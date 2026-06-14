@@ -18,26 +18,23 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
+- **iter 16 (2026-06-14)** — **NETS!** Built `tools/sync_nets.py`. Exports
+  the schematic netlist via kicad-cli, parses 95 nets + 288 pad
+  assignments, inserts `(net N "name")` declarations at the PCB top level
+  after the (layers) block, then rewrites every pad's `(net "name")` →
+  `(net code "name")` matching by (refdes, pin). 246 of 288 pads
+  rewritten (the J10 USB-C pads and a few unconnected ones don't have
+  schematic net assignments yet).
+  With nets working, added GND zone on In1.Cu + B.Cu and +3V3 zone on
+  In2.Cu, all covering the board interior with 0.5mm edge clearance.
+  Ran `kicad-cli pcb drc --refill-zones --save-board` to compute the
+  actual fill polygons. Back-side render now shows a clean copper pour
+  with the DEFCON wordmark cleanly overlaid in silk. This is the biggest
+  functional unlock of the run.
 - **iter 15 (2026-06-14)** — Discovery + cleanup pass.
-  * Tried flipping J31 microSD to B.Cu by changing only the top-level
-    `(layer)` line — produced a hybrid mess (silk on F.SilkS but topology
-    on B.Cu). Reverted. A real flip needs a full F.*↔B.* layer swap.
-  * Tried adding GND/+3V3 inner-layer zones — discovered the PCB has
-    **zero net declarations at the top level** (`(net N "name")`). The
-    original code generator skipped the net list entirely, which means
-    every pad in the PCB is netless. Without nets: no zones, no routing,
-    no ratsnest, and DRC's 179 "unconnected" complaints are misleading
-    because there are no nets to connect.
-  * Verified `kicad-cli sch export netlist --format kicadsexpr` works
-    and produces 95 nets — the data is there in the schematic.
-  * Removed stale backup files (`*.pre_*_backup`, `_autosave-*`,
-    freerouting `*.dsn`, `~*.lck`, old `*-drc.rpt`) — they're all
-    regenerable. Repo is cleaner.
-- **iter 14 (2026-06-14)** — Fab pass + flipped 65 footprints from B.Cu
-  to F.Cu (huge bug). Exported gerbers/drill/pos/BOM.
+- **iter 14 (2026-06-14)** — Flipped 65 footprints B.Cu→F.Cu, fab export.
 - **iter 13 (2026-06-14)** — Silk reorg: big mirrored DEFCON on back.
 - **iter 12 (2026-06-13)** — Landed J10 USB-C + place_lib_footprint.py.
-- **iter 11 (2026-06-13)** — DEFCON silk identity (first pass).
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -65,15 +62,17 @@ power, MCU, audio, LEDs, connectors, switches.
 - [x] ~~Silk reorganization~~ (iter 13).
 - [x] ~~Components to F.Cu, fab pass exported~~ (iter 14).
 - [x] ~~Repo cleanup~~ (iter 15: removed stale backups).
-- [ ] **CRITICAL BLOCKER**: PCB has no net declarations. Build
-      `tools/sync_nets_from_sch.py`:
-      1. Run `kicad-cli sch export netlist --format kicadsexpr ...`
-      2. Parse out (net (code N) (name "X")) and each (node (ref R) (pin P))
-      3. Add `(net N "name")` blocks at PCB top level (after the layers
-         block, before footprints).
-      4. For each pad, look up (ref, pin) → net code → add `(net code name)`
-         inside the pad's s-expression.
-      5. Without this, zones/routing/DRC are all broken.
+- [x] ~~Build net sync tool + add ground zones~~ (iter 16).
+- [ ] Wire J10 USB-C pads (VBUS, GND, DP, DM, CC1, CC2, SHIELD, SBU).
+      Currently the schematic instance J10 has its symbol but the pin
+      labels weren't matched into nets — sync_nets.py finds 0 mappings
+      for J10. Likely J10 doesn't have actual wires in the schematic
+      yet, or its labels don't match the nets it should be on.
+- [ ] Routing pass. With nets + zones in place, the ratsnest is real.
+      Either: (a) install JRE and run freerouting on the exported DSN,
+      (b) hand-route the critical USB/SPI/I2C/audio nets via Python
+      gr_line additions, (c) leave the PCB as zones-only and let the
+      user finish in KiCad.
 - [ ] J31 microSD: flip to B.Cu (back side). Watch for collision with
       the big "DEFCON" wordmark — place microSD in the lower-right back
       area where it won't obstruct the silk.
