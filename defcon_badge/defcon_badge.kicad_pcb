@@ -1161,7 +1161,7 @@
 	(footprint "Package_SON:Winbond_USON-8-1EP_3x2mm_P0.5mm_EP0.2x1.6mm"
 		(layer "B.Cu")
 		(uuid "00000000-0000-0000-0000-00005eff7ec0")
-		(at 130 115)
+		(at 149.000 107.000 0)
 		(descr "Winbond  USON, 8 Pin (https://www.lcsc.com/datasheet/lcsc_datasheet_2205122030_Winbond-Elec-W25Q16JVUXIQ_C2843335.pdf#page=66f)")
 		(tags "Winbond USON NoLead")
 		(property "Reference" "U2"
@@ -3343,7 +3343,7 @@
 	(footprint "RP2040_minimal:RP2040-QFN-56"
 		(layer "B.Cu")
 		(uuid "00000000-0000-0000-0000-00005eff812a")
-		(at 100 115)
+		(at 143.000 107.000 0)
 		(descr "QFN, 56 Pin (http://www.cypress.com/file/416486/download#page=40), generated with kicad-footprint-generator ipc_dfn_qfn_generator.py")
 		(tags "QFN DFN_QFN")
 		(property "Reference" "U3"
@@ -8347,7 +8347,7 @@
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "B.Cu")
 		(uuid "250a8886-6195-4450-a39b-57b4932ef87c")
-		(at 72 111)
+		(at 137.000 104.000)
 		(descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
 		(tags "capacitor")
 		(property "Reference" "C2"
@@ -9502,7 +9502,7 @@
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "B.Cu")
 		(uuid "488b2f55-d820-4fae-91e5-1d25d921d5ee")
-		(at 72 119)
+		(at 137.000 110.000)
 		(descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
 		(tags "capacitor")
 		(property "Reference" "C3"
@@ -12377,7 +12377,7 @@
 	(footprint "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm"
 		(layer "B.Cu")
 		(uuid "5eb59c79-3d21-40e1-bcc1-656d5067130d")
-		(at 77 115)
+		(at 137.000 107.000 0)
 		(descr "SMD Crystal SERIES SMD3225/4 http://www.txccrystal.com/images/pdf/7m-accuracy.pdf, 3.2x2.5mm^2 package")
 		(tags "SMD SMT crystal")
 		(property "Reference" "Y1"
@@ -19175,7 +19175,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "B.Cu")
 		(uuid "e5eb59d5-9a94-434e-871c-ae49d30090d1")
-		(at 82 111 90)
+		(at 149.000 111.000)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
 		(tags "resistor")
 		(property "Reference" "R5"

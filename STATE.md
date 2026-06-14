@@ -18,11 +18,14 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
+- **iter 3 (2026-06-13)** — Moved MCU cluster to center: U3 RP2040 @ (143,107),
+  Y1 crystal @ (137,107), C2/C3 15p load caps flanking Y1 vertically,
+  U2 flash @ (149,107), R5 boot pull @ (149,111). Render confirms cluster
+  is on-board. Decoupling caps (C4-C19) still outside the new outline —
+  iter 4 brings them in around the RP2040 power pins.
 - **iter 2 (2026-06-13)** — Built `tools/move_components.py` (reads a JSON
   refdes→{x,y,rot} map, rewrites footprint `(at ...)` lines). Used it to
-  move H1-H4 mounting holes to the 4 corners of the new 86×54 outline
-  (3mm margin). Render confirms holes are at the rounded corners.
-  The script is generic; future iters will use it for all subsystem placement.
+  move H1-H4 mounting holes to the 4 corners of the new 86×54 outline.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -37,8 +40,10 @@ power, MCU, audio, LEDs, connectors, switches.
       diff vs PCB footprints, insert missing footprints with refdes + nets.
       Use it to land J10 USB-C onto the PCB at the right edge.
 - [x] ~~Move 4 mounting holes to corners~~ (iter 2).
-- [ ] Move the MCU cluster (U3 RP2040, U2 flash, Y1 crystal + their caps)
-      to the center of the new outline. Center: x=143, y=107.
+- [x] ~~Move MCU cluster to center~~ (iter 3: U3, Y1, C2/C3, U2, R5 placed).
+- [ ] Pull RP2040 decoupling caps (C4, C6-C19) close to U3 power pins.
+      RP2040 has IOVDD on pins 1,10,22,33,42,49 → need 100n per pin.
+      For now, just sprinkle them around U3 within board bounds.
 - [ ] Move the LED strip (LED20-23 + caps C60-63) along the top edge,
       ~7mm below the top corner-arc clear zone.
 - [ ] Move audio subsystem (U20 TM8211, U21 FDA1308, C40-46, audio jack)
