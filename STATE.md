@@ -18,23 +18,21 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 16 (2026-06-14)** — **NETS!** Built `tools/sync_nets.py`. Exports
-  the schematic netlist via kicad-cli, parses 95 nets + 288 pad
-  assignments, inserts `(net N "name")` declarations at the PCB top level
-  after the (layers) block, then rewrites every pad's `(net "name")` →
-  `(net code "name")` matching by (refdes, pin). 246 of 288 pads
-  rewritten (the J10 USB-C pads and a few unconnected ones don't have
-  schematic net assignments yet).
-  With nets working, added GND zone on In1.Cu + B.Cu and +3V3 zone on
-  In2.Cu, all covering the board interior with 0.5mm edge clearance.
-  Ran `kicad-cli pcb drc --refill-zones --save-board` to compute the
-  actual fill polygons. Back-side render now shows a clean copper pour
-  with the DEFCON wordmark cleanly overlaid in silk. This is the biggest
-  functional unlock of the run.
+- **iter 17 (2026-06-14)** — USB-C J10 net assignment + sync_nets.py fix.
+  Discovered KiCad's `--save-board` strips top-level `(net N "name")`
+  declarations that it doesn't recognize as canonical. Fixed sync_nets
+  to insert AFTER `(setup ...)` block (proper canonical order) and
+  established a two-pass workflow: (a) refill zones with --save-board
+  to compute fill polygons, (b) re-run sync_nets to re-inject nets, (c)
+  patch J10 pads with manual net mapping (USB-C UFP standard).
+  Net codes: GND=67, VBUS=66, CC2=64, USB_DP=76, USB_DM=75. Patched 14
+  J10 pads (4 GND, 4 VBUS, 2 CC2, 2 USB_DP, 2 USB_DM, plus 4 SH=GND).
+  Re-exported fab artifacts. Back-side render still shows the clean blue
+  GND pour with DEFCON wordmark and visible thermal connections at J10.
+- **iter 16 (2026-06-14)** — Built sync_nets.py + GND/+3V3 inner zones.
 - **iter 15 (2026-06-14)** — Discovery + cleanup pass.
 - **iter 14 (2026-06-14)** — Flipped 65 footprints B.Cu→F.Cu, fab export.
 - **iter 13 (2026-06-14)** — Silk reorg: big mirrored DEFCON on back.
-- **iter 12 (2026-06-13)** — Landed J10 USB-C + place_lib_footprint.py.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -63,11 +61,11 @@ power, MCU, audio, LEDs, connectors, switches.
 - [x] ~~Components to F.Cu, fab pass exported~~ (iter 14).
 - [x] ~~Repo cleanup~~ (iter 15: removed stale backups).
 - [x] ~~Build net sync tool + add ground zones~~ (iter 16).
-- [ ] Wire J10 USB-C pads (VBUS, GND, DP, DM, CC1, CC2, SHIELD, SBU).
-      Currently the schematic instance J10 has its symbol but the pin
-      labels weren't matched into nets — sync_nets.py finds 0 mappings
-      for J10. Likely J10 doesn't have actual wires in the schematic
-      yet, or its labels don't match the nets it should be on.
+- [x] ~~Wire J10 USB-C pads~~ (iter 17: manual UFP mapping applied).
+- [ ] Note: the schematic's net assignment for J10 was wrong — the
+      netlist exported A1/A4/A5/A9/A12/B1/B12 all as `/Power/CC2` instead
+      of separate GND/VBUS/CC nets. Iter 17 hard-coded the correct UFP
+      mapping in the PCB; the schematic still has the bug for future fixes.
 - [ ] Routing pass. With nets + zones in place, the ratsnest is real.
       Either: (a) install JRE and run freerouting on the exported DSN,
       (b) hand-route the critical USB/SPI/I2C/audio nets via Python

@@ -70,11 +70,13 @@ def main() -> int:
     text = PCB.read_text()
     shutil.copy2(PCB, PCB.with_suffix(PCB.suffix + ".pre_netsync_backup"))
 
-    # 1) Insert (net N "name") declarations after the (layers ...) block.
-    # Find end of (layers ...) — match opening (layers and walk to its closing paren.
-    layers_start = text.index("\t(layers")
+    # 1) Insert (net N "name") declarations after the (setup ...) block.
+    # KiCad strips nets that come before (setup) on save, so order matters.
+    # First strip any pre-existing (net N "name") declarations we may have added before.
+    text = re.sub(r'\n\t\(net \d+ "[^"]*"\)', '', text)
+    setup_start = text.index("\t(setup")
     depth = 0
-    i = layers_start
+    i = setup_start
     while i < len(text):
         if text[i] == "(":
             depth += 1
