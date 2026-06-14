@@ -319,8 +319,8 @@
 	)
 	(embedded_fonts no)
 	(model "${KIPRJMOD}/defcon_badge.3dshapes/10038075-D0P.step"
-		(offset (xyz 0 0 0))
+		(offset (xyz 0 0 3))
 		(scale (xyz 1 1 1))
-		(rotate (xyz 0 0 0))
+		(rotate (xyz 0 0 90))
 	)
 )
