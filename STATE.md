@@ -18,18 +18,26 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 14 (2026-06-14)** — Fab pass + critical bug fix: all 65 footprints
-  were silently on B.Cu (back side) because the original code generator
-  set `(layer "B.Cu")` at the footprint top level. Flipped all to F.Cu
-  via a sed pass. Exported gerbers (24 files including 4 copper layers),
-  Excellon drill, pos file, and grouped BOM with MPN/LCSC to `fab/`.
-  Wrote `fab/README.md` documenting the package, caveats, and remaining
-  gaps. Board is now mid-fab-ready: parts placed on the correct side,
-  silk done, but no copper routing or USB-C net assignment yet.
-- **iter 13 (2026-06-14)** — Silk reorg: big mirrored DEFCON on B.SilkS.
-- **iter 12 (2026-06-13)** — Placed J10 USB-C, built place_lib_footprint.py.
+- **iter 15 (2026-06-14)** — Discovery + cleanup pass.
+  * Tried flipping J31 microSD to B.Cu by changing only the top-level
+    `(layer)` line — produced a hybrid mess (silk on F.SilkS but topology
+    on B.Cu). Reverted. A real flip needs a full F.*↔B.* layer swap.
+  * Tried adding GND/+3V3 inner-layer zones — discovered the PCB has
+    **zero net declarations at the top level** (`(net N "name")`). The
+    original code generator skipped the net list entirely, which means
+    every pad in the PCB is netless. Without nets: no zones, no routing,
+    no ratsnest, and DRC's 179 "unconnected" complaints are misleading
+    because there are no nets to connect.
+  * Verified `kicad-cli sch export netlist --format kicadsexpr` works
+    and produces 95 nets — the data is there in the schematic.
+  * Removed stale backup files (`*.pre_*_backup`, `_autosave-*`,
+    freerouting `*.dsn`, `~*.lck`, old `*-drc.rpt`) — they're all
+    regenerable. Repo is cleaner.
+- **iter 14 (2026-06-14)** — Fab pass + flipped 65 footprints from B.Cu
+  to F.Cu (huge bug). Exported gerbers/drill/pos/BOM.
+- **iter 13 (2026-06-14)** — Silk reorg: big mirrored DEFCON on back.
+- **iter 12 (2026-06-13)** — Landed J10 USB-C + place_lib_footprint.py.
 - **iter 11 (2026-06-13)** — DEFCON silk identity (first pass).
-- **iter 10 (2026-06-13)** — J30 SAO + I2C pullups.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -56,6 +64,16 @@ power, MCU, audio, LEDs, connectors, switches.
 - [x] ~~Land J10 USB-C~~ (iter 12).
 - [x] ~~Silk reorganization~~ (iter 13).
 - [x] ~~Components to F.Cu, fab pass exported~~ (iter 14).
+- [x] ~~Repo cleanup~~ (iter 15: removed stale backups).
+- [ ] **CRITICAL BLOCKER**: PCB has no net declarations. Build
+      `tools/sync_nets_from_sch.py`:
+      1. Run `kicad-cli sch export netlist --format kicadsexpr ...`
+      2. Parse out (net (code N) (name "X")) and each (node (ref R) (pin P))
+      3. Add `(net N "name")` blocks at PCB top level (after the layers
+         block, before footprints).
+      4. For each pad, look up (ref, pin) → net code → add `(net code name)`
+         inside the pad's s-expression.
+      5. Without this, zones/routing/DRC are all broken.
 - [ ] J31 microSD: flip to B.Cu (back side). Watch for collision with
       the big "DEFCON" wordmark — place microSD in the lower-right back
       area where it won't obstruct the silk.
