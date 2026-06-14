@@ -18,17 +18,17 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 7 (2026-06-13)** — Audio subsystem in bottom-left quadrant.
-  U20 TM8211 DAC + U21 FDA1308 amp stacked at x=118, y=115/122. Output
-  coupling 220u caps (C45, C46) at x=110-113. Decoupling/bulk caps C40-C44.
-  Feedback/gain resistors R20-R25 in a column at x=127. J20 PJ-320A audio
-  jack at bottom-left corner (108, 128), body extends partially off board
-  edge — intentional for plug clearance.
-- **iter 6 (2026-06-13)** — Cleared LED-row collisions: U30/D20/R30 to
-  bottom center, J33 to right edge, R3/R4 27R tucked left of Y1.
+- **iter 8 (2026-06-13)** — Power subsystem to right side. J11 JST-PH battery
+  at top-right (180,100), TP4056 charger U10 at (165,114), ME6211 LDO U11
+  at (172,114), SW1 SS-12D00 power slide switch at (180,127) bottom-right.
+  Charge/sense passives in cluster: R12 2.4k PROG, R13/R14/R15 100k,
+  C20/C21/C22/C23 (1u/10u/1u/1u), R10/R11 5.1k CC pulldowns near future
+  USB-C site. Right half of board now densely populated.
+- **iter 7 (2026-06-13)** — Audio subsystem in bottom-left quadrant
+  (U20 TM8211 + U21 FDA1308 + caps + Rs + J20 audio jack).
+- **iter 6 (2026-06-13)** — Cleared LED-row collisions.
 - **iter 5 (2026-06-13)** — LED strip across top edge.
 - **iter 4 (2026-06-13)** — Decoupling cap ring around RP2040.
-- **iter 3 (2026-06-13)** — MCU cluster to center.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -48,15 +48,16 @@ power, MCU, audio, LEDs, connectors, switches.
 - [x] ~~LED strip across top~~ (iter 5).
 - [x] ~~Relocate IR + SWD + 27R~~ (iter 6).
 - [x] ~~Place audio subsystem~~ (iter 7).
-- [ ] Power subsystem to right edge. Components: U10 TP4056 (SOT-23-5
-      charger), U11 ME6211C33M5G (SOT-23-5 LDO), J11 JST-PH battery,
-      C20 1u, C21 10u, C22 1u, C23 1u, R12 2.4k (PROG), R10/R11 5.1k
-      CC pulldowns for USB-C, R13/R14/R15 100k. SW1 SS-12D00 power switch.
-      Layout sketch: J11 battery top-right edge ~(180,100); SW1 below at
-      (180,108) (between J11 and J33 SWD); U10 TP4056 at (165,113);
-      U11 ME6211 at (170,120); R10/R11 by USB-C area.
-- [ ] Land J10 USB-C on PCB. Will need either a sync tool or manual
-      footprint insertion. Right-edge bottom-half area at ~(180, 125).
+- [x] ~~Place power subsystem~~ (iter 8).
+- [ ] Remaining off-board parts: SW20/21/22 push buttons (~6mm, TS-1187A)
+      → bottom edge of board, x ≈ 122/138/154, y ≈ 130. J31 microSD →
+      right edge or left edge interior, hard to fit at this density.
+      J30 SAO 2x3 → ?, J32 UART debug 1x03 → bottom-right somewhere,
+      R40/R41 4.7k I2C pullups for SAO.
+- [ ] Land J10 USB-C: build `tools/place_footprint_from_lib.py` that
+      reads a stock .kicad_mod, wraps it as a (footprint ...) block with
+      a refdes + position, and appends to the PCB. Skip net assignments
+      for now (will show as unconnected; fixable later).
 - [ ] Move the LED strip (LED20-23 + caps C60-63) along the top edge,
       ~7mm below the top corner-arc clear zone.
 - [ ] Move audio subsystem (U20 TM8211, U21 FDA1308, C40-46, audio jack)
