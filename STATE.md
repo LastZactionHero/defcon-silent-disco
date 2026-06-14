@@ -1,11 +1,12 @@
 # Iteration state
 
 ## Current focus
-**Phase 1 — basic correctness.** Outline shrunk (iter 1). Next: sync J10 USB-C
-from schematic to PCB (needs a new tool — `tools/sync_pcb_from_sch.py` that
-exports the netlist and adds any missing footprints to the PCB). Then begin
-moving subsystems inside the new outline (probably one subsystem per iter):
-power, MCU, audio, LEDs, connectors, switches.
+**STOPPED at iter 29 — natural completion.** Board is placement-complete,
+silked, net-synced, zone-filled, fab-exported, documented, licensed.
+Routing is the only major remaining item and is the user's call
+(blocked by no JRE). See `README.md` § "Known gaps" for the remaining
+TODOs the loop chose not to attempt (schematic ERC, hand-routing,
+schematic J10 fix).
 
 ## Baseline (iter 0, 2026-06-13)
 - ERC: 71 violations (58 root sheet, then per-subsheet errors)
@@ -18,15 +19,11 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 22 (2026-06-14)** — Wrote top-level README.md with PCB renders
-  inline, spec, subsystem map, tooling inventory, build pipeline,
-  known gaps. Copied current top/bottom renders to docs/ for the
-  README to reference (renders/ stays gitignored).
-- **iter 21 (2026-06-14)** — Front-side polish: --subtract-soldermask,
-  drop F.Fab, DEFCON chevrons, repositioned "PRESS A FOR PARTY".
-- **iter 20 (2026-06-14)** — Back-side silk art (chevrons, accents).
-- **iter 19 (2026-06-14)** — Flipped J31 microSD to B.Cu.
-- **iter 18 (2026-06-14)** — Makefile + one-command fab pipeline.
+- **iter 29 (2026-06-14)** — Wrap-up commit, loop stopped.
+- **iter 28 (2026-06-14)** — Back iso re-rendered with floor shadow.
+- **iter 27 (2026-06-14)** — 2400×1500 hero render with floor shadow.
+- **iter 26 (2026-06-14)** — MIT LICENSE.
+- **iter 25 (2026-06-14)** — microSD rotated 180° — slot opens to bottom edge.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -105,4 +102,28 @@ power, MCU, audio, LEDs, connectors, switches.
 - [ ] Export gerbers, drills, BOM, CPL to `fab/`.
 
 ## Stop conditions
-See HARNESS.md "Definition of done (overall)".
+See HARNESS.md "Definition of done (overall)". STOPPED at iter 29.
+
+## Session summary (iter 1 → iter 29)
+1. **Tooling foundation** — render_pcb.sh, move_components.py, set_outline.py,
+   check_footprints.py, place_lib_footprint.py, flip_footprint.py,
+   sync_nets.py, patch_j10_nets.py, Makefile.
+2. **Board outline** — 86×54mm credit-card with 3mm rounded corners.
+3. **Component placement** — 79 footprints on F.Cu, 1 (microSD) on B.Cu.
+   MCU cluster center, LEDs top, audio bottom-left, power right, IR left,
+   buttons bottom, USB-C bottom-center.
+4. **Critical bug fixes** — Discovered + flipped 65 footprints accidentally
+   placed on B.Cu by the original code generator. Discovered + worked
+   around KiCad stripping synthetic top-level `(net N "name")` decls
+   on save. Documented J10 USB-C schematic wiring bug + patched the PCB
+   with correct UFP mapping.
+5. **Silk identity** — DEFCON wordmark (mirrored size-5 on back, smaller
+   above LEDs on front), chevrons + accent rules + corner brackets
+   framing both sides, flavor text (0xC0FFEE, @LZH, PRESS A FOR PARTY,
+   DC32 BADGE by LZH, github URL).
+6. **Functional fill** — Sync nets from schematic (95 nets, 246+14 pad
+   net assignments). GND zone on In1.Cu + B.Cu, +3V3 zone on In2.Cu.
+7. **Documentation** — README.md with hero + iso + plan renders,
+   schematic.pdf, fab/README.md, fab/bom.csv, fab/pos.csv, MIT LICENSE.
+8. **Stopped** — Routing blocked (no JRE), schematic ERC fixes risky;
+   handed off as a placement-complete fab-ready-minus-routing board.
