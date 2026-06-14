@@ -18,14 +18,14 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
+- **iter 4 (2026-06-13)** — Pulled 13 decoupling/bulk caps (C1, C4, C5-C12,
+  C14, C16, C17) into a tight ring around U3 RP2040: 100n caps above/below
+  the QFN edge at y=102 and y=112, 1u caps further out at y=115, 10u bulk
+  caps along y=118. Whole cluster fits within x∈[132,154], y∈[102,118].
 - **iter 3 (2026-06-13)** — Moved MCU cluster to center: U3 RP2040 @ (143,107),
-  Y1 crystal @ (137,107), C2/C3 15p load caps flanking Y1 vertically,
-  U2 flash @ (149,107), R5 boot pull @ (149,111). Render confirms cluster
-  is on-board. Decoupling caps (C4-C19) still outside the new outline —
-  iter 4 brings them in around the RP2040 power pins.
-- **iter 2 (2026-06-13)** — Built `tools/move_components.py` (reads a JSON
-  refdes→{x,y,rot} map, rewrites footprint `(at ...)` lines). Used it to
-  move H1-H4 mounting holes to the 4 corners of the new 86×54 outline.
+  Y1 @ (137,107), C2/C3 flanking, U2 @ (149,107), R5 @ (149,111).
+- **iter 2 (2026-06-13)** — Built `tools/move_components.py`; moved H1-H4
+  mounting holes to corners of the 86×54 outline.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -40,10 +40,11 @@ power, MCU, audio, LEDs, connectors, switches.
       diff vs PCB footprints, insert missing footprints with refdes + nets.
       Use it to land J10 USB-C onto the PCB at the right edge.
 - [x] ~~Move 4 mounting holes to corners~~ (iter 2).
-- [x] ~~Move MCU cluster to center~~ (iter 3: U3, Y1, C2/C3, U2, R5 placed).
-- [ ] Pull RP2040 decoupling caps (C4, C6-C19) close to U3 power pins.
-      RP2040 has IOVDD on pins 1,10,22,33,42,49 → need 100n per pin.
-      For now, just sprinkle them around U3 within board bounds.
+- [x] ~~Move MCU cluster to center~~ (iter 3).
+- [x] ~~Pull decoupling caps in~~ (iter 4: 13 caps placed around U3).
+- [ ] Move LEDs across top edge of board: LED20-23 (SK9822-EC20 5×5mm)
+      with their 10n caps C60-C63. Suggest LED row at y=87, spacing 14mm
+      starting at x=115 → 115, 129, 143, 157. Caps tucked at y=89.
 - [ ] Move the LED strip (LED20-23 + caps C60-63) along the top edge,
       ~7mm below the top corner-arc clear zone.
 - [ ] Move audio subsystem (U20 TM8211, U21 FDA1308, C40-46, audio jack)
