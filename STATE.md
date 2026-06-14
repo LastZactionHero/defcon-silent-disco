@@ -27,11 +27,13 @@ power, MCU, audio, LEDs, connectors, switches.
   baseline: USB-C is designed, just not laid out.
 
 ## Open TODO (you don't have to do these in order, just pick the highest value next)
-- [ ] Add USB-C receptacle (GCT USB4085 footprint exists in stock) to Power schematic.
-      Wire VBUS through TP4056 charger input, D+/D- to RP2040 USB pins,
-      add 5.1k CC1/CC2 pulldowns for UFP.
-- [ ] Shrink board outline to ~86×54mm via `tools/set_outline.py`, then re-place
-      mounting holes at corners.
+- [x] ~~USB-C in schematic~~ already there as J10 (USB4085).
+- [x] ~~Shrink outline~~ (iter 1, 86×54 rounded).
+- [ ] Build `tools/sync_pcb_from_sch.py`: export netlist from kicad-cli,
+      diff vs PCB footprints, insert missing footprints with refdes + nets.
+      Use it to land J10 USB-C onto the PCB at the right edge.
+- [ ] Move the 4 mounting holes to the corners of the new 86×54 outline
+      (currently still at the old wide corners).
 - [ ] Fix ERC label_dangling errors on root sheet (likely hierarchical labels
       that don't match net names on subsheets).
 - [ ] Add PWR_FLAG symbols for any net showing `power_pin_not_driven`.
