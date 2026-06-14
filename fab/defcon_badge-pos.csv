@@ -1,4 +1,5 @@
 Ref,Val,Package,PosX,PosY,Rot,Side
+"J31","microSD","microSD_HC_Hirose_DM3D-SF",143.000000,-122.000000,0.000000,bottom
 "C1","10u","C_0805_2012Metric",132.000000,-118.000000,0.000000,top
 "C2","15p","C_0402_1005Metric",137.000000,-104.000000,0.000000,top
 "C3","15p","C_0402_1005Metric",137.000000,-110.000000,0.000000,top
@@ -40,7 +41,6 @@ Ref,Val,Package,PosX,PosY,Rot,Side
 "J11","JST-PH 2P","JST_PH_S2B-PH-K_1x02_P2.00mm_Horizontal",180.000000,-100.000000,-90.000000,top
 "J20","PJ-320A","Jack_3.5mm_QingPu_WQP-PJ398SM_Vertical_CircularHoles",108.000000,-128.000000,0.000000,top
 "J30","SAO 2x3","PinHeader_2x03_P2.54mm_Vertical",163.000000,-100.000000,0.000000,top
-"J31","microSD","microSD_HC_Hirose_DM3D-SF",100.000000,-165.000000,0.000000,top
 "J32","UART debug","PinHeader_1x03_P2.54mm_Vertical",105.000000,-122.000000,90.000000,top
 "J33","Dev/SWD header","PinHeader_1x05_P2.54mm_Vertical",180.000000,-115.000000,0.000000,top
 "LED20","SK9822-EC20","LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",113.000000,-92.000000,0.000000,top
