@@ -18,18 +18,18 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 12 (2026-06-13)** — Built `tools/place_lib_footprint.py` (reads a
-  stock .kicad_mod, rewrites Reference + injects (at), (uuid), regenerates
-  internal UUIDs, appends to PCB). Used it to land J10 USB_C_Receptacle_
-  GCT_USB4085 at (134,125) bottom edge between SW20 and SW21 — connector
-  body extends slightly past the bottom edge for plug clearance. Shifted
-  SW21 to x=146 and SW22 to x=168 to make room. Pads unconnected; net
-  wiring still needed.
-- **iter 11 (2026-06-13)** — DEFCON silk identity (7 gr_text elements:
-  wordmark, tagline, corner glyphs, back-side credits).
-- **iter 10 (2026-06-13)** — J30 SAO + I2C pullups between LEDs.
+- **iter 13 (2026-06-14)** — Silk reorganization. Removed front-center
+  DEFCON wordmark (was overlapping U3). Added big bold mirrored DEFCON
+  on B.SilkS (back side) centered at (143,104) size 5 — reads correctly
+  from the back via `(justify mirror)` on the effects clause. Added
+  "// SILENT DISCO //", "DC32 BADGE by LZH", and a github URL on the back.
+  Back-side render now shows a clean DEFCON wordmark identity card.
+  Front retains a small "DEFCON" above LED20 + flavor glyphs.
+- **iter 12 (2026-06-13)** — place_lib_footprint.py + landed J10 USB-C
+  at bottom edge between SW20 and SW21.
+- **iter 11 (2026-06-13)** — DEFCON silk identity (first pass).
+- **iter 10 (2026-06-13)** — J30 SAO + I2C pullups.
 - **iter 9 (2026-06-13)** — Bottom buttons + IR to left edge + UART.
-- **iter 8 (2026-06-13)** — Power subsystem to right side.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -54,11 +54,15 @@ power, MCU, audio, LEDs, connectors, switches.
 - [x] ~~SAO + I2C pullups~~ (iter 10).
 - [x] ~~DEFCON silk identity~~ (iter 11).
 - [x] ~~Land J10 USB-C~~ (iter 12).
-- [ ] J31 microSD: flip to B.Cu (back side). Need flip tool. Until then,
-      microSD is the only off-board part.
-- [ ] Wire J10 USB-C pads to nets (VBUS → TP4056 VCC, GND → GND,
-      D+/D- → R3/R4 → MCU, CC1/CC2 → R10/R11). Currently pads are
-      unconnected — they'll appear as unconnected items in DRC.
+- [x] ~~Silk reorganization~~ (iter 13: clean front, big DEFCON on back).
+- [ ] J31 microSD: flip to B.Cu (back side). Watch for collision with
+      the big "DEFCON" wordmark — place microSD in the lower-right back
+      area where it won't obstruct the silk.
+- [ ] Wire J10 USB-C pads to nets (VBUS, GND, D+, D-, CC1, CC2, SHIELD).
+      Currently 17 pads unconnected on J10. Use a Python script to set
+      each pad's `(net "name")` based on the schematic's J10 connections.
+- [ ] Hide the long "USB_C_Receptacle_GCT_USB4085" Value silk text on
+      J10 (move it to F.Fab layer or hide the property).
 - [ ] Add silk vector art (a glyph or small skull) — bigger visual win
       than text, no DC-trademark issues. Could use gr_poly or gr_line.
 - [ ] Address 71 ERC errors (label_dangling, power_pin_not_driven, etc).
