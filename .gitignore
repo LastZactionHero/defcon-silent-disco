@@ -22,6 +22,9 @@ fab/
 *-drc.rpt
 *-erc.rpt
 
+# Renders (committed periodically with `git add -f renders/assembly.png`)
+renders/
+
 # Python
 __pycache__/
 *.pyc
