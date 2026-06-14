@@ -2,91 +2,76 @@
 
 RP2040-based wearable badge with 4 addressable RGB LEDs, microSD audio
 playback, headphone amp, IR receive/transmit, and Shitty Add-On (SAO).
-Designed iteratively by an autonomous Claude Code loop (see HARNESS.md).
+Mecha Tokyo dance party silkscreen aesthetic.
+Designed for board-to-board pairing via sawtooth interlocking edges +
+3D-printed IR light covers.
 
-## Current state
+## Current state — review on phone
 
-### 3D photo-real renders
+### Iso 3D (the hero shots)
 
-![Hero](docs/hero.png)
+![Front iso](docs/hero_front.png)
 
-| Front | Back |
-|---|---|
-| ![Top](docs/render_3d_top.png) | ![Bottom](docs/render_3d_bottom.png) |
+![Back iso](docs/hero_back.png)
 
-![Back iso](docs/render_3d_back_iso.png)
-
-### Plan view (mfg surface)
+### Straight-on 3D (manufactured look)
 
 | Front | Back |
 |---|---|
-| ![Top plan](docs/top.png) | ![Bottom plan](docs/bottom.png) |
+| ![Front](docs/front_3d.png) | ![Back](docs/back_3d.png) |
 
-**Spec at a glance**
-- Form factor: **86 × 54 mm** (ID-1 / credit-card), 3 mm rounded corners
-- Stackup: **4-layer** — F.Cu / In1.Cu = GND / In2.Cu = +3V3 / B.Cu = GND pour
-- 80 components placed (79 on F.Cu, 1 on B.Cu)
-- All footprints resolve from stock KiCad libraries
+### 2D plan view (top-down, courtyards visible — design review)
 
-**Functional subsystems**
-- **MCU** RP2040 (U3) + W25Q16 flash (U2) + 12 MHz crystal (Y1) — center
-- **Power** USB-C (J10) → TP4056 charger (U10) → JST-PH LiPo (J11) → SS-12D00 switch (SW1) → ME6211C33 LDO (U11) → +3V3 — right edge
-- **LEDs** 4× SK9822 RGB addressable (LED20-23) with 10 nF bypass — top edge
-- **Audio** TM8211 DAC (U20) → FDA1308 headphone amp (U21) → PJ-320A jack (J20) — bottom-left
-- **IR** TSOP4838 receiver (U30) + 940 nm LED (D20) — left edge
-- **Buttons** 3× TS-1187A push (SW20-22) — bottom row
-- **Connectors** SAO 2×3 (J30), Dev/SWD 1×5 (J33), UART 1×3 (J32), microSD (J31, back)
+![Front plan](docs/front_plan.png)
 
-## Repo layout
-```
-defcon_badge/             KiCad project (sheets: Audio, IO, LEDs_IR, MCU_Core, Power)
-defcon_badge/tools/       Python + bash automation
-  render_pcb.sh           SVG/PNG renders to renders/
-  move_components.py      Reposition footprints by refdes
-  flip_footprint.py       Move a footprint to the back side (proper F.*↔B.* swap)
-  set_outline.py          Rewrite Edge.Cuts (rounded rect + optional cutouts)
-  place_lib_footprint.py  Add a stdlib footprint to the PCB by name
-  sync_nets.py            Sync nets from schematic into PCB
-  patch_j10_nets.py       Override J10 USB-C pad nets with the correct UFP map
-  check_footprints.py     Verify every footprint reference resolves
-fab/                      gerbers/ (regenerable), pos.csv, bom.csv, README.md
-docs/                     PCB renders for the README
-renders/                  Latest renders (gitignored — run `make render`)
-HARNESS.md                The autonomous-loop playbook
-PROMPT.md                 The /loop entry prompt
-STATE.md                  Rolling iteration state — last 5 iters + open TODO
-Makefile                  `make fab`, `make render`, `make drc`, `make erc`, etc.
-```
+## Spec at a glance
+- **Outline:** 86 × 54 mm credit-card form factor, sharp corners
+- **Pairing geometry:** Real-sawtooth left + right edges (9 teeth per side, 6mm period, 2mm depth) — A's right teeth slot into B's left notches
+- **Stackup:** 4-layer (F.Cu, In1.Cu = GND, In2.Cu = +3V3, B.Cu = GND pour)
+- **Components:** 80 placed (79 on F.Cu, 1 on B.Cu microSD)
+- **Mounting:** 4× M2.5 holes (2.7mm) at corners
+- **Ratsnest length:** 1422.9 mm across 87 nets (excluding GND, which is the inner plane)
 
-## Build pipeline
+## Subsystems
+- **MCU:** RP2040 (U3) + W25Q16 flash (U2) + 12 MHz crystal Y1 with 15p load caps + 12-cap decoupling ring (one 100n adjacent to each U3 power pin)
+- **Power:** USB-C (J10) → TP4056 charger (U10) → JST-PH LiPo (J11) → SS-12D00 switch (SW1) → ME6211C33 LDO (U11) → +3V3 rail
+- **LEDs:** 4× SK9822-EC20 5×5mm RGB addressable across the top edge with 10nF bypass per LED
+- **Audio:** TM8211 I²S DAC (U20) → FDA1308 headphone amp (U21) → 220µF AC coupling (C45/C46) → Amphenol 10038075-D0P stereo jack (J20, plug exits up off top edge)
+- **IR:** TSOP4838 receiver (U30) in the left-edge sawtooth notch, IR LED (D20) on the right-edge sawtooth peak — both at y=110 for board-pair alignment
+- **Buttons:** 3× TS-1187A tactile (SW20-22) mid-board row
+- **Connectors:** SAO 2×3 (J30, near U3 SAO pins for short routing), Dev/SWD 1×5 (J33, bottom row), UART 1×3 (J32, near U3 UART pins), microSD (J31, on B.Cu so card slot accessible from below)
+
+## Silkscreen — mecha Tokyo dance party
+- **Back:** Big bold mirrored DEFCON wordmark with a 24-ray sunburst, "// SILENT DISCO //" tagline, octagonal DC32 emblem with hex glyphs flanking, corner armor brackets, chevron frame stripes, diagonal hatch shading in the corners, dot-grid "LED rain" patterns, github URL, 0xC0FFEE / @LZH flavor.
+- **Front:** Subtle corner brackets and accent chevrons indicating data flow toward USB-C and audio jack. Refdes silk stays prominent for assembly.
+
+## Tooling
+
+Project-local tools under `defcon_badge/tools/`:
+- `render_pcb.sh` — SVG/PNG renders
+- `set_outline_v2.py` — sawtooth board outline generator (period, depth, IR-Y configurable)
+- `silk_mecha.py` — vector silk art generator (idempotent, tagged uuids)
+- `move_components.py`, `flip_footprint.py`, `place_lib_footprint.py` — placement legacy tools
+- `sync_nets.py`, `fix_pad_nets.py`, `patch_j10_nets.py` — net assignment tools
+- `sweep_offboard.py` — sweep all parts to staging grid
+
+Skills shipped to `~/.claude/skills/` for any future PCB work:
+- **pcb-placement** — `fp_meta.py` (full pad metadata after rotation), `place_at.py` (pad-relative anchor with 0.1mm grid snap), `align.py` (row/col/distribute), `ratsnest.py` (MST length quality metric), `whats_near.py` (describe board area), `check_courtyards.py`, `check_edge_components.py`, `rotate.py`
+- **pcb-views** — `render_all.sh` (6 standard angles), `render_area.py` (orthographic top-down zoom on any region)
+
+## Build
 ```sh
-make render    # SVG/PNG renders to renders/
-make fab       # refill zones → sync nets → patch J10 → gerbers/drill/pos/BOM
-make drc       # design rules check + zone refill
-make erc       # ERC summary
-make clean     # wipe generated artifacts
+make render   # SVG/PNG renders
+make fab      # gerbers + drill + pos + BOM to fab/
+make drc      # design rules check
+make erc      # ERC summary
+make clean    # wipe generated artifacts
 ```
 
 ## Known gaps
-- **No copper traces routed.** The board has all components placed, nets
-  declared, and GND/+3V3 zones filled, but no signal traces. Routing is
-  the user's call: install JRE + run freerouting on the exported DSN, or
-  hand-route in KiCad.
-- **Schematic has 71 ERC violations** (mostly off-grid endpoints,
-  unconnected wire stubs, missing PWR_FLAG markers). The PCB ignores
-  these but DRC/parity will complain. None change topology.
-- **Schematic J10 USB-C wiring bug.** The codegen wired every CC/VBUS/GND
-  pin to a single `/Power/CC2` net. `tools/patch_j10_nets.py` overrides
-  this in the PCB with the correct UFP mapping (4× GND, 4× VBUS, 2× CC2,
-  2× DP, 2× DM, 4× shield); the schematic still has the bug.
+- No copper routing yet — placement-complete, ratsnest visible but signals not yet wired (would need freerouting w/ JRE or hand routing in KiCad)
+- Schematic has 71 ERC violations (mostly off-grid endpoints and missing PWR_FLAG) — none change topology
+- J10 USB-C wiring patched in PCB via `patch_j10_nets.py` because the original schematic miswired CC/VBUS/GND all to one net
 
-## How this was built
-This entire layout pass was produced by an autonomous Claude Code loop
-running in `/loop` dynamic mode. Each iteration:
-1. Renders the PCB and reads the image.
-2. Picks the single highest-value fix.
-3. Applies it, commits with `iter(N): <summary>`, updates `STATE.md`.
-4. Schedules the next iteration via `ScheduleWakeup`.
-
-See `HARNESS.md` for the playbook and permissions, and `git log` for
-the iteration history.
+## License
+MIT — see LICENSE file.
