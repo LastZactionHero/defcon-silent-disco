@@ -18,14 +18,14 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 4 (2026-06-13)** — Pulled 13 decoupling/bulk caps (C1, C4, C5-C12,
-  C14, C16, C17) into a tight ring around U3 RP2040: 100n caps above/below
-  the QFN edge at y=102 and y=112, 1u caps further out at y=115, 10u bulk
-  caps along y=118. Whole cluster fits within x∈[132,154], y∈[102,118].
-- **iter 3 (2026-06-13)** — Moved MCU cluster to center: U3 RP2040 @ (143,107),
-  Y1 @ (137,107), C2/C3 flanking, U2 @ (149,107), R5 @ (149,111).
-- **iter 2 (2026-06-13)** — Built `tools/move_components.py`; moved H1-H4
-  mounting holes to corners of the 86×54 outline.
+- **iter 5 (2026-06-13)** — LED strip across the top edge: LED20-23 at y=92
+  with 20mm pitch starting at x=113, 10n bypass caps C60-C63 at y=96. Notes:
+  LED20 sits within ~1mm of TSOP4838 (U30 at 106,95) and LED21 crowds J33
+  Dev/SWD header at (125,95). Iter 6 relocates U30 + D20 + J33 + R3/R4/R30.
+- **iter 4 (2026-06-13)** — 13 decoupling/bulk caps in a ring around U3 RP2040
+  (100n at y=102/112, 1u at y=115, 10u at y=118).
+- **iter 3 (2026-06-13)** — MCU cluster to center: U3, Y1, U2, R5 placed.
+- **iter 2 (2026-06-13)** — `tools/move_components.py`; mounting holes to corners.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -41,10 +41,12 @@ power, MCU, audio, LEDs, connectors, switches.
       Use it to land J10 USB-C onto the PCB at the right edge.
 - [x] ~~Move 4 mounting holes to corners~~ (iter 2).
 - [x] ~~Move MCU cluster to center~~ (iter 3).
-- [x] ~~Pull decoupling caps in~~ (iter 4: 13 caps placed around U3).
-- [ ] Move LEDs across top edge of board: LED20-23 (SK9822-EC20 5×5mm)
-      with their 10n caps C60-C63. Suggest LED row at y=87, spacing 14mm
-      starting at x=115 → 115, 129, 143, 157. Caps tucked at y=89.
+- [x] ~~Pull decoupling caps in~~ (iter 4).
+- [x] ~~LED strip across top~~ (iter 5).
+- [ ] Relocate IR + SWD that crowd the LED row: U30 TSOP4838 + D20 IR LED
+      + R30 (current limit) → probably bottom-center near buttons; J33
+      Dev/SWD header → right edge between LEDs and microSD; R3/R4 27R
+      USB termination → next to U3 (between U3 and U2 ideally).
 - [ ] Move the LED strip (LED20-23 + caps C60-63) along the top edge,
       ~7mm below the top corner-arc clear zone.
 - [ ] Move audio subsystem (U20 TM8211, U21 FDA1308, C40-46, audio jack)
