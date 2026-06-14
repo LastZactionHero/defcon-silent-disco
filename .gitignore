@@ -1,0 +1,33 @@
+# KiCad autosave / lock / backup
+_autosave-*
+*-backups/
+*.bak
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*.kicad_prl
+*.lck
+*~
+
+# Pre-edit backups
+*.pre_*_backup
+
+# Build / output
+*.drl
+*.gbr
+*.gbrjob
+gerbers/
+fab/
+
+# DRC/ERC reports
+*-drc.rpt
+*-erc.rpt
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
