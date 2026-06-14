@@ -67,20 +67,20 @@ ZONES = {
     },
     # ─── AUDIO CHAIN: U20 → U21 → C45 → C46 → J20 ─────────────
     'audio_chain': {
-        # U20 + U21 SOIC-8 ICs (3.9×4.9mm). Spacing 7mm allows ~3mm gap.
-        'bbox': [135, 99, 144, 101],
+        # U20, U21 SOIC-8 — spacing must be ≥7.4mm for courtyards (cy 7.4mm wide).
+        'bbox': [134, 99, 145, 101],
         'topology': 'chain',
         'direction': 'right',
         'parts': ['U20', 'U21'],
     },
     'audio_caps_big': {
-        # C45/C46 electrolytics (6.6×6.6mm). Need >9mm anchor spacing.
-        # C45 at x=151 — gap of ~5mm to U21 (4mm right edge clears).
-        'bbox': [151, 99, 164, 101],
+        # C45/C46 cy width 9.6mm — anchors at x=153, 163 (10mm spacing,
+        # 0.4mm cy gap). C45 left edge at x=148.2 gives 0.5mm to U21 cy.
+        'bbox': [148, 99, 166, 101],
         'topology': 'fixed',
         'positions': {
-            'C45': [151.0, 100.0],
-            'C46': [161.0, 100.0],
+            'C45': [153.0, 100.0],
+            'C46': [163.0, 100.0],
         },
     },
     'audio_jack_position': {
@@ -132,9 +132,9 @@ ZONES = {
         'parts': ['C2', 'C3'],
     },
     'mcu_bulk_caps': {
-        # C1 (10u), C8 (1u +1V1), C10 (1u +3V3), C17 (10u) — to the LEFT
-        # of the U3 ring (clear of the y=116 ring bottom)
-        'bbox': [120, 110, 128, 113],
+        # C1 (10u), C8 (1u +1V1), C10 (1u +3V3), C17 (10u) — BELOW the
+        # U3 ring (ring bottom y=116, Y1 at y=121 — bulks fit at y=118).
+        'bbox': [128, 118, 145, 119],
         'topology': 'row',
         'parts': ['C1', 'C8', 'C10', 'C17'],
     },
@@ -174,7 +174,8 @@ ZONES = {
         'parts': ['U10', 'U11'],
     },
     'power_caps': {
-        'bbox': [118, 121, 132, 122],
+        # Above U10/U11 with 2mm gap (U10 cy top = 121.8)
+        'bbox': [118, 119, 132, 120],
         'topology': 'row',
         'parts': ['C20', 'C22', 'C23'],
     },
@@ -184,10 +185,19 @@ ZONES = {
         'parts': ['R12', 'R13', 'R14', 'R15'],
     },
     'usb_cc_pulldowns': {
-        # R10, R11 — 5.1k CC pulldowns next to USB-C
-        'bbox': [148, 132, 152, 134],
+        # R10, R11 — 5.1k CC pulldowns. Clear of J10 cy (right=148.25).
+        'bbox': [150, 132, 154, 134],
         'topology': 'row',
         'parts': ['R10', 'R11'],
+    },
+    'ir_rx_support': {
+        # R2, C71 — TSOP4838 pullup + filter cap, right of U30
+        'bbox': [112, 112, 114, 115],
+        'topology': 'fixed',
+        'positions': {
+            'R2': [112.0, 112.0],
+            'C71': [112.0, 114.0],
+        },
     },
     # ─── BACK SIDE: battery + microSD ─────────────────────────
     'back_battery': {
