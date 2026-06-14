@@ -18,17 +18,15 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 21 (2026-06-14)** — Front-side polish. Removed F.Fab from the
-  top render (assembly notes shouldn't show in the manufactured look)
-  and added --subtract-soldermask so exposed copper shows pink. Added
-  small chevrons left and right of the front DEFCON wordmark
-  (`>> DEFCON <<`). Moved "PRESS A FOR PARTY" silk to (155,133) to
-  clear the USB-C body. Top render now reads as a real fab board.
-- **iter 20 (2026-06-14)** — Back-side silk art: chevrons, accent rules,
-  corner brackets framing the DEFCON wordmark.
+- **iter 22 (2026-06-14)** — Wrote top-level README.md with PCB renders
+  inline, spec, subsystem map, tooling inventory, build pipeline,
+  known gaps. Copied current top/bottom renders to docs/ for the
+  README to reference (renders/ stays gitignored).
+- **iter 21 (2026-06-14)** — Front-side polish: --subtract-soldermask,
+  drop F.Fab, DEFCON chevrons, repositioned "PRESS A FOR PARTY".
+- **iter 20 (2026-06-14)** — Back-side silk art (chevrons, accents).
 - **iter 19 (2026-06-14)** — Flipped J31 microSD to B.Cu.
 - **iter 18 (2026-06-14)** — Makefile + one-command fab pipeline.
-- **iter 17 (2026-06-14)** — Wired J10 USB-C pads with UFP mapping.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
