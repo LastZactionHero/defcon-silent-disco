@@ -20638,6 +20638,226 @@
 		)
 	)
 	(gr_line
+		(start 105 92)
+		(end 107 95)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "348f19ca-f652-4371-8b58-16cd06259ee7")
+	)
+	(gr_line
+		(start 106 85)
+		(end 106 89)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "431c47bb-a092-48c9-a78d-b61b9047e1e4")
+	)
+	(gr_line
+		(start 106 85)
+		(end 110 85)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "1bef204e-fc5e-418f-944c-29629841aae6")
+	)
+	(gr_line
+		(start 106 129)
+		(end 106 125)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "8c36762f-9236-4bda-ace6-30363cf91c90")
+	)
+	(gr_line
+		(start 106 129)
+		(end 110 129)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "4c989aaf-2f6b-4cf0-951e-47a5696b1c69")
+	)
+	(gr_line
+		(start 107 95)
+		(end 105 98)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "437dc08d-549d-403c-8fe5-b860223e6821")
+	)
+	(gr_line
+		(start 109 92)
+		(end 111 95)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "6d7a441d-f5cf-4112-84e7-694105b27fed")
+	)
+	(gr_line
+		(start 110 87)
+		(end 176 87)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "7dbeef66-cec2-443b-8c93-fbff29f78310")
+	)
+	(gr_line
+		(start 110 108)
+		(end 176 108)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "27b0481a-28b3-4a0d-a2b2-7877f3ce0ac6")
+	)
+	(gr_line
+		(start 111 95)
+		(end 109 98)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "2424c8f0-4ba1-4d27-9fa1-59c4888d9388")
+	)
+	(gr_line
+		(start 113 92)
+		(end 115 95)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "46fc2146-5c80-49f6-b72e-843eefea57fc")
+	)
+	(gr_line
+		(start 115 95)
+		(end 113 98)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "6c481f1c-d9e5-4492-b6d4-5de9ea7f4dea")
+	)
+	(gr_line
+		(start 171 95)
+		(end 173 98)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "5afbf3a0-102e-4376-bdeb-1d1687e334cd")
+	)
+	(gr_line
+		(start 173 92)
+		(end 171 95)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "ce10ccb9-47a5-472b-9fcc-dba072203447")
+	)
+	(gr_line
+		(start 175 95)
+		(end 177 98)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "4f028514-ceb2-4bd5-a072-8ed18365e775")
+	)
+	(gr_line
+		(start 177 92)
+		(end 175 95)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "04277fd1-f7eb-4369-b3ca-da13d49f42ea")
+	)
+	(gr_line
+		(start 179 95)
+		(end 181 98)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "24c86e02-58ba-40a4-becc-12375b427ee1")
+	)
+	(gr_line
+		(start 180 85)
+		(end 180 89)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "e7ff1203-fd61-4a92-9d1d-0debe9754a2c")
+	)
+	(gr_line
+		(start 180 85)
+		(end 184 85)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "995c366a-f696-4eb7-aecb-e114e7b6965b")
+	)
+	(gr_line
+		(start 180 129)
+		(end 180 125)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "873c30b5-a33f-44b2-ae2b-b91ac96622a2")
+	)
+	(gr_line
+		(start 180 129)
+		(end 184 129)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "e175387a-0717-43cf-8c47-f791fd424510")
+	)
+	(gr_line
+		(start 181 92)
+		(end 179 95)
+		(stroke
+			(width 0.25)
+			(type default)
+		)
+		(layer "B.SilkS")
+		(uuid "9b41888b-9f72-4846-a50e-cfc92cc920c6")
+	)
+	(gr_line
 		(start 100 83)
 		(end 100 131)
 		(stroke
@@ -20789,7 +21009,7 @@
 		)
 	)
 	(gr_text "github.com/LastZactionHero/defcon-silent-disco"
-		(at 117 127 0)
+		(at 117 87 0)
 		(layer "B.SilkS")
 		(uuid "b1a619e3-7e4e-44c7-949e-f204728801d8")
 		(effects
@@ -20801,7 +21021,7 @@
 		)
 	)
 	(gr_text "DC32 BADGE by LZH"
-		(at 130 120 0)
+		(at 130 131 0)
 		(layer "B.SilkS")
 		(uuid "6b222aba-3ebf-4b4e-8cf2-439a3b472e32")
 		(effects
@@ -20813,7 +21033,7 @@
 		)
 	)
 	(gr_text "// SILENT DISCO //"
-		(at 128 111 0)
+		(at 128 100 0)
 		(layer "B.SilkS")
 		(uuid "2d16deeb-1e01-4585-8bf2-343b30c7e9f1")
 		(effects
@@ -20825,7 +21045,7 @@
 		)
 	)
 	(gr_text "DEFCON"
-		(at 143 104 0)
+		(at 143 95 0)
 		(layer "B.SilkS")
 		(uuid "f9afa552-014c-4242-88f9-16aff043c1f0")
 		(effects
