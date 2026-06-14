@@ -5727,7 +5727,7 @@
 	(footprint "Connector_PinHeader_2.54mm:PinHeader_2x03_P2.54mm_Vertical"
 		(layer "F.Cu")
 		(uuid "0af44f73-5c70-496d-a260-bf33272c261d")
-		(at 108.000 118.000 0)
+		(at 158.000 100.000 0)
 		(descr "Through hole straight pin header, 2x03, 2.54mm pitch, double rows")
 		(tags "Through hole pin header THT 2x03 2.54mm double row")
 		(property "Reference" "J30"
@@ -6218,7 +6218,7 @@
 	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical"
 		(layer "F.Cu")
 		(uuid "0f062b03-10bd-406d-990f-9dc716d834e3")
-		(at 105.000 127.000 0)
+		(at 117.000 116.000 0)
 		(descr "Through hole straight pin header, 1x03, 2.54mm pitch, single row")
 		(tags "Through hole pin header THT 1x03 2.54mm single row")
 		(property "Reference" "J32"
@@ -9205,7 +9205,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "46f4311a-43f0-4273-822f-719f4f6fad11")
-		(at 113.500 114.000 0)
+		(at 153.500 100.000 0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R40"
@@ -17481,7 +17481,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "d072c1d9-9197-4ecc-960e-03035d12af80")
-		(at 113.500 117.000 0)
+		(at 153.500 103.000 0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R41"
