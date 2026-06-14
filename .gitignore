@@ -25,6 +25,9 @@ fab/
 # Renders (committed periodically with `git add -f renders/assembly.png`)
 renders/
 
+# Claude Code session state
+.claude/
+
 # Python
 __pycache__/
 *.pyc
