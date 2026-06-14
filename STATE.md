@@ -18,14 +18,15 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 5 (2026-06-13)** — LED strip across the top edge: LED20-23 at y=92
-  with 20mm pitch starting at x=113, 10n bypass caps C60-C63 at y=96. Notes:
-  LED20 sits within ~1mm of TSOP4838 (U30 at 106,95) and LED21 crowds J33
-  Dev/SWD header at (125,95). Iter 6 relocates U30 + D20 + J33 + R3/R4/R30.
-- **iter 4 (2026-06-13)** — 13 decoupling/bulk caps in a ring around U3 RP2040
-  (100n at y=102/112, 1u at y=115, 10u at y=118).
-- **iter 3 (2026-06-13)** — MCU cluster to center: U3, Y1, U2, R5 placed.
-- **iter 2 (2026-06-13)** — `tools/move_components.py`; mounting holes to corners.
+- **iter 6 (2026-06-13)** — Cleared LED-row collisions. U30 TSOP4838 IR
+  receiver + D20 IR LED + R30 to bottom center (y=127). J33 Dev/SWD 1x05
+  header to right edge (180,115). R3/R4 27R USB termination tucked left
+  of Y1 crystal at x=133. LED row now visually clean across the top.
+- **iter 5 (2026-06-13)** — LED strip LED20-23 at top edge y=92, 10n bypass
+  caps C60-C63 at y=96. (LED20/21 had collisions resolved in iter 6.)
+- **iter 4 (2026-06-13)** — 13 decoupling/bulk caps in a ring around U3.
+- **iter 3 (2026-06-13)** — MCU cluster to center.
+- **iter 2 (2026-06-13)** — `move_components.py`; mounting holes to corners.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -43,10 +44,15 @@ power, MCU, audio, LEDs, connectors, switches.
 - [x] ~~Move MCU cluster to center~~ (iter 3).
 - [x] ~~Pull decoupling caps in~~ (iter 4).
 - [x] ~~LED strip across top~~ (iter 5).
-- [ ] Relocate IR + SWD that crowd the LED row: U30 TSOP4838 + D20 IR LED
-      + R30 (current limit) → probably bottom-center near buttons; J33
-      Dev/SWD header → right edge between LEDs and microSD; R3/R4 27R
-      USB termination → next to U3 (between U3 and U2 ideally).
+- [x] ~~Relocate IR + SWD + 27R~~ (iter 6).
+- [ ] Place audio subsystem in bottom-left quadrant. Components: U20 TM8211
+      DAC (SOIC-8), U21 FDA1308 amp (SOIC-8), C40 100n, C41 10u, C42 10u,
+      C43 10u, C44 10u, C45 220u elcap, C46 220u elcap (AMP_OUTL/R coupling
+      to jack), R22-R28 (gain/feedback resistors). Suggest:
+        U20 @ (110, 115), U21 @ (110, 122), 220u caps row at y=128,
+        feedback Rs at y=119, 100n at y=110.
+- [ ] Audio jack J32 (PJ398SM vertical 3.5mm): bottom-left corner area
+      around (107, 130). Or replace with horizontal SMD jack later.
 - [ ] Move the LED strip (LED20-23 + caps C60-63) along the top edge,
       ~7mm below the top corner-arc clear zone.
 - [ ] Move audio subsystem (U20 TM8211, U21 FDA1308, C40-46, audio jack)
