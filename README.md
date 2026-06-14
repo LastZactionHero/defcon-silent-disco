@@ -8,7 +8,7 @@ Designed iteratively by an autonomous Claude Code loop (see HARNESS.md).
 
 ### 3D photo-real renders
 
-![Iso top](docs/render_3d_iso.png)
+![Hero](docs/hero.png)
 
 | Front | Back |
 |---|---|
