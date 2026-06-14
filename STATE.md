@@ -18,17 +18,14 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
+- **iter 10 (2026-06-13)** — J30 SAO 2x3 connector at (163, 100) tucked between
+  LED22 and LED23 on the top edge. R40/R41 4.7k I2C pullups flanking at
+  x=155 and x=170. Only off-board component now is J31 microSD (too big
+  for any remaining front-side slot at ~12×11mm).
 - **iter 9 (2026-06-13)** — Bottom-row buttons + IR relocation + UART header.
-  SW20/SW21/SW22 TS-1187A buttons across bottom at x=122/143/164 y=128.
-  U30 TSOP4838 + D20 IR LED + R30 moved to LEFT EDGE column at x=105
-  (y=100/107/113) — frees the bottom-center for buttons and puts IR
-  emitter/receiver in a clear sight line off the left edge. J32 UART
-  debug 1x03 vertical at (105, 122).
-- **iter 8 (2026-06-13)** — Power subsystem to right side
-  (J11/U10/U11/SW1 + passives).
+- **iter 8 (2026-06-13)** — Power subsystem to right side.
 - **iter 7 (2026-06-13)** — Audio subsystem bottom-left quadrant.
 - **iter 6 (2026-06-13)** — Cleared LED-row collisions.
-- **iter 5 (2026-06-13)** — LED strip across top edge.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -50,13 +47,12 @@ power, MCU, audio, LEDs, connectors, switches.
 - [x] ~~Place audio subsystem~~ (iter 7).
 - [x] ~~Place power subsystem~~ (iter 8).
 - [x] ~~Buttons + IR + UART~~ (iter 9).
-- [ ] J30 SAO 2x3 connector + R40/R41 4.7k I2C pullups. Top-right area
-      between LED23 (173,92) and J11 (180,100) is tight; consider tucking
-      J30 below the LED row at ~(165, 100) and pullups at (160, 100).
-- [ ] J31 microSD: 12×11mm Hirose DM3D-SF. No clean front-side slot
-      remains; suggest move to B.Cu (back) somewhere below the MCU.
-      `move_components.py` doesn't currently change layer — extend it or
-      write a one-off layer flip step.
+- [x] ~~SAO + I2C pullups~~ (iter 10).
+- [ ] J31 microSD: flip to B.Cu (back side), place below the MCU at
+      roughly (143, 115) on B.Cu. Need to extend tools/move_components.py
+      with a `"side": "B"` field that flips the footprint via KiCad's
+      layer convention (top-level layer + recursive F.*→B.* layer swap +
+      mirror-X on (at ...) sub-positions).
 - [ ] Land J10 USB-C: build `tools/place_footprint_from_lib.py` that
       reads a stock .kicad_mod, wraps it as a (footprint ...) block with
       a refdes + position, and appends to the PCB. Skip net assignments
