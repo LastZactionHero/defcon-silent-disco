@@ -75,11 +75,13 @@ if [[ "$QUICK" -eq 1 ]]; then
 fi
 
 echo "Rendering top view..."
-plot top "Edge.Cuts,F.Cu,F.Silkscreen,F.Mask,F.Paste,F.Fab"
+# Manufactured top look: copper + silk + soldermask (mask subtracted so
+# exposed copper shows). No F.Fab — that's assembly notes for humans.
+plot top "Edge.Cuts,F.Cu,F.Silkscreen,F.Mask" --subtract-soldermask
 png top
 
 echo "Rendering bottom view..."
-plot bottom "Edge.Cuts,B.Cu,B.Silkscreen,B.Mask,B.Fab" --mirror
+plot bottom "Edge.Cuts,B.Cu,B.Silkscreen,B.Mask" --subtract-soldermask --mirror
 png bottom
 
 if [[ "$ROUTING" -eq 1 ]]; then

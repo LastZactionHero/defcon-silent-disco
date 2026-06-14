@@ -20638,6 +20638,86 @@
 		)
 	)
 	(gr_line
+		(start 107 86)
+		(end 108 87)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "92e957ec-6919-4962-8dd5-6e149bb2de5b")
+	)
+	(gr_line
+		(start 108 87)
+		(end 107 88)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "cd1c1182-04d4-4bd6-b21f-2b5a197a9acb")
+	)
+	(gr_line
+		(start 109 86)
+		(end 110 87)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "3927521a-cd2f-48e4-ace5-0bbf109030ec")
+	)
+	(gr_line
+		(start 110 87)
+		(end 109 88)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "a588715a-efd2-4d4a-ba02-126998ff808a")
+	)
+	(gr_line
+		(start 123 87)
+		(end 124 88)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "ac700115-a0cf-4358-8b2d-fd0b24e6eea4")
+	)
+	(gr_line
+		(start 124 86)
+		(end 123 87)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "ccb0de41-27e0-4318-b81b-666d12eede3e")
+	)
+	(gr_line
+		(start 125 87)
+		(end 126 88)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "c8d5028d-1d9c-45aa-9d18-bccc4636ba63")
+	)
+	(gr_line
+		(start 126 86)
+		(end 125 87)
+		(stroke
+			(width 0.2)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "fddd1a5e-81ca-4268-9e16-10ca9560c7d3")
+	)
+	(gr_line
 		(start 105 92)
 		(end 107 95)
 		(stroke
@@ -20953,7 +21033,7 @@
 		)
 	)
 	(gr_text "PRESS A FOR PARTY"
-		(at 125 133 0)
+		(at 155 133 0)
 		(layer "F.SilkS")
 		(uuid "a4c23a31-2de7-4d67-9b72-0d8703d4da7d")
 		(effects

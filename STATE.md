@@ -18,18 +18,17 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 20 (2026-06-14)** — Back-side silk art pass. Repositioned text
-  to clear the microSD footprint: DEFCON wordmark @ (143,95), tagline
-  @ (128,100), DC32 BADGE credit moved to bottom @ (130,131), github
-  URL moved to top edge @ (117,87). Added 22 decorative gr_lines:
-  three chevrons left + three chevrons right of DEFCON, horizontal
-  accent rules above (y=87) and below (y=108), corner brackets at all
-  four corners. Back render now looks like a finished badge.
-- **iter 19 (2026-06-14)** — Flipped J31 microSD to B.Cu via new
-  tools/flip_footprint.py (proper F.*↔B.* layer swap).
-- **iter 18 (2026-06-14)** — Makefile + one-command `make fab` pipeline.
-- **iter 17 (2026-06-14)** — Wired J10 USB-C pads with correct UFP map.
-- **iter 16 (2026-06-14)** — Built sync_nets.py + GND/+3V3 inner zones.
+- **iter 21 (2026-06-14)** — Front-side polish. Removed F.Fab from the
+  top render (assembly notes shouldn't show in the manufactured look)
+  and added --subtract-soldermask so exposed copper shows pink. Added
+  small chevrons left and right of the front DEFCON wordmark
+  (`>> DEFCON <<`). Moved "PRESS A FOR PARTY" silk to (155,133) to
+  clear the USB-C body. Top render now reads as a real fab board.
+- **iter 20 (2026-06-14)** — Back-side silk art: chevrons, accent rules,
+  corner brackets framing the DEFCON wordmark.
+- **iter 19 (2026-06-14)** — Flipped J31 microSD to B.Cu.
+- **iter 18 (2026-06-14)** — Makefile + one-command fab pipeline.
+- **iter 17 (2026-06-14)** — Wired J10 USB-C pads with UFP mapping.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
