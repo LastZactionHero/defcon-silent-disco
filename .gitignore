@@ -11,12 +11,11 @@ _autosave-*
 # Pre-edit backups
 *.pre_*_backup
 
-# Build / output
+# Build / output (gerbers regenerable; track only README + BOM + pos)
 *.drl
 *.gbr
 *.gbrjob
-gerbers/
-fab/
+fab/gerbers/
 
 # DRC/ERC reports
 *-drc.rpt

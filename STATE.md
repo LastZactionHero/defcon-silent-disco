@@ -18,18 +18,18 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 13 (2026-06-14)** — Silk reorganization. Removed front-center
-  DEFCON wordmark (was overlapping U3). Added big bold mirrored DEFCON
-  on B.SilkS (back side) centered at (143,104) size 5 — reads correctly
-  from the back via `(justify mirror)` on the effects clause. Added
-  "// SILENT DISCO //", "DC32 BADGE by LZH", and a github URL on the back.
-  Back-side render now shows a clean DEFCON wordmark identity card.
-  Front retains a small "DEFCON" above LED20 + flavor glyphs.
-- **iter 12 (2026-06-13)** — place_lib_footprint.py + landed J10 USB-C
-  at bottom edge between SW20 and SW21.
+- **iter 14 (2026-06-14)** — Fab pass + critical bug fix: all 65 footprints
+  were silently on B.Cu (back side) because the original code generator
+  set `(layer "B.Cu")` at the footprint top level. Flipped all to F.Cu
+  via a sed pass. Exported gerbers (24 files including 4 copper layers),
+  Excellon drill, pos file, and grouped BOM with MPN/LCSC to `fab/`.
+  Wrote `fab/README.md` documenting the package, caveats, and remaining
+  gaps. Board is now mid-fab-ready: parts placed on the correct side,
+  silk done, but no copper routing or USB-C net assignment yet.
+- **iter 13 (2026-06-14)** — Silk reorg: big mirrored DEFCON on B.SilkS.
+- **iter 12 (2026-06-13)** — Placed J10 USB-C, built place_lib_footprint.py.
 - **iter 11 (2026-06-13)** — DEFCON silk identity (first pass).
 - **iter 10 (2026-06-13)** — J30 SAO + I2C pullups.
-- **iter 9 (2026-06-13)** — Bottom buttons + IR to left edge + UART.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -54,7 +54,8 @@ power, MCU, audio, LEDs, connectors, switches.
 - [x] ~~SAO + I2C pullups~~ (iter 10).
 - [x] ~~DEFCON silk identity~~ (iter 11).
 - [x] ~~Land J10 USB-C~~ (iter 12).
-- [x] ~~Silk reorganization~~ (iter 13: clean front, big DEFCON on back).
+- [x] ~~Silk reorganization~~ (iter 13).
+- [x] ~~Components to F.Cu, fab pass exported~~ (iter 14).
 - [ ] J31 microSD: flip to B.Cu (back side). Watch for collision with
       the big "DEFCON" wordmark — place microSD in the lower-right back
       area where it won't obstruct the silk.
