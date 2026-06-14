@@ -22435,7 +22435,7 @@
 		(generator "pcbnew")
 		(generator_version "10.0")
 		(layer "F.Cu")
-		(at 169.700 88.200 90)
+		(at 169.700 85.000 180)
 		(property "Reference" "J20"
 			(at 0.175 -9.635 0)
 			(layer "F.SilkS")
