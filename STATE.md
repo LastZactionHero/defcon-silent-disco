@@ -18,17 +18,17 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 8 (2026-06-13)** — Power subsystem to right side. J11 JST-PH battery
-  at top-right (180,100), TP4056 charger U10 at (165,114), ME6211 LDO U11
-  at (172,114), SW1 SS-12D00 power slide switch at (180,127) bottom-right.
-  Charge/sense passives in cluster: R12 2.4k PROG, R13/R14/R15 100k,
-  C20/C21/C22/C23 (1u/10u/1u/1u), R10/R11 5.1k CC pulldowns near future
-  USB-C site. Right half of board now densely populated.
-- **iter 7 (2026-06-13)** — Audio subsystem in bottom-left quadrant
-  (U20 TM8211 + U21 FDA1308 + caps + Rs + J20 audio jack).
+- **iter 9 (2026-06-13)** — Bottom-row buttons + IR relocation + UART header.
+  SW20/SW21/SW22 TS-1187A buttons across bottom at x=122/143/164 y=128.
+  U30 TSOP4838 + D20 IR LED + R30 moved to LEFT EDGE column at x=105
+  (y=100/107/113) — frees the bottom-center for buttons and puts IR
+  emitter/receiver in a clear sight line off the left edge. J32 UART
+  debug 1x03 vertical at (105, 122).
+- **iter 8 (2026-06-13)** — Power subsystem to right side
+  (J11/U10/U11/SW1 + passives).
+- **iter 7 (2026-06-13)** — Audio subsystem bottom-left quadrant.
 - **iter 6 (2026-06-13)** — Cleared LED-row collisions.
 - **iter 5 (2026-06-13)** — LED strip across top edge.
-- **iter 4 (2026-06-13)** — Decoupling cap ring around RP2040.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -49,11 +49,14 @@ power, MCU, audio, LEDs, connectors, switches.
 - [x] ~~Relocate IR + SWD + 27R~~ (iter 6).
 - [x] ~~Place audio subsystem~~ (iter 7).
 - [x] ~~Place power subsystem~~ (iter 8).
-- [ ] Remaining off-board parts: SW20/21/22 push buttons (~6mm, TS-1187A)
-      → bottom edge of board, x ≈ 122/138/154, y ≈ 130. J31 microSD →
-      right edge or left edge interior, hard to fit at this density.
-      J30 SAO 2x3 → ?, J32 UART debug 1x03 → bottom-right somewhere,
-      R40/R41 4.7k I2C pullups for SAO.
+- [x] ~~Buttons + IR + UART~~ (iter 9).
+- [ ] J30 SAO 2x3 connector + R40/R41 4.7k I2C pullups. Top-right area
+      between LED23 (173,92) and J11 (180,100) is tight; consider tucking
+      J30 below the LED row at ~(165, 100) and pullups at (160, 100).
+- [ ] J31 microSD: 12×11mm Hirose DM3D-SF. No clean front-side slot
+      remains; suggest move to B.Cu (back) somewhere below the MCU.
+      `move_components.py` doesn't currently change layer — extend it or
+      write a one-off layer flip step.
 - [ ] Land J10 USB-C: build `tools/place_footprint_from_lib.py` that
       reads a stock .kicad_mod, wraps it as a (footprint ...) block with
       a refdes + position, and appends to the PCB. Skip net assignments
