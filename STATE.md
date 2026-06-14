@@ -18,13 +18,17 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
+- **iter 2 (2026-06-13)** — Built `tools/move_components.py` (reads a JSON
+  refdes→{x,y,rot} map, rewrites footprint `(at ...)` lines). Used it to
+  move H1-H4 mounting holes to the 4 corners of the new 86×54 outline
+  (3mm margin). Render confirms holes are at the rounded corners.
+  The script is generic; future iters will use it for all subsystem placement.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
   to use page-size-mode 1 so out-of-bounds components are visible.
   USB-C J10 confirmed present in schematic (Power.kicad_sch) but never
-  transferred to PCB — needs a sync step. Realized I was wrong in iter 0
-  baseline: USB-C is designed, just not laid out.
+  transferred to PCB — needs a sync step.
 
 ## Open TODO (you don't have to do these in order, just pick the highest value next)
 - [x] ~~USB-C in schematic~~ already there as J10 (USB4085).
@@ -32,8 +36,15 @@ power, MCU, audio, LEDs, connectors, switches.
 - [ ] Build `tools/sync_pcb_from_sch.py`: export netlist from kicad-cli,
       diff vs PCB footprints, insert missing footprints with refdes + nets.
       Use it to land J10 USB-C onto the PCB at the right edge.
-- [ ] Move the 4 mounting holes to the corners of the new 86×54 outline
-      (currently still at the old wide corners).
+- [x] ~~Move 4 mounting holes to corners~~ (iter 2).
+- [ ] Move the MCU cluster (U3 RP2040, U2 flash, Y1 crystal + their caps)
+      to the center of the new outline. Center: x=143, y=107.
+- [ ] Move the LED strip (LED20-23 + caps C60-63) along the top edge,
+      ~7mm below the top corner-arc clear zone.
+- [ ] Move audio subsystem (U20 TM8211, U21 FDA1308, C40-46, audio jack)
+      to the bottom-left quadrant.
+- [ ] Move power subsystem (U10 TP4056, U11 ME6211C33M5G, J11 JST_PH,
+      caps C20-23, R10-15) to the right edge.
 - [ ] Fix ERC label_dangling errors on root sheet (likely hierarchical labels
       that don't match net names on subsheets).
 - [ ] Add PWR_FLAG symbols for any net showing `power_pin_not_driven`.

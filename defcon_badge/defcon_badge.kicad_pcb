@@ -4302,7 +4302,7 @@
 	(footprint "MountingHole:MountingHole_2.7mm_M2.5"
 		(layer "F.Cu")
 		(uuid "00000000-0000-0000-0000-00005eff823f")
-		(at 140 60)
+		(at 183.000 83.000)
 		(descr "Mounting Hole 2.7mm, no annular, M2.5")
 		(tags "mounting hole 2.7mm no annular m2.5")
 		(property "Reference" "H2"
@@ -4611,7 +4611,7 @@
 	(footprint "MountingHole:MountingHole_2.7mm_M2.5"
 		(layer "F.Cu")
 		(uuid "00000000-0000-0000-0000-00005eff8335")
-		(at 60 200)
+		(at 103.000 131.000)
 		(descr "Mounting Hole 2.7mm, no annular, M2.5")
 		(tags "mounting hole 2.7mm no annular m2.5")
 		(property "Reference" "H3"
@@ -4920,7 +4920,7 @@
 	(footprint "MountingHole:MountingHole_2.7mm_M2.5"
 		(layer "F.Cu")
 		(uuid "00000000-0000-0000-0000-00005f0885f4")
-		(at 60 60)
+		(at 103.000 83.000)
 		(descr "Mounting Hole 2.7mm, no annular, M2.5")
 		(tags "mounting hole 2.7mm no annular m2.5")
 		(property "Reference" "H1"
@@ -5014,7 +5014,7 @@
 	(footprint "MountingHole:MountingHole_2.7mm_M2.5"
 		(layer "F.Cu")
 		(uuid "00000000-0000-0000-0000-00005f088646")
-		(at 140 200)
+		(at 183.000 131.000)
 		(descr "Mounting Hole 2.7mm, no annular, M2.5")
 		(tags "mounting hole 2.7mm no annular m2.5")
 		(property "Reference" "H4"
