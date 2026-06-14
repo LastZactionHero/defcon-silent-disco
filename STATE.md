@@ -18,14 +18,19 @@ power, MCU, audio, LEDs, connectors, switches.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-- **iter 10 (2026-06-13)** — J30 SAO 2x3 connector at (163, 100) tucked between
-  LED22 and LED23 on the top edge. R40/R41 4.7k I2C pullups flanking at
-  x=155 and x=170. Only off-board component now is J31 microSD (too big
-  for any remaining front-side slot at ~12×11mm).
-- **iter 9 (2026-06-13)** — Bottom-row buttons + IR relocation + UART header.
+- **iter 11 (2026-06-13)** — DEFCON silk identity. 7 gr_text elements
+  added: "DEFCON" wordmark (size 2.5 bold) over MCU, "// SILENT DISCO //"
+  tagline above LED row, "[ DC32 ]" label, "0xC0FFEE" and "@LZH" corner
+  glyphs, "PRESS A FOR PARTY" bottom tagline, "DC SILENT DISCO BADGE v1.0"
+  on B.SilkS centered. Hit a layer-name gotcha: gr_text needs canonical
+  "F.SilkS" / "B.SilkS" (not the user alias "F.Silkscreen"). Some silk
+  overlap with component refdes silk — visible but acceptable; iter 12+
+  can clean up if needed.
+- **iter 10 (2026-06-13)** — J30 SAO 2x3 + R40/R41 I2C pullups between
+  LED22/LED23 on top edge.
+- **iter 9 (2026-06-13)** — Bottom-row buttons + IR to left edge + UART.
 - **iter 8 (2026-06-13)** — Power subsystem to right side.
 - **iter 7 (2026-06-13)** — Audio subsystem bottom-left quadrant.
-- **iter 6 (2026-06-13)** — Cleared LED-row collisions.
 - **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
   at origin (100, 80). All 79 footprints remained in place — most now sit
   outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
@@ -48,11 +53,17 @@ power, MCU, audio, LEDs, connectors, switches.
 - [x] ~~Place power subsystem~~ (iter 8).
 - [x] ~~Buttons + IR + UART~~ (iter 9).
 - [x] ~~SAO + I2C pullups~~ (iter 10).
-- [ ] J31 microSD: flip to B.Cu (back side), place below the MCU at
-      roughly (143, 115) on B.Cu. Need to extend tools/move_components.py
-      with a `"side": "B"` field that flips the footprint via KiCad's
-      layer convention (top-level layer + recursive F.*→B.* layer swap +
-      mirror-X on (at ...) sub-positions).
+- [x] ~~DEFCON silk identity~~ (iter 11).
+- [ ] J31 microSD: flip to B.Cu (back side). Need flip tool. Until then,
+      microSD is the only off-board part.
+- [ ] Land J10 USB-C on PCB (still off — sync tool needed).
+- [ ] Add silk vector art (a glyph or small skull) — bigger visual win
+      than text, no DC-trademark issues. Could use gr_poly or gr_line.
+- [ ] Address 71 ERC errors (label_dangling, power_pin_not_driven, etc).
+      Largely schematic-level fixes — may need PWR_FLAG symbols added to
+      sheets via Python edits to *.kicad_sch.
+- [ ] Fab files: export gerbers + drills via `kicad-cli pcb export gerbers
+      / drill` to `fab/` once placement is settled.
 - [ ] Land J10 USB-C: build `tools/place_footprint_from_lib.py` that
       reads a stock .kicad_mod, wraps it as a (footprint ...) block with
       a refdes + position, and appends to the PCB. Skip net assignments
