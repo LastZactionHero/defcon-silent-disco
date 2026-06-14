@@ -1,9 +1,11 @@
 # Iteration state
 
 ## Current focus
-**Phase 1 — basic correctness.** Add the USB-C connector that's missing, fix
-the worst ERC/parity errors, and shrink the board outline to credit-card size.
-Placement aesthetics come after correctness.
+**Phase 1 — basic correctness.** Outline shrunk (iter 1). Next: sync J10 USB-C
+from schematic to PCB (needs a new tool — `tools/sync_pcb_from_sch.py` that
+exports the netlist and adds any missing footprints to the PCB). Then begin
+moving subsystems inside the new outline (probably one subsystem per iter):
+power, MCU, audio, LEDs, connectors, switches.
 
 ## Baseline (iter 0, 2026-06-13)
 - ERC: 71 violations (58 root sheet, then per-subsheet errors)
@@ -16,7 +18,13 @@ Placement aesthetics come after correctness.
 - microSD: in middle of board, has keepout violation
 
 ## Last 5 iterations
-(empty — this is iter 0)
+- **iter 1 (2026-06-13)** — Set Edge.Cuts to 86×54mm rounded credit-card outline
+  at origin (100, 80). All 79 footprints remained in place — most now sit
+  outside the new outline; iter 2+ will move them in. Updated render_pcb.sh
+  to use page-size-mode 1 so out-of-bounds components are visible.
+  USB-C J10 confirmed present in schematic (Power.kicad_sch) but never
+  transferred to PCB — needs a sync step. Realized I was wrong in iter 0
+  baseline: USB-C is designed, just not laid out.
 
 ## Open TODO (you don't have to do these in order, just pick the highest value next)
 - [ ] Add USB-C receptacle (GCT USB4085 footprint exists in stock) to Power schematic.

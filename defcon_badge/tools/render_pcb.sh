@@ -42,10 +42,11 @@ plot() {
   local name="$1"; shift
   local layers="$1"; shift
   local extra=("$@")
+  # page-size-mode 1 = current page size (shows components outside the board outline)
   kicad-cli pcb export svg \
     --output "$OUT/$name.svg" \
     --layers "$layers" \
-    --page-size-mode 2 \
+    --page-size-mode 1 \
     --exclude-drawing-sheet \
     --mode-single \
     "${extra[@]}" \
