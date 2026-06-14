@@ -6,7 +6,19 @@ Designed iteratively by an autonomous Claude Code loop (see HARNESS.md).
 
 ## Current state
 
-![Top](docs/top.png) ![Bottom](docs/bottom.png)
+### 3D photo-real renders
+
+![Iso top](docs/render_3d_iso.png)
+
+| Front | Back |
+|---|---|
+| ![Top](docs/render_3d_top.png) | ![Bottom](docs/render_3d_bottom.png) |
+
+### Plan view (mfg surface)
+
+| Front | Back |
+|---|---|
+| ![Top plan](docs/top.png) | ![Bottom plan](docs/bottom.png) |
 
 **Spec at a glance**
 - Form factor: **86 × 54 mm** (ID-1 / credit-card), 3 mm rounded corners
