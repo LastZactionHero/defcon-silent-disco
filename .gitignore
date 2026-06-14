@@ -24,6 +24,10 @@ fab/gerbers/
 # Renders (committed periodically with `git add -f renders/assembly.png`)
 renders/
 
+# Heavy regenerable 3D assets
+fab/3d/*.step
+fab/3d/*.glb
+
 # Claude Code session state
 .claude/
 

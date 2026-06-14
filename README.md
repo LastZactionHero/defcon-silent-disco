@@ -14,6 +14,8 @@ Designed iteratively by an autonomous Claude Code loop (see HARNESS.md).
 |---|---|
 | ![Top](docs/render_3d_top.png) | ![Bottom](docs/render_3d_bottom.png) |
 
+![Back iso](docs/render_3d_back_iso.png)
+
 ### Plan view (mfg surface)
 
 | Front | Back |
