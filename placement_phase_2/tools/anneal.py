@@ -192,13 +192,16 @@ class Board:
     def net_len(self, net):
         return mst([self.pad_world(r, k) for r, k in self.net_members[net]])
 
+    CLEAR = 0.06      # min courtyard clearance — just enough to clear DRC touch, not over-constrain
+
     def overlap_pair(self, a, b):
         if self.layer[a] != self.layer[b]:
             return 0.0
+        c = self.CLEAR / 2
         ax0, ay0, ax1, ay1 = self.cy_aabb(a)
         bx0, by0, bx1, by1 = self.cy_aabb(b)
-        ix = min(ax1, bx1) - max(ax0, bx0)
-        iy = min(ay1, by1) - max(ay0, by0)
+        ix = min(ax1 + c, bx1 + c) - max(ax0 - c, bx0 - c)
+        iy = min(ay1 + c, by1 + c) - max(ay0 - c, by0 - c)
         return ix * iy if ix > 0 and iy > 0 else 0.0
 
     def part_overlap(self, r):

@@ -132,6 +132,33 @@ def sev(v: dict) -> str:
     return (v.get("severity") or v.get("severity_level") or "error").lower()
 
 
+def _item_ref(it: dict):
+    m = re.search(r"(?:of |Footprint )([A-Za-z]+\d+)", it.get("description", ""))
+    return m.group(1) if m else None
+
+
+# edge-locked connectors that are SUPPOSED to have copper at the board edge
+EDGE_EXEMPT = {"J10", "J20", "J31", "U30", "D20", "J11"}
+
+
+def placement_spacing(v: dict) -> bool:
+    """True only for PLACEMENT-caused copper-spacing violations — i.e. distinct
+    footprints' copper too close, or a non-edge part's pad too close to the board
+    edge. Excludes geometry the layout can't/shouldn't change: intra-footprint
+    fine-pitch pins / THT hole rings (same or single refdes), GND-zone-fill-to-edge
+    (a zone clearance setting), and edge connectors whose pads belong at the edge."""
+    t = v.get("type") or ""
+    items = v.get("items", [])
+    refs = {_item_ref(it) for it in items}
+    refs.discard(None)
+    if t in ("clearance", "hole_clearance", "track_width", "annular_width"):
+        return len(refs) >= 2                       # two different parts -> placement
+    if t == "copper_edge_clearance":
+        part_refs = [r for r in refs if r not in EDGE_EXEMPT]
+        return bool(part_refs)                       # a non-edge part pad near edge
+    return False
+
+
 # --------------------------------------------------------------------------- #
 # metric computations
 # --------------------------------------------------------------------------- #
@@ -143,6 +170,9 @@ def geom_overlaps(meta: dict) -> int:
         cbb = m.get("courtyard_bbox")
         if cbb:
             boxes.append((cbb[0], cbb[1], cbb[2], cbb[3], m["layer"]))
+    # require a small positive clearance: DRC flags courtyards that merely touch
+    # (0mm gap), so count any pair whose AABBs overlap OR are within EPS.
+    EPS = 0.05
     n = 0
     for i in range(len(boxes)):
         ax0, ay0, ax1, ay1, al = boxes[i]
@@ -150,7 +180,8 @@ def geom_overlaps(meta: dict) -> int:
             bx0, by0, bx1, by1, bl = boxes[j]
             if al != bl:
                 continue
-            if min(ax1, bx1) > max(ax0, bx0) and min(ay1, by1) > max(ay0, by0):
+            if (min(ax1, bx1) - max(ax0, bx0) > -EPS and
+                    min(ay1, by1) - max(ay0, by0) > -EPS):
                 n += 1
     return n
 
@@ -293,9 +324,7 @@ def measure(pcb: Path, do_drc: bool = True) -> dict:
         drc_report = run_kicad_cli(["pcb", "drc", str(pcb)])
         drc = collect_violations(drc_report)
         drc_errors = sum(1 for v in drc if sev(v) == "error")
-        DFM = {"clearance", "copper_edge_clearance", "hole_clearance",
-               "track_width", "annular_width"}
-        dfm_spacing = sum(1 for v in drc if (v.get("type") or "") in DFM)
+        dfm_spacing = sum(1 for v in drc if placement_spacing(v))
         courtyard_drc = sum(1 for v in drc
                             if "courtyard" in (v.get("type") or ""))
         if isinstance(drc_report, dict):
