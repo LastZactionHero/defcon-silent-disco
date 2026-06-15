@@ -61,3 +61,23 @@ strong. Board itself unchanged (floor plan is a plan, not a placement) so metric
 baseline. | Δ floorplan quality: first scored plan (892mm proxy).
 NEXT: B(4) — implement Approach B (connectivity-driven min-cut partition) reusing floorplan.py's
 classify/validate/score; compare est_ratsnest + capacity vs A; record CHAMPION:.
+
+[2026-06-15] CHAMPION: B(4) — Approach A (constructive, schematic-sheet grouping) wins | Built
+tools/floorplan_partition.py (Approach B: connectivity-driven seeded label-propagation over a
+shared-signal-net graph). Scored both on the identical centroid-proxy metric.
+  A (sheet-based):       est_ratsnest 892.4mm, valid, clean subsystem grouping.
+  B (connectivity):      est_ratsnest 944.3mm, valid, but dragged 21 parts into mcu.
+  WHY B LOST: rail-only decoupling caps (C60-63, C20/21/23, C40/44…) have no signal-net edges
+  → hit the default region; buttons (SW21-23) connect only to U3 → propagate to mcu instead of
+  the bottom edge. Pure connectivity can't recover design intent that the schematic sheet encodes.
+  Champion floorplan.json = Approach A. Both variants kept (floorplan_A.json/floorplan_B.json).
+  Documented the floor-planner as the `badge-placement` skill (~/.claude/skills/badge-placement),
+  listed under HARNESS "Skills authored". |
+  PHASE B EXIT GATE — all met: floor-planner WITH committed spec ✓; emitted plan validates ✓
+  (1 zone/part, zones inside Edge.Cuts, fixed parts present, grouping matches subsystems,
+  signal-flow zones laid input→output); ≥2 approaches scored + champion recorded ✓; tool
+  documented as a skill ✓. | Δ floorplan: champion 892mm proxy (A beats B by 5.5%).
+  NEXT: Phase C — build the placement engine that consumes floorplan.json, moves the 75 staged
+  parts onto the board per zone topology, and optimizes ratsnest to the LOCKED gates
+  (overlaps=0, offboard=0, ratsnest ≤2358 & ideally <1339, decoupling≤2.0, dfm=0, fixed_ok,
+  erc≤14). Start with a constructive per-zone placer, then add SA/force-directed refinement.

@@ -157,3 +157,6 @@ and keep complying. A human adjudicates locked rules; you do not.
 
 ## Skills authored
 (Append one line per new skill: name — purpose.)
+- badge-placement (~/.claude/skills/badge-placement) — reusable floor-planning + placement
+  system: measure.py (metrics), depopulate.py (reset), floorplan.py (Approach A, champion),
+  floorplan_partition.py (Approach B). Grows with the Phase-C placement engine.

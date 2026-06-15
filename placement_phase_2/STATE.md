@@ -1,29 +1,33 @@
 # STATE (pointer only — durable history lives in LEDGER.md + metrics.jsonl)
 
-Phase: **B — Floor-plan tool**
-Current approach: Approach A (constructive) DONE & valid; Approach B next.
-Last completed: B(3) — tools/floorplan.py + floorplan.json (Approach A). Valid: 79 parts
-  placed (68 zoned + 11 fixed), est_ratsnest proxy 892mm. Commit pending this iter.
+Phase: **C — Placement engine**
+Current approach: (none yet — Phase C just opened). Champion floor plan: floorplan.json (A).
+Last completed: B(4) — Phase B gate MET. Floor-planner (spec + floorplan.py Approach A
+  champion @892mm proxy + floorplan_partition.py Approach B challenger) documented as the
+  `badge-placement` skill. Commit pending this iter.
 
-Next intended action (Phase B):
-  1. [done B2] Committed floor-planner SPEC — see placement_phase_2/FLOORPLAN_SPEC.md.
-  2. [done B3] Approach A (constructive) — tools/floorplan.py, floorplan.json, valid,
-     est_ratsnest proxy 892mm.
-  3. B(4): implement Approach B (connectivity-driven min-cut partition) as
-     tools/floorplan_partition.py, reusing floorplan.py classify/validate/score; build the
-     component graph weighted by shared non-power nets, partition into the same zones, map
-     partitions to regions via their fixed anchors; score both; record CHAMPION: in LEDGER;
-     keep the winning floorplan.json.
-  4. Document the floor-planner as a skill; list under HARNESS "Skills authored".
-  5. When Phase B gate holds (>=2 approaches scored + champion + plan validates), advance
-     STATE to Phase C (placement engine) — build the tool that moves staged parts onto the
-     board per the champion floor plan, then optimize to the locked gates.
+Next intended action (Phase C):
+  1. C(5): write a short PLACEMENT_SPEC (purpose, objective=ratsnest s.t. locked gates,
+     how validated) — plan-before-build — then build tools/place.py: a CONSTRUCTIVE per-zone
+     placer that reads floorplan.json and lays each zone's parts by its topology
+     (ring=decoupling around anchor IC pins via the auto_decouple primitive; chain=signal-flow
+     line; row/column=evenly spaced; cluster=compact pack), pins fixed/edge parts at their
+     locked positions/rotations, keeps everything inside Edge.Cuts. Emit + measure.
+  2. C(6+): legalize overlaps (pcb-placement spread.py / check_courtyards) and pull parts to
+     real pin proximity; drive ratsnest down. Then add a global optimizer (simulated annealing
+     or force-directed, per placement_research.md) as champion/challenger vs the constructive
+     placement; keep the champion. Re-measure every iteration; escalate if the metric plateaus
+     short of the gate (no repeating a stalled move).
+  3. Render and LOOK every few iterations (pcb-views render_all.sh / render_area.py) — catch
+     wrong-facing connectors, off-edge parts, collisions the metrics miss.
 
-Exit gate (Phase B): floor-planner tool WITH committed spec exists; emitted plan validates
-(one zone per component, zones fit Edge.Cuts, fixed/edge parts at required spots, grouping
-matches design subsystems, signal-flow ordering respected); ≥2 approaches scored, champion
-recorded; tool documented as a skill. See HARNESS.md "Phase B".
+LOCKED Phase C exit gates (ALL must hold; tighten only):
+  overlaps==0; offboard==0; unplaced==0; fp_unresolved==0; fixed_ok==true
+  (J20 top-right plug-up; J10 USB-C bottom; SW1 bottom-left; U30 left y=110 & D20 right y=110;
+   J31 microSD B.Cu edge; 4× M2.5 holes corners);
+  decoupling_max_mm<=2.0; dfm_spacing_violations==0;
+  ratsnest_mm >= 20% better than baseline 2947 (i.e. <=2358) AND non-regressing — beat & lock
+  the ~1339mm phase-1 reference; erc_errors<=14 (no regression).
+  Placement produced BY TOOLS, not hand-placing parts. Then plateau (<2% over 5 iters) to finish.
 
-Fixed constraints (must hold by Phase C): J20 top-right plug-up; J10 USB-C bottom edge;
-SW1 bottom-left; U30 IR-RX left edge y=110 & D20 IR-LED right edge y=110 (mirror);
-J31 microSD on B.Cu edge-accessible; 4× M2.5 holes at corners. Board 88×54mm, x[100,188] y[80,134].
+Board: 88×54mm, x[100,188] y[80,134]. Staging grid currently holds 75 movable parts below y=134.

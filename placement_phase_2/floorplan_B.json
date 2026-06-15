@@ -1,0 +1,313 @@
+{
+  "board": {
+    "x0": 100.0,
+    "y0": 80.0,
+    "x1": 188.0,
+    "y1": 134.0
+  },
+  "zones": {
+    "leds": {
+      "bbox": [
+        110,
+        82,
+        182,
+        93
+      ],
+      "topology": "row",
+      "flow": "right",
+      "note": "4x SK9822 + local caps across the top edge"
+    },
+    "mcu": {
+      "bbox": [
+        124,
+        94,
+        156,
+        118
+      ],
+      "topology": "ring",
+      "anchor": "U3",
+      "note": "RP2040 + flash + xtal + decoupling ring, board center"
+    },
+    "audio": {
+      "bbox": [
+        157,
+        93,
+        186,
+        123
+      ],
+      "topology": "chain",
+      "flow": "up",
+      "note": "DAC->amp->output coupling, flows up toward J20"
+    },
+    "power": {
+      "bbox": [
+        101,
+        118,
+        152,
+        133
+      ],
+      "topology": "chain",
+      "flow": "right",
+      "note": "USB-C/charger/LDO chain along the bottom toward J10/J11"
+    },
+    "buttons": {
+      "bbox": [
+        152,
+        124,
+        186,
+        133
+      ],
+      "topology": "row",
+      "flow": "right",
+      "note": "tactile buttons along the bottom-right edge"
+    },
+    "sao": {
+      "bbox": [
+        101,
+        98,
+        121,
+        116
+      ],
+      "topology": "cluster",
+      "note": "SAO header + I2C pullups, left edge"
+    },
+    "ir": {
+      "bbox": [
+        176,
+        114,
+        186,
+        123
+      ],
+      "topology": "cluster",
+      "note": "IR drive resistor near D20 (U30/D20 are fixed edge parts)"
+    }
+  },
+  "fixed": {
+    "J20": {
+      "pos": [
+        178.0,
+        86.0
+      ],
+      "rot": 180,
+      "layer": "F.Cu",
+      "edge": "top-right",
+      "why": "audio jack, plug exits up off top edge"
+    },
+    "J10": {
+      "pos": [
+        144.0,
+        130.5
+      ],
+      "rot": 90,
+      "layer": "F.Cu",
+      "edge": "bottom",
+      "why": "USB-C, plug down off bottom edge"
+    },
+    "SW1": {
+      "pos": [
+        107.0,
+        128.0
+      ],
+      "rot": 0,
+      "layer": "F.Cu",
+      "edge": "bottom-left",
+      "why": "slide power switch, bottom-left corner"
+    },
+    "U30": {
+      "pos": [
+        103.5,
+        110.0
+      ],
+      "rot": 0,
+      "layer": "F.Cu",
+      "edge": "left",
+      "why": "IR-RX, left edge y=110 (mirror of D20)"
+    },
+    "D20": {
+      "pos": [
+        184.5,
+        110.0
+      ],
+      "rot": 180,
+      "layer": "F.Cu",
+      "edge": "right",
+      "why": "IR-LED, right edge y=110 (mirror of U30)"
+    },
+    "J31": {
+      "pos": [
+        130.0,
+        129.5
+      ],
+      "rot": 0,
+      "layer": "B.Cu",
+      "edge": "bottom",
+      "why": "microSD on back, slot accessible from bottom edge"
+    },
+    "J11": {
+      "pos": [
+        115.0,
+        124.0
+      ],
+      "rot": 0,
+      "layer": "B.Cu",
+      "edge": "bottom-left",
+      "why": "LiPo JST-PH on back near power zone"
+    },
+    "H2": {
+      "pos": [
+        183.0,
+        83.0
+      ],
+      "rot": 0.0,
+      "layer": "F.Cu",
+      "edge": "corner",
+      "why": "M2.5 mounting hole (locked)"
+    },
+    "H3": {
+      "pos": [
+        103.0,
+        131.0
+      ],
+      "rot": 0.0,
+      "layer": "F.Cu",
+      "edge": "corner",
+      "why": "M2.5 mounting hole (locked)"
+    },
+    "H1": {
+      "pos": [
+        103.0,
+        83.0
+      ],
+      "rot": 0.0,
+      "layer": "F.Cu",
+      "edge": "corner",
+      "why": "M2.5 mounting hole (locked)"
+    },
+    "H4": {
+      "pos": [
+        183.0,
+        131.0
+      ],
+      "rot": 0.0,
+      "layer": "F.Cu",
+      "edge": "corner",
+      "why": "M2.5 mounting hole (locked)"
+    }
+  },
+  "assign": {
+    "C4": "mcu",
+    "C10": "mcu",
+    "C8": "mcu",
+    "C5": "mcu",
+    "R2": "mcu",
+    "U2": "mcu",
+    "R1": "mcu",
+    "C9": "mcu",
+    "C12": "mcu",
+    "C14": "mcu",
+    "R3": "mcu",
+    "C7": "mcu",
+    "C1": "mcu",
+    "C11": "mcu",
+    "C16": "mcu",
+    "U3": "mcu",
+    "R4": "mcu",
+    "C6": "mcu",
+    "C17": "mcu",
+    "C41": "mcu",
+    "R30": "ir",
+    "J30": "sao",
+    "C20": "mcu",
+    "C21": "mcu",
+    "R13": "power",
+    "U20": "audio",
+    "R20": "audio",
+    "C2": "mcu",
+    "C43": "audio",
+    "C45": "audio",
+    "R22": "audio",
+    "R40": "sao",
+    "C3": "mcu",
+    "LED23": "leds",
+    "U21": "audio",
+    "U10": "power",
+    "C71": "mcu",
+    "SW21": "mcu",
+    "C61": "mcu",
+    "SW22": "mcu",
+    "SW23": "mcu",
+    "Y1": "mcu",
+    "LED20": "leds",
+    "C46": "audio",
+    "C23": "mcu",
+    "SW20": "buttons",
+    "C70": "mcu",
+    "R24": "mcu",
+    "R12": "power",
+    "R15": "mcu",
+    "R11": "mcu",
+    "C42": "audio",
+    "C62": "mcu",
+    "C60": "mcu",
+    "C63": "mcu",
+    "R14": "mcu",
+    "C44": "mcu",
+    "R21": "audio",
+    "R25": "mcu",
+    "R41": "sao",
+    "LED21": "leds",
+    "C22": "power",
+    "LED22": "leds",
+    "C40": "mcu",
+    "R5": "mcu",
+    "R10": "mcu",
+    "R23": "audio",
+    "U11": "power"
+  },
+  "_approach": "B",
+  "score": {
+    "approach": "B",
+    "est_ratsnest_mm": 944.3,
+    "capacity": {
+      "leds": {
+        "zone_area": 792,
+        "used_area": 151.8,
+        "util": 0.19
+      },
+      "mcu": {
+        "zone_area": 768,
+        "used_area": 330.5,
+        "util": 0.43
+      },
+      "audio": {
+        "zone_area": 870,
+        "used_area": 231.9,
+        "util": 0.27
+      },
+      "power": {
+        "zone_area": 765,
+        "used_area": 59.1,
+        "util": 0.08
+      },
+      "buttons": {
+        "zone_area": 306,
+        "used_area": 51.0,
+        "util": 0.17
+      },
+      "sao": {
+        "zone_area": 360,
+        "used_area": 56.0,
+        "util": 0.16
+      },
+      "ir": {
+        "zone_area": 90,
+        "used_area": 1.7,
+        "util": 0.02
+      }
+    }
+  },
+  "validation": {
+    "ok": true,
+    "violations": []
+  }
+}
