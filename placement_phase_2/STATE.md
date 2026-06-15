@@ -1,23 +1,20 @@
 # STATE (pointer only — durable history lives in LEDGER.md + metrics.jsonl)
 
 Phase: **B — Floor-plan tool**
-Current approach: (none yet — Phase B just opened)
-Last completed: A(1) — board depopulated, measure.py + depopulate.py built, baseline logged
-  (ratsnest 2947mm, overlaps 0, offboard 75, erc 14). Commit f4d1c94.
+Current approach: spec frozen (FLOORPLAN_SPEC.md); implementing approaches next.
+Last completed: B(2) — committed FLOORPLAN_SPEC.md (zone model, per-subsystem assignment,
+  2 approaches, scoring metric, validation gate). Board unchanged. Commit pending this iter.
 
 Next intended action (Phase B):
-  1. Write a committed floor-planner SPEC in placement_phase_2/ (purpose, the objective it
-     optimizes, the zone model, how it is validated) BEFORE implementing — plan-before-build.
-  2. Derive functional zones from badge_hw_design.md + the netlist (MCU+flash+xtal+decoupling;
-     power chain USB-C→TP4056→switch→LDO→3V3; 4× SK9822 across top; audio TM8211→TDA1308→J20;
-     IR U30/D20 mirror at y=110; 3 buttons; SAO/UART/SWD). Re-derive — do NOT resurrect
-     defcon_badge/tools/badge_floorplan.py blindly (HARNESS: reference but re-derive).
-  3. Build tools/floorplan.py emitting a floor-plan artifact (zones w/ bboxes inside
-     Edge.Cuts; every component in exactly one zone; fixed/edge constraints recorded).
-  4. Implement a SECOND distinct approach (e.g. partitioning/min-cut vs. constructive
-     intent-driven, or force-directed seed) and score both on a documented metric; record
-     CHAMPION: in LEDGER.
-  5. Document the floor-planner as a skill and list it under HARNESS "Skills authored".
+  1. [done B2] Committed floor-planner SPEC — see placement_phase_2/FLOORPLAN_SPEC.md.
+  2. B(3): implement Approach A (constructive intent-driven) in tools/floorplan.py per the
+     spec: pin fixed parts, lay zones (LEDs top, IR pair sides@y110, audio upper-right→J20,
+     power bottom→J10/J11, MCU center ring, buttons bottom, SAO free edge), pack to courtyard
+     area, emit placement_phase_2/floorplan.json, validate, score (est_ratsnest + violations).
+  3. B(4): implement Approach B (connectivity-driven min-cut partition); score both; record
+     CHAMPION: in LEDGER; keep the winning floorplan.json.
+  4. Document the floor-planner as a skill; list under HARNESS "Skills authored".
+  5. When Phase B gate holds, advance STATE to Phase C (placement engine).
 
 Exit gate (Phase B): floor-planner tool WITH committed spec exists; emitted plan validates
 (one zone per component, zones fit Edge.Cuts, fixed/edge parts at required spots, grouping

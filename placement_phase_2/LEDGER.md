@@ -33,3 +33,16 @@ Edge.Cuts untouched, mounting holes H1-H4 kept at corners. |
   so the baseline row's gate metrics stand. Append-only: baseline row left as recorded.
   NEXT: Phase B — write a floor-planner spec, then build a floorplan tool that partitions
   the netlist + design intent into zones; implement ≥2 approaches and score them.
+
+[2026-06-15] B(2) — Floor-planner SPEC committed (plan-before-build) | Extracted full
+component/net inventory (79 fps) and mapped every part to a subsystem from real nets, not
+guesswork. Wrote placement_phase_2/FLOORPLAN_SPEC.md: purpose, objective (min est. inter-zone
+ratsnest s.t. hard constraints), zone model (ring/chain/row/column/cluster/edge), concrete
+per-subsystem zone assignment for THIS board (mcu/power/audio/leds/sao/buttons + IR/connectors
+as fixed-edge), the locked fixed-constraint table, TWO approaches (A constructive intent-driven,
+B connectivity-driven min-cut partition), the scoring metric, and the Phase-B validation gate.
+Resolved the design-doc vs HARNESS jack conflict in favor of HARNESS (J20 top-right, locked). |
+RESULT: spec frozen; board unchanged so metrics row B(2) == baseline (ratsnest 2947, overlaps 0,
+offboard 75, erc 14) — expected during a planning iteration. | Δ none (planning iteration).
+NEXT: B(3) — implement Approach A (constructive) in tools/floorplan.py, emit + validate
+floorplan.json, score it.
