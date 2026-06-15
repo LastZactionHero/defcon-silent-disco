@@ -624,7 +624,7 @@
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "00000000-0000-0000-0000-00005eff7c8b")
-		(at 137.400 117.050 90.0)
+		(at 137.400 117.000 90.0)
 		(descr "Capacitor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 76, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
 		(tags "capacitor")
 		(property "Reference" "C8"
@@ -2419,7 +2419,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "00000000-0000-0000-0000-00005eff7ff1")
-		(at 137.250 106.950 90.0)
+		(at 137.300 106.950 90.0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
 		(tags "resistor")
 		(property "Reference" "R3"
@@ -4504,7 +4504,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "00000000-0000-0000-0000-00005eff825b")
-		(at 139.150 106.950 90.0)
+		(at 139.100 106.950 90.0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
 		(tags "resistor")
 		(property "Reference" "R4"
@@ -5555,7 +5555,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "06990cd3-1522-46fd-b69b-2c619a79c223")
-		(at 177.000 110.000 0)
+		(at 177.000 116.000 0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R30"
@@ -6838,7 +6838,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "15703db7-de17-4abf-b225-3bbecb6e202f")
-		(at 123.900 121.200 180.0)
+		(at 123.900 121.250 180.0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R13"
@@ -7953,7 +7953,7 @@
 	(footprint "Capacitor_SMD:CP_Elec_6.3x5.4"
 		(layer "F.Cu")
 		(uuid "3595ede8-7a99-45a5-840e-978a2af30d27")
-		(at 151.600 100.050 0)
+		(at 153.200 100.000 0)
 		(descr "SMD capacitor, aluminum electrolytic, Panasonic C55, 6.3x5.4mm")
 		(tags "capacitor electrolytic")
 		(property "Reference" "C45"
@@ -9674,7 +9674,7 @@
 	(footprint "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
 		(layer "F.Cu")
 		(uuid "52989540-48e0-4c2b-8b68-83f2b71bddd7")
-		(at 143.150 100.200 0)
+		(at 144.400 100.200 0)
 		(descr "SOIC, 8 Pin (JEDEC MS-012AA, https://www.analog.com/media/en/package-pcb-resources/package/pkg_pdf/soic_narrow-r/r_8.pdf)")
 		(tags "SOIC SO")
 		(property "Reference" "U21"
@@ -10636,7 +10636,7 @@
 	(footprint "Button_Switch_SMD:SW_SPST_TL3342"
 		(layer "F.Cu")
 		(uuid "5bd36b86-219b-4c76-a489-7e70b2ed65ef")
-		(at 180.000 104.000 0)
+		(at 174.000 101.500 0)
 		(descr "Low-profile SMD Tactile Switch, https://www.e-switch.com/system/asset/product_line/data_sheet/165/TL3342.pdf")
 		(tags "SPST Tactile Switch")
 		(property "Reference" "SW21"
@@ -11410,7 +11410,7 @@
 	(footprint "Button_Switch_SMD:SW_SPST_TL3342"
 		(layer "F.Cu")
 		(uuid "5e59fd32-5993-49fe-b86d-91ee10255e8d")
-		(at 181.000 116.000 0)
+		(at 176.000 107.000 0)
 		(descr "Low-profile SMD Tactile Switch, https://www.e-switch.com/system/asset/product_line/data_sheet/165/TL3342.pdf")
 		(tags "SPST Tactile Switch")
 		(property "Reference" "SW22"
@@ -12012,7 +12012,7 @@
 	(footprint "Button_Switch_SMD:SW_SPST_TL3342"
 		(layer "F.Cu")
 		(uuid "eadb0919-b687-44b6-ab32-9f6059b8fa08")
-		(at 170.000 122.000 0)
+		(at 178.000 112.500 0)
 		(descr "Low-profile SMD Tactile Switch, https://www.e-switch.com/system/asset/product_line/data_sheet/165/TL3342.pdf")
 		(tags "SPST Tactile Switch")
 		(property "Reference" "SW23"
@@ -13168,7 +13168,7 @@
 	(footprint "Capacitor_SMD:CP_Elec_6.3x5.4"
 		(layer "F.Cu")
 		(uuid "6ca3c587-942b-4b33-902d-547d20d3e045")
-		(at 161.100 100.000 0)
+		(at 162.800 100.000 0)
 		(descr "SMD capacitor, aluminum electrolytic, Panasonic C55, 6.3x5.4mm")
 		(tags "capacitor electrolytic")
 		(property "Reference" "C46"
@@ -13775,7 +13775,7 @@
 	(footprint "Button_Switch_SMD:SW_SPST_TL3342"
 		(layer "F.Cu")
 		(uuid "70f53ace-04ad-4f49-8331-eeb44331f19e")
-		(at 170.000 98.000 0)
+		(at 172.000 96.000 0)
 		(descr "Low-profile SMD Tactile Switch, https://www.e-switch.com/system/asset/product_line/data_sheet/165/TL3342.pdf")
 		(tags "SPST Tactile Switch")
 		(property "Reference" "SW20"
@@ -15008,7 +15008,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "874c645e-b827-4b49-a616-706c5af3bb07")
-		(at 147.450 96.050 0.0)
+		(at 147.450 96.100 0.0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R24"
@@ -15180,7 +15180,7 @@
 	(footprint "OptoDevice:Vishay_MINICAST-3Pin"
 		(layer "F.Cu")
 		(uuid "8a2a66c4-c26b-4fad-a5bf-076a0b21a806")
-		(at 104.400 110.000 0)
+		(at 104.400 116.000 0)
 		(descr "IR Receiver Vishay TSOP-xxxx, MINICAST package, see https://www.vishay.com/docs/82669/tsop32s40f.pdf")
 		(tags "IR Receiver Vishay TSOP-xxxx MINICAST")
 		(property "Reference" "U30"
@@ -15481,7 +15481,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "919557ab-0771-42b1-a951-aa3c114f008d")
-		(at 117.300 121.200 180.0)
+		(at 117.300 121.250 180.0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R12"
@@ -16169,7 +16169,7 @@
 	(footprint "LED_SMD:LED_0805_2012Metric"
 		(layer "F.Cu")
 		(uuid "aa8578fa-a480-43f1-86e1-3d774c9f256f")
-		(at 180.000 110.000 0)
+		(at 180.000 116.000 0)
 		(descr "LED SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: https://docs.google.com/spreadsheets/d/1BsfQQcO9C6DZCsRaXUlFlo91Tg2WpOkGARC1WS5S8t0/edit?usp=sharing)")
 		(tags "LED")
 		(property "Reference" "D20"
@@ -16919,7 +16919,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "b954f90a-2663-4a7d-9572-41f0017cc917")
-		(at 123.900 129.000 0.0)
+		(at 123.900 128.950 0.0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R14"
@@ -17237,7 +17237,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "ccc174f0-cfeb-480c-9900-a40128cf530c")
-		(at 145.900 103.400 180.0)
+		(at 147.450 103.400 180.0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R21"
@@ -17581,7 +17581,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "d072c1d9-9197-4ecc-960e-03035d12af80")
-		(at 140.200 117.050 270.0)
+		(at 140.150 117.050 270.0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R41"
@@ -18763,7 +18763,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "e5eb59d5-9a94-434e-871c-ae49d30090d1")
-		(at 136.450 117.050 90.0)
+		(at 136.500 117.050 90.0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
 		(tags "resistor")
 		(property "Reference" "R5"
@@ -19139,7 +19139,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "f9203a22-fee3-42b8-a7b9-5fe76f8ce1e2")
-		(at 145.900 97.050 180.0)
+		(at 147.450 97.050 180.0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R23"
@@ -23361,8 +23361,8 @@
 	(gr_line (start 168.000 109.000) (end 178.000 109.000) (stroke (width 0.12) (type default)) (layer "F.SilkS") (uuid "meca7a91-0b9ba968-0000-0000-0000-aa76159d7a05"))
 	(gr_line (start 108.000 124.000) (end 116.000 124.000) (stroke (width 0.12) (type default)) (layer "F.SilkS") (uuid "meca7a91-5561b55b-0000-0000-0000-20c7840ba101"))
 	(gr_line (start 170.000 124.000) (end 178.000 124.000) (stroke (width 0.12) (type default)) (layer "F.SilkS") (uuid "meca7a91-2c0e6a99-0000-0000-0000-ee9d274fdb36"))
-	(gr_text "Vol+" (at 175.000 93.500 0) (layer "F.SilkS") (uuid "c1eanup1e721cffc24c248be9bc55baa") (effects (font (size 0.80 0.80) (thickness 0.18))))
-	(gr_text "Vol-" (at 185.000 102.500 0) (layer "F.SilkS") (uuid "c1eanup17f398d6145004bc2849c5747") (effects (font (size 0.70 0.70) (thickness 0.18))))
-	(gr_text "Channel" (at 185.000 117.500 0) (layer "F.SilkS") (uuid "c1eanup11e3738091fac402da9c0c1a4") (effects (font (size 0.70 0.70) (thickness 0.18))))
-	(gr_text "Sync" (at 175.000 126.000 0) (layer "F.SilkS") (uuid "c1eanup1dd4637beff8e4c97b71466be") (effects (font (size 0.80 0.80) (thickness 0.18))))
+	(gr_text "Vol+" (at 178.000 96.000 0) (layer "F.SilkS") (uuid "c1eanup1e5f34c85f27d4340963f0d1e") (effects (font (size 0.90 0.90) (thickness 0.18))))
+	(gr_text "Vol-" (at 180.000 101.500 0) (layer "F.SilkS") (uuid "c1eanup1b8c42220bd7a4659a2fdecde") (effects (font (size 0.90 0.90) (thickness 0.18))))
+	(gr_text "Channel" (at 182.500 107.000 0) (layer "F.SilkS") (uuid "c1eanup116296e0dde924f6a919715a6") (effects (font (size 0.90 0.90) (thickness 0.18))))
+	(gr_text "Sync" (at 183.500 112.500 0) (layer "F.SilkS") (uuid "c1eanup16463ae7966a64b148b3cf8c0") (effects (font (size 0.90 0.90) (thickness 0.18))))
 )
