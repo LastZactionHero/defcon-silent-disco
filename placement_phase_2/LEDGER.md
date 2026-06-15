@@ -133,3 +133,18 @@ sank Approach B. Verified the mapping (D20←C63, LED20-23←C60-62/C70, U3←5,
   fixed parts frozen, warm-started from the constructive placement). | Δ board unchanged (reverted
   bad move); decoupling approach found + escalated. | NEXT: C(8) — implement tools/anneal.py per
   spec; run from the constructive warm start; keep champion vs constructive if all gates hold.
+
+[2026-06-15] CHAMPION: C(8) — simulated-annealing optimizer — ratsnest 1580→928mm | Built
+tools/anneal.py per ANNEAL_SPEC: zone-constrained Metropolis SA, fixed parts frozen, incremental
+cost (ratsnest MST + overlap-area + offboard + edge-intrusion), geometric cooling, --seed
+deterministic. Warm-started from the constructive placement. Fast: 30k iters ≈ 5s.
+  Compared seeds @30k: s1=928.0, s3=973.5, s2=1001.3 → champion seed 1. Applied seed 1.
+  RESULT — ratsnest 1580.4→927.95mm (−41%; now FAR below the 2358 floor AND the ~1339 phase-1
+  reference — beat & locked). Gates still holding: overlaps 0 ✓, offboard 0 ✓, unplaced 0 ✓,
+  fp_unresolved 0 ✓, fixed_ok TRUE ✓, erc 14 ✓. Rendered + looked: subsystems still grouped,
+  all edge parts in place, valid layout. | Δ ratsnest −652.4mm (−41.3%) vs constructive.
+  CAVEAT: SA has no decoupling term yet, so decoupling_max rose 26→18 (rail-only LED caps drift
+  on the global +3V3 net — ratsnest MST clusters caps among themselves, not at their IC pin).
+  dfm_spacing 191 (silk + clearance) unaddressed. | NEXT: C(9) — add a decoupling-proximity
+  term to the SA cost (w_dec * sum max(0, cap→owner_pin_dist − 2), owners from decouple.py
+  mapping); re-run; drive decoupling_max ≤2.0 while holding ratsnest ≈<1000 and overlaps 0.

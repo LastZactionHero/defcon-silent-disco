@@ -1,28 +1,28 @@
 # STATE (pointer only — durable history lives in LEDGER.md + metrics.jsonl)
 
 Phase: **C — Placement engine**
-Current approach: ESCALATED to global SA optimizer (greedy decouple+spread plateaus).
-Last completed: C(7) — built decouple.py (load-balanced cap→owner) + ANNEAL_SPEC.md. Greedy
-  decouple+spread got decoupling 26→9.7 but stalls + adds overlaps; reverted to clean C(6)
-  state (0 overlaps, 1580mm, decoupling 26). Board unchanged. Commit pending this iter.
+Current approach: SA optimizer is CHAMPION (ratsnest 928mm). Adding decoupling term next.
+Last completed: C(8) — built tools/anneal.py (zone-constrained SA); ratsnest 1580→928mm, all
+  previously-passing gates held. Applied seed 1. Commit pending this iter.
 
 GATE STATUS: overlaps 0 ✓ | offboard 0 ✓ | unplaced 0 ✓ | fp_unresolved 0 ✓ | fixed_ok ✓ |
-  erc 14 ✓ (<=14) | ratsnest 1580 (<=2358 ✓; target <1339) | decoupling_max 26.3 ✗ (need <=2.0)
-  | dfm_spacing 190 ✗ (need 0; mostly silk_overlap + copper/edge clearance, unrouted board).
+  erc 14 ✓ | ratsnest 928 ✓ (<=2358 AND <1339 reference — beat & locked) |
+  decoupling_max 18.1 ✗ (need <=2.0; SA has no decoupling term yet) |
+  dfm_spacing 191 ✗ (need 0; mostly silk_overlap/silk_over_copper cosmetic + some clearance).
+  → 7 of 9 gate lines pass. Remaining: decoupling (C9), dfm (silk pass + clearance).
 
 Next intended action (Phase C):
-  1. C(8): implement tools/anneal.py per ANNEAL_SPEC.md — SA over (ratsnest + overlap +
-     offboard + edge + decoupling) cost, fixed parts frozen, warm-started from the current
-     constructive placement (optionally decouple.py-seeded). numpy. --seed for determinism.
-     Accept the result only if every passing gate still holds AND objective improved, else
-     revert. Render + LOOK. Keep champion vs constructive (1580mm).
-  2. C(9+): tune SA weights/schedule + multiple seeds; target ratsnest <1339, decoupling<=2.0,
-     overlaps 0, offboard 0, all held. If SA underperforms, challenger = force-directed/analytical.
-  3. dfm_spacing: separate placement-driven copper/edge clearance (must be 0, SA edge term
-     handles) from silk_overlap/silk_over_copper (cosmetic — handle via a silk-regen pass, not
-     placement). Don't conflate. Re-measure.
-  4. Render + LOOK every few iters; escalate (switch method / global re-place) if a metric
-     plateaus short of gate — never repeat a stalled move.
+  1. C(9): add a DECOUPLING term to anneal.py cost — w_dec * sum max(0, dist(cap_pwr_pad,
+     owner_pwr_pad) − 2.0), owner map from decouple.py's load-balanced logic (import it).
+     Re-run SA (warm start from current 928mm board, or from constructive). Goal: decoupling_max
+     <= 2.0 while keeping overlaps 0, offboard 0, ratsnest low (<~1100 acceptable trade). Tune
+     w_dec. Accept only if gates hold + decoupling improves; render + LOOK; keep champion.
+  2. C(10): dfm_spacing — separate placement-driven copper/edge clearance (SA edge term / nudge)
+     from silk_overlap/silk_over_copper (cosmetic). Handle silk via a silk-regen pass tool (not
+     placement). Target dfm copper/edge clearance 0; track silk separately. Re-measure.
+  3. When ALL Phase C gates hold and ratsnest plateaus (<2% over 5 iters), advance to Phase D
+     (routing via Freerouting DSN/SES or alternative). Update STATE pointer.
+  4. Render + LOOK every few iters; escalate if a metric plateaus short of gate.
 
 LOCKED Phase C exit gates (ALL must hold; tighten only):
   overlaps==0; offboard==0; unplaced==0; fp_unresolved==0; fixed_ok==true

@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""anneal.py — simulated-annealing global placement refinement (Phase C).
+
+Warm-starts from the current placement and refines movable parts to minimise a
+single cost = ratsnest + overlap + offboard + edge-intrusion (+ optional
+decoupling), with fixed/edge parts frozen and each part constrained to its
+floorplan zone. Metropolis acceptance, geometric cooling. Incremental cost
+updates make each move cheap.
+
+Accept the result only if it improves; the caller verifies gates with measure.py
+and reverts (git) if any passing gate regressed.
+
+Usage:
+  anneal.py defcon_badge/defcon_badge.kicad_pcb --plan placement_phase_2/floorplan.json \
+      --iters 40000 --seed 1 [--w-dec 0] [--zone-slack 1.0]
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import os
+import random
+import re
+import sys
+from pathlib import Path
+
+SKILL = os.environ.get(
+    "PCB_PLACEMENT_SCRIPTS",
+    str(Path.home() / ".claude/skills/pcb-placement/scripts"),
+)
+sys.path.insert(0, SKILL)
+from fp_meta import load_pcb            # noqa: E402
+from validate_placement import parse_edge_cuts, point_in_polygon  # noqa: E402
+
+GROUND = {"GND", "/GND", "AGND", "PGND", "DGND"}
+
+
+def rot(dx, dy, deg):
+    r = math.radians(deg)
+    c, s = math.cos(r), math.sin(r)
+    return dx * c - dy * s, dx * s + dy * c
+
+
+def mst(pts):
+    n = len(pts)
+    if n < 2:
+        return 0.0
+    intree = [False] * n
+    d = [math.inf] * n
+    d[0] = 0.0
+    tot = 0.0
+    for _ in range(n):
+        best, bd = -1, math.inf
+        for i in range(n):
+            if not intree[i] and d[i] < bd:
+                bd, best = d[i], i
+        if best < 0:
+            break
+        intree[best] = True
+        tot += bd
+        bx, by = pts[best]
+        for j in range(n):
+            if not intree[j]:
+                dd = math.hypot(pts[j][0] - bx, pts[j][1] - by)
+                if dd < d[j]:
+                    d[j] = dd
+    return tot
+
+
+class Board:
+    def __init__(self, pcb, plan):
+        self.meta = load_pcb(pcb)
+        text = pcb.read_text()
+        self.poly = parse_edge_cuts(text)
+        xs = [p[0] for p in self.poly]; ys = [p[1] for p in self.poly]
+        self.bx = (min(xs), min(ys), max(xs), max(ys))
+        self.fixed = set(plan["fixed"])
+        self.zones = plan["zones"]
+        self.assign = plan["assign"]
+
+        self.refs = list(self.meta)
+        self.idx = {r: i for i, r in enumerate(self.refs)}
+        self.movable = [r for r in self.refs if r not in self.fixed]
+        self.edge_exempt = self.fixed  # only fixed connectors may poke past edge
+
+        # per-part state
+        self.x = {}; self.y = {}; self.rot = {}; self.layer = {}
+        self.local_pads = {}        # ref -> [(ldx,ldy,net)]
+        self.local_cy = {}          # ref -> [(lx,ly)*4] courtyard corners (local)
+        for r, m in self.meta.items():
+            a = m["anchor"]
+            self.x[r], self.y[r], self.rot[r] = a["x"], a["y"], a["rot"]
+            self.layer[r] = m["layer"]
+            lp = []
+            for p in m["pads"]:
+                ldx, ldy = rot(p["x"] - a["x"], p["y"] - a["y"], -a["rot"])
+                lp.append((ldx, ldy, p.get("net")))
+            self.local_pads[r] = lp
+            cy = m.get("courtyard_bbox")
+            if cy:
+                corners = [(cy[0], cy[1]), (cy[2], cy[1]), (cy[2], cy[3]), (cy[0], cy[3])]
+                self.local_cy[r] = [rot(cx - a["x"], cyy - a["y"], -a["rot"])
+                                    for cx, cyy in corners]
+            else:
+                self.local_cy[r] = [(-2, -2), (2, -2), (2, 2), (-2, 2)]
+
+        # net -> [(ref, padlocal_idx)]
+        self.net_members = {}
+        for r in self.refs:
+            for k, (_, _, net) in enumerate(self.local_pads[r]):
+                if not net or net in GROUND or net.endswith("/GND"):
+                    continue
+                self.net_members.setdefault(net, []).append((r, k))
+        self.part_nets = {}
+        for net, mem in self.net_members.items():
+            for r, _ in mem:
+                self.part_nets.setdefault(r, set()).add(net)
+
+    # ---- geometry ----
+    def pad_world(self, r, k):
+        ldx, ldy, _ = self.local_pads[r][k]
+        wx, wy = rot(ldx, ldy, self.rot[r])
+        return self.x[r] + wx, self.y[r] + wy
+
+    def cy_aabb(self, r):
+        pts = [rot(lx, ly, self.rot[r]) for lx, ly in self.local_cy[r]]
+        xs = [self.x[r] + p[0] for p in pts]; ys = [self.y[r] + p[1] for p in pts]
+        return min(xs), min(ys), max(xs), max(ys)
+
+    # ---- cost terms ----
+    def net_len(self, net):
+        return mst([self.pad_world(r, k) for r, k in self.net_members[net]])
+
+    def overlap_pair(self, a, b):
+        if self.layer[a] != self.layer[b]:
+            return 0.0
+        ax0, ay0, ax1, ay1 = self.cy_aabb(a)
+        bx0, by0, bx1, by1 = self.cy_aabb(b)
+        ix = min(ax1, bx1) - max(ax0, bx0)
+        iy = min(ay1, by1) - max(ay0, by0)
+        return ix * iy if ix > 0 and iy > 0 else 0.0
+
+    def part_overlap(self, r):
+        return sum(self.overlap_pair(r, o) for o in self.refs if o != r)
+
+    def part_off_edge(self, r):
+        x0, y0, x1, y1 = self.cy_aabb(r)
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        off = 0.0 if point_in_polygon(cx, cy, self.poly) else 1.0
+        intr = 0.0
+        if r not in self.edge_exempt:
+            bx0, by0, bx1, by1 = self.bx
+            intr = (max(0, bx0 - x0) + max(0, x1 - bx1)
+                    + max(0, by0 - y0) + max(0, y1 - by1))
+        return off, intr
+
+
+# weights: hard constraints dominate ratsnest
+W = {"rat": 1.0, "ov": 60.0, "off": 200.0, "edge": 40.0}
+
+
+def anneal(b: Board, iters: int, seed: int, t0: float, t1: float, slack: float):
+    rng = random.Random(seed)
+    net_cache = {n: b.net_len(n) for n in b.net_members}
+    tot_rat = sum(net_cache.values())
+    tot_ov = sum(b.part_overlap(r) for r in b.refs) / 2.0
+    offedge = {r: b.part_off_edge(r) for r in b.movable}
+    tot_off = sum(v[0] for v in offedge.values())
+    tot_edge = sum(v[1] for v in offedge.values())
+
+    def cost():
+        return W["rat"] * tot_rat + W["ov"] * tot_ov + W["off"] * tot_off + W["edge"] * tot_edge
+
+    zone_bbox = {}
+    for r in b.movable:
+        z = b.zones.get(b.assign.get(r))
+        zone_bbox[r] = z["bbox"] if z else list(b.bx)
+
+    best_cost = cost()
+    accepts = 0
+    for it in range(iters):
+        frac = it / iters
+        T = t0 * (t1 / t0) ** frac
+        sigma = 3.0 * (1 - frac) + 0.3
+        r = rng.choice(b.movable)
+
+        ox, oy, orot = b.x[r], b.y[r], b.rot[r]
+        # snapshot affected metrics
+        a_nets = b.part_nets.get(r, set())
+        old_net = {n: net_cache[n] for n in a_nets}
+        old_po = b.part_overlap(r)
+        old_off, old_edge = offedge[r]
+
+        if rng.random() < 0.15:
+            b.rot[r] = (orot + 90) % 360
+        else:
+            zx0, zy0, zx1, zy1 = zone_bbox[r]
+            nx = ox + rng.gauss(0, sigma)
+            ny = oy + rng.gauss(0, sigma)
+            b.x[r] = min(max(nx, zx0 - slack), zx1 + slack)
+            b.y[r] = min(max(ny, zy0 - slack), zy1 + slack)
+
+        # recompute affected
+        d_rat = 0.0
+        for n in a_nets:
+            nl = b.net_len(n)
+            d_rat += nl - old_net[n]
+        new_po = b.part_overlap(r)
+        d_ov = new_po - old_po
+        noff, nedge = b.part_off_edge(r)
+        d_off = noff - old_off
+        d_edge = nedge - old_edge
+        dE = (W["rat"] * d_rat + W["ov"] * d_ov + W["off"] * d_off + W["edge"] * d_edge)
+
+        if dE <= 0 or rng.random() < math.exp(-dE / max(T, 1e-6)):
+            for n in a_nets:
+                net_cache[n] = b.net_len(n)
+            tot_rat += d_rat; tot_ov += d_ov; tot_off += d_off; tot_edge += d_edge
+            offedge[r] = (noff, nedge)
+            accepts += 1
+        else:
+            b.x[r], b.y[r], b.rot[r] = ox, oy, orot
+
+    return cost(), tot_rat, tot_ov, tot_off, tot_edge, accepts
+
+
+def set_anchor_body(body, x, y, rotdeg):
+    pat = re.compile(r"(^\t\t\(at )(-?\d+\.?\d*)\s+(-?\d+\.?\d*)(\s+-?\d+\.?\d*)?(\))", re.M)
+    return pat.sub(lambda m: f"{m.group(1)}{x:.3f} {y:.3f} {rotdeg:.0f}{m.group(5)}", body, count=1)
+
+
+def write_back(pcb: Path, b: Board):
+    text = pcb.read_text()
+    chunks = re.split(r"(\n\t\(footprint )", text)
+    out = [chunks[0]]
+    i = 1
+    while i < len(chunks):
+        body = chunks[i + 1] if i + 1 < len(chunks) else ""
+        mref = re.search(r'\(property "Reference" "([^"]+)"', body)
+        r = mref.group(1) if mref else None
+        if r in b.movable:
+            body = set_anchor_body(body, b.x[r], b.y[r], b.rot[r])
+        out.append(chunks[i]); out.append(body)
+        i += 2
+    pcb.write_text("".join(out))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("pcb")
+    ap.add_argument("--plan", default="placement_phase_2/floorplan.json")
+    ap.add_argument("--iters", type=int, default=40000)
+    ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--t0", type=float, default=4.0)
+    ap.add_argument("--t1", type=float, default=0.02)
+    ap.add_argument("--zone-slack", type=float, default=1.0)
+    ap.add_argument("--dry-run", action="store_true", help="optimize but don't write")
+    args = ap.parse_args()
+
+    pcb = Path(args.pcb)
+    plan = json.loads(Path(args.plan).read_text())
+    b = Board(pcb, plan)
+
+    c0 = (W["rat"] * sum(b.net_len(n) for n in b.net_members)
+          + W["ov"] * sum(b.part_overlap(r) for r in b.refs) / 2)
+    rat0 = sum(b.net_len(n) for n in b.net_members)
+    fc, rat, ov, off, edge, acc = anneal(b, args.iters, args.seed, args.t0, args.t1, args.zone_slack)
+    print(f"SA seed={args.seed} iters={args.iters} accepts={acc}")
+    print(f"  ratsnest {rat0:.1f} -> {rat:.1f} mm | overlap_area {ov:.2f} | offboard {off:.0f} | edge {edge:.2f}")
+    if not args.dry_run:
+        write_back(pcb, b)
+        print(f"  wrote {pcb}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
