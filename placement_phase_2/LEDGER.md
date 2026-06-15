@@ -148,3 +148,24 @@ deterministic. Warm-started from the constructive placement. Fast: 30k iters ≈
   dfm_spacing 191 (silk + clearance) unaddressed. | NEXT: C(9) — add a decoupling-proximity
   term to the SA cost (w_dec * sum max(0, cap→owner_pin_dist − 2), owners from decouple.py
   mapping); re-run; drive decoupling_max ≤2.0 while holding ratsnest ≈<1000 and overlaps 0.
+
+[2026-06-15] C(9) — decoupling term + snap finisher in SA — decoupling 18→2.09mm, overlaps 0 |
+Added to anneal.py: (1) a decoupling-proximity cost term with DISTINCT-pin targets (each cap →
+its own owner power pin, mirroring auto_decouple) — fixed the "all caps crowd one corner" failure;
+(2) a deterministic coordinate-descent SNAP finisher (6 passes, radius/angle search) that seats
+caps overlap-aware at their pins; (3) tuning knobs (--w-dec/--w-ov/--deco-target/--snap). Also
+made decouple.owners_for_caps capacity+sheet-aware and fixed-excluded (U3 gets its 9 IOVDD/core
+caps, U2 just 1, each LED its own, fixed D20/U30 never owners).
+  EXPLORED (not thrashing — each move changed the approach, logged): SA+deco target 2.0→2.08;
+  tighter target+higher w_ov→overlaps trade; distinct-pin targets; iterative snap→1.9 but 4 tiny
+  cap-cap grazes (≤0.17mm²); overlap-priority polish→0 overlaps @ 2.09.
+  RESULT (committed, non-regressing): overlaps 0 ✓, offboard 0 ✓, ratsnest 941.6mm ✓, fixed_ok ✓,
+  erc 14 ✓; decoupling_max 2.09 — 0.09mm over the 2.0 gate. Rendered U3: a real dense 9-cap ring.
+  FINDING: decoupling_max≤2.0 (pad-center, EVERY cap) AND courtyard-overlaps==0 on ONE side is at
+  the geometric margin for the U3 QFN ring (9 caps + 10µF bulk competing for the perimeter). The
+  standard fix is BACK-SIDE decoupling (caps under the IC, vias to pins) — proper and frees the
+  front. | Δ decoupling −15.9mm (18.1→2.09); ratsnest held ~940. GATE not yet met (0.09 short).
+REVIEW: the 2.0mm pad-center threshold for every cap simultaneously, single-sided, sits right at
+feasibility for a dense QFN ring; complying (not loosening) and closing it via back-side caps in C(10).
+NEXT: C(10) — back-side decoupling: flip the tightest 2-3 U3 caps to B.Cu directly under their
+power pins (place.py flip + snap), re-measure; expect decoupling ≤2.0 with overlaps 0. Then dfm/silk.

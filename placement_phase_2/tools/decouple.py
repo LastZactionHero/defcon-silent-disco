@@ -42,16 +42,26 @@ def parse_farads(value):
     return float(m.group(1)) * scale.get(m.group(2), 1.0)
 
 
-def owners_for_caps(meta, max_uf):
+def owners_for_caps(meta, max_uf, sheets=None, exclude=None):
+    """Map each small bypass cap to the IC/LED it decouples — position-independent.
+
+    Owner candidates = same-power-net non-passive parts (U/LED/D/Y). Preference:
+    (1) restrict to candidates on the cap's own schematic sheet if any exist
+        (so MCU caps stay on the MCU sheet, LED caps on LEDs_IR, etc.);
+    (2) assign capacity-aware + load-balanced: each owner's capacity = how many
+        pads it has on that power net (U3 has many IOVDD pins -> takes many caps;
+        U2 flash has one -> takes one), so caps fill owners proportionally rather
+        than splitting evenly. Resolves both the rail-only-cap ambiguity and the
+        small-part-overload problem.
+    Returns {owner: [caps]} and is deterministic (refdes tiebreak)."""
     by_net = {}
     for ref, m in meta.items():
         for pad in m["pads"]:
             n = pad.get("net")
             if n:
-                by_net.setdefault(n, []).append((pad["x"], pad["y"], ref))
+                by_net.setdefault(n, []).append(ref)
 
-    # collect each cap's candidate owners (same-net non-passive parts)
-    cap_cands = {}
+    cap_info = {}     # cap -> (net, {owner: capacity})
     for ref, m in meta.items():
         if not ref.startswith("C"):
             continue
@@ -65,25 +75,26 @@ def owners_for_caps(meta, max_uf):
                and POWER_RE.search(p["net"])]
         if not pwr:
             continue
-        p = pwr[0]
-        cands = {}
-        for q in by_net.get(p["net"], []):
-            if q[2] != ref and q[2].startswith(OWNER_PREFIX):
-                d = math.hypot(p["x"] - q[0], p["y"] - q[1])
-                cands[q[2]] = min(cands.get(q[2], 1e9), d)
-        if cands:
-            cap_cands[ref] = cands
+        net = pwr[0]["net"]
+        cap_cnt = {}
+        for o in by_net.get(net, []):
+            if o != ref and o.startswith(OWNER_PREFIX) and not (exclude and o in exclude):
+                cap_cnt[o] = cap_cnt.get(o, 0) + 1
+        if sheets:
+            same = {o: c for o, c in cap_cnt.items()
+                    if sheets.get(o) and sheets.get(o) == sheets.get(ref)}
+            if same:
+                cap_cnt = same
+        if cap_cnt:
+            cap_info[ref] = (net, cap_cnt)
 
-    # Load-balanced nearest assignment: a cap goes to its nearest candidate owner,
-    # but owners already carrying caps are penalised so siblings on a shared rail
-    # (e.g. 4 SK9822 LEDs all on +3V3) each get their own bypass cap before any
-    # owner doubles up. Resolves the rail-only-cap ambiguity Approach B exposed.
     load = {}
     groups = {}
-    # assign caps with the fewest candidates first (most constrained)
-    for ref in sorted(cap_cands, key=lambda r: len(cap_cands[r])):
-        cands = cap_cands[ref]
-        owner = min(cands, key=lambda o: (load.get(o, 0), cands[o]))
+    # most-constrained caps (fewest candidate owners) first
+    for ref in sorted(cap_info, key=lambda r: (len(cap_info[r][1]), r)):
+        _, cap_cnt = cap_info[ref]
+        owner = min(cap_cnt,
+                    key=lambda o: (load.get(o, 0) / cap_cnt[o], -cap_cnt[o], o))
         load[owner] = load.get(owner, 0) + 1
         groups.setdefault(owner, []).append(ref)
     return groups
@@ -98,7 +109,10 @@ def main():
 
     pcb = Path(args.pcb)
     meta = load_pcb(pcb)
-    groups = owners_for_caps(meta, args.max_uf)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import floorplan as fp
+    sheets = fp.sheet_membership(pcb.parent)
+    groups = owners_for_caps(meta, args.max_uf, sheets)
     def num(r):
         m = re.search(r"\d+", r)
         return int(m.group()) if m else 0

@@ -70,6 +70,7 @@ def mst(pts):
 
 class Board:
     def __init__(self, pcb, plan):
+        self.pcb_parent = pcb.parent
         self.meta = load_pcb(pcb)
         text = pcb.read_text()
         self.poly = parse_edge_cuts(text)
@@ -117,6 +118,61 @@ class Board:
             for r, _ in mem:
                 self.part_nets.setdefault(r, set()).add(net)
 
+        # decoupling pairs: (cap, cap_padk, owner, owner_padk)
+        self.deco = []
+        self._build_deco()
+        self.part_deco = {}
+        for di, (cap, _, owner, _) in enumerate(self.deco):
+            self.part_deco.setdefault(cap, set()).add(di)
+            self.part_deco.setdefault(owner, set()).add(di)
+
+    def _build_deco(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import floorplan as fp
+        import decouple as dc
+        sheets = fp.sheet_membership(self.pcb_parent)
+        groups = dc.owners_for_caps(self.meta, 1.1, sheets, exclude=self.fixed)
+        for owner, caps in groups.items():
+            # DISTINCT-pin assignment: each cap gets its OWN owner power pin on the
+            # matching net (greedy nearest, one cap per pin) so caps don't all crowd
+            # the same corner and collide — mirrors auto_decouple's pin matching.
+            used = set()
+            # most-constrained net first; deterministic by refdes
+            for cap in sorted(caps, key=lambda r: int(re.search(r"\d+", r).group())):
+                capk = capnet = None
+                for k, (_, _, net) in enumerate(self.local_pads[cap]):
+                    if net and net not in GROUND and dc.POWER_RE.search(net):
+                        capk, capnet = k, net
+                        break
+                if capk is None:
+                    continue
+                cwx, cwy = self.pad_world(cap, capk)
+                best, bd = None, 1e9
+                for k, (_, _, net) in enumerate(self.local_pads[owner]):
+                    if net == capnet and (owner, k) not in used:
+                        owx, owy = self.pad_world(owner, k)
+                        d = math.hypot(owx - cwx, owy - cwy)
+                        if d < bd:
+                            bd, best = d, k
+                if best is None:   # ran out of distinct pins: share nearest
+                    for k, (_, _, net) in enumerate(self.local_pads[owner]):
+                        if net == capnet:
+                            owx, owy = self.pad_world(owner, k)
+                            d = math.hypot(owx - cwx, owy - cwy)
+                            if d < bd:
+                                bd, best = d, k
+                if best is not None:
+                    used.add((owner, best))
+                    self.deco.append((cap, capk, owner, best))
+
+    deco_target = 1.2     # pull caps to <=this mm of the pin so measured max stays <2.0
+
+    def deco_excess(self, di):
+        cap, capk, owner, ok = self.deco[di]
+        cwx, cwy = self.pad_world(cap, capk)
+        owx, owy = self.pad_world(owner, ok)
+        return max(0.0, math.hypot(owx - cwx, owy - cwy) - self.deco_target)
+
     # ---- geometry ----
     def pad_world(self, r, k):
         ldx, ldy, _ = self.local_pads[r][k]
@@ -157,7 +213,7 @@ class Board:
 
 
 # weights: hard constraints dominate ratsnest
-W = {"rat": 1.0, "ov": 60.0, "off": 200.0, "edge": 40.0}
+W = {"rat": 1.0, "ov": 60.0, "off": 200.0, "edge": 40.0, "dec": 0.0}
 
 
 def anneal(b: Board, iters: int, seed: int, t0: float, t1: float, slack: float):
@@ -168,9 +224,12 @@ def anneal(b: Board, iters: int, seed: int, t0: float, t1: float, slack: float):
     offedge = {r: b.part_off_edge(r) for r in b.movable}
     tot_off = sum(v[0] for v in offedge.values())
     tot_edge = sum(v[1] for v in offedge.values())
+    deco_cache = {di: b.deco_excess(di) for di in range(len(b.deco))}
+    tot_dec = sum(deco_cache.values())
 
     def cost():
-        return W["rat"] * tot_rat + W["ov"] * tot_ov + W["off"] * tot_off + W["edge"] * tot_edge
+        return (W["rat"] * tot_rat + W["ov"] * tot_ov + W["off"] * tot_off
+                + W["edge"] * tot_edge + W["dec"] * tot_dec)
 
     zone_bbox = {}
     for r in b.movable:
@@ -191,6 +250,8 @@ def anneal(b: Board, iters: int, seed: int, t0: float, t1: float, slack: float):
         old_net = {n: net_cache[n] for n in a_nets}
         old_po = b.part_overlap(r)
         old_off, old_edge = offedge[r]
+        a_deco = b.part_deco.get(r, ())
+        old_deco = {di: deco_cache[di] for di in a_deco}
 
         if rng.random() < 0.15:
             b.rot[r] = (orot + 90) % 360
@@ -211,18 +272,66 @@ def anneal(b: Board, iters: int, seed: int, t0: float, t1: float, slack: float):
         noff, nedge = b.part_off_edge(r)
         d_off = noff - old_off
         d_edge = nedge - old_edge
-        dE = (W["rat"] * d_rat + W["ov"] * d_ov + W["off"] * d_off + W["edge"] * d_edge)
+        d_dec = 0.0
+        new_deco = {}
+        for di in a_deco:
+            new_deco[di] = b.deco_excess(di)
+            d_dec += new_deco[di] - old_deco[di]
+        dE = (W["rat"] * d_rat + W["ov"] * d_ov + W["off"] * d_off
+              + W["edge"] * d_edge + W["dec"] * d_dec)
 
         if dE <= 0 or rng.random() < math.exp(-dE / max(T, 1e-6)):
             for n in a_nets:
                 net_cache[n] = b.net_len(n)
             tot_rat += d_rat; tot_ov += d_ov; tot_off += d_off; tot_edge += d_edge
+            tot_dec += d_dec
+            for di, v in new_deco.items():
+                deco_cache[di] = v
             offedge[r] = (noff, nedge)
             accepts += 1
         else:
             b.x[r], b.y[r], b.rot[r] = ox, oy, orot
 
-    return cost(), tot_rat, tot_ov, tot_off, tot_edge, accepts
+    return cost(), tot_rat, tot_ov, tot_off, tot_edge, tot_dec, accepts
+
+
+def snap_decouple(b: Board):
+    """Deterministic finisher: set each decoupling cap so its power pad sits just
+    outboard of its assigned distinct owner pin, searching a small radius/angle
+    set for a spot that is overlap-free and <=2.0mm pad-to-pad. Guarantees the
+    decoupling gate where geometrically feasible without disturbing anything else."""
+    # Coordinate-descent over several passes: re-place each cap aware of the others'
+    # latest positions, so caps settle into distinct, overlap-free, <=2.0mm spots.
+    order = list(range(len(b.deco)))
+    for _pass in range(6):
+        for di in order:
+            cap, capk, owner, ok = b.deco[di]
+            ox0, oy0, ox1, oy1 = b.cy_aabb(owner)
+            ocx, ocy = (ox0 + ox1) / 2, (oy0 + oy1) / 2
+            pinx, piny = b.pad_world(owner, ok)
+            dx, dy = pinx - ocx, piny - ocy
+            n = math.hypot(dx, dy) or 1.0
+            ux, uy = dx / n, dy / n
+            ldx, ldy, _ = b.local_pads[cap][capk]
+            best = None
+            for r in (0.9, 1.1, 1.3, 1.5, 1.7, 1.9):
+                for ang in (0, 20, -20, 40, -40, 65, -65, 90, -90, 120, -120, 155, -155, 180):
+                    a = math.radians(ang)
+                    vx = ux * math.cos(a) - uy * math.sin(a)
+                    vy = ux * math.sin(a) + uy * math.cos(a)
+                    tx, ty = pinx + vx * r, piny + vy * r
+                    rdx, rdy = rot(ldx, ldy, b.rot[cap])
+                    b.x[cap], b.y[cap] = tx - rdx, ty - rdy
+                    wx, wy = b.pad_world(cap, capk)
+                    dist = math.hypot(wx - pinx, wy - piny)
+                    ov = b.part_overlap(cap)
+                    cx0, cy0, cx1, cy1 = b.cy_aabb(cap)
+                    inside = point_in_polygon((cx0 + cx1) / 2, (cy0 + cy1) / 2, b.poly)
+                    score = (round(ov, 3), 0 if inside else 1, round(dist, 3))
+                    if best is None or score < best[0]:
+                        best = (score, b.x[cap], b.y[cap])
+            b.x[cap], b.y[cap] = best[1], best[2]
+    return len(b.deco)
 
 
 def set_anchor_body(body, x, y, rotdeg):
@@ -255,19 +364,31 @@ def main():
     ap.add_argument("--t0", type=float, default=4.0)
     ap.add_argument("--t1", type=float, default=0.02)
     ap.add_argument("--zone-slack", type=float, default=1.0)
+    ap.add_argument("--w-dec", type=float, default=0.0,
+                    help="decoupling-proximity weight (0 disables the term)")
+    ap.add_argument("--w-ov", type=float, default=W["ov"], help="overlap weight")
+    ap.add_argument("--deco-target", type=float, default=Board.deco_target,
+                    help="pull caps to <=this mm of the pin")
+    ap.add_argument("--snap", action="store_true",
+                    help="after SA, deterministically snap decoupling caps to their pins")
     ap.add_argument("--dry-run", action="store_true", help="optimize but don't write")
     args = ap.parse_args()
 
+    W["dec"] = args.w_dec
+    W["ov"] = args.w_ov
+    Board.deco_target = args.deco_target
     pcb = Path(args.pcb)
     plan = json.loads(Path(args.plan).read_text())
     b = Board(pcb, plan)
 
-    c0 = (W["rat"] * sum(b.net_len(n) for n in b.net_members)
-          + W["ov"] * sum(b.part_overlap(r) for r in b.refs) / 2)
     rat0 = sum(b.net_len(n) for n in b.net_members)
-    fc, rat, ov, off, edge, acc = anneal(b, args.iters, args.seed, args.t0, args.t1, args.zone_slack)
-    print(f"SA seed={args.seed} iters={args.iters} accepts={acc}")
-    print(f"  ratsnest {rat0:.1f} -> {rat:.1f} mm | overlap_area {ov:.2f} | offboard {off:.0f} | edge {edge:.2f}")
+    fc, rat, ov, off, edge, dec, acc = anneal(b, args.iters, args.seed, args.t0, args.t1, args.zone_slack)
+    print(f"SA seed={args.seed} iters={args.iters} w_dec={args.w_dec} accepts={acc}")
+    print(f"  ratsnest {rat0:.1f} -> {rat:.1f} mm | overlap_area {ov:.2f} | offboard {off:.0f} | "
+          f"edge {edge:.2f} | deco_excess {dec:.2f}")
+    if args.snap:
+        m = snap_decouple(b)
+        print(f"  snapped {m} decoupling caps to their pins")
     if not args.dry_run:
         write_back(pcb, b)
         print(f"  wrote {pcb}")
