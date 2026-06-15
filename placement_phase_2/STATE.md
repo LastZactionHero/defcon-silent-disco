@@ -1,21 +1,25 @@
 # STATE (pointer only — durable history lives in LEDGER.md + metrics.jsonl)
 
 Phase: **C — Placement engine**
-Current approach: constructive placement landed (place.py); refining toward gates.
-Last completed: C(5) — PLACEMENT_SPEC + tools/place.py; all 75 parts on-board, grouped.
-  ratsnest 2947 → 1604.55mm (−45%). offboard 4, overlaps 2, decoupling_max 29.1, erc 14.
-  Rendered + looked (renders/views/area_100_80_188_134.png). Commit pending this iter.
+Current approach: constructive placement legalized; 4/8 hard gates pass. Refining.
+Last completed: C(6) — overlaps 0, offboard 0, unplaced 0, fixed_ok TRUE. ratsnest 1580mm.
+  place.py now has row topology + board-clamp + flip-to-back; BOOTSEL on B.Cu. Commit pending.
+
+GATE STATUS: overlaps 0 ✓ | offboard 0 ✓ | unplaced 0 ✓ | fp_unresolved 0 ✓ | fixed_ok ✓ |
+  erc 14 ✓ (<=14) | ratsnest 1580 (<=2358 ✓; target <1339) | decoupling_max 26.3 ✗ (need <=2.0)
+  | dfm_spacing 190 ✗ (need 0; mostly silk_overlap + copper/edge clearance, unrouted board).
 
 Next intended action (Phase C):
-  1. C(6): legalize — pcb-placement spread.py to clear the 2 courtyard overlaps; pull the 4
-     off-edge parts inside via validate_placement. Nudge J20→top-right corner (y~84) and
-     SW1→bottom-left corner (y~130) in floorplan.py FIXED config so fixed_ok passes; set
-     connector orientations (J20 plug up, J10 plug down). Re-place, re-measure, re-render.
-  2. C(7): auto_decouple U3 (and U20/U21) to drive decoupling_max_mm 29→≤2.0 (caps to IC
-     power pins). Build/extend a tool; don't hand-edit.
-  3. C(8+): global optimizer — simulated annealing (baseline) minimizing ratsnest with
-     courtyard-overlap + off-board + fixed-displacement penalties; compare a 2nd method
-     (force-directed); keep champion. Target ratsnest <1339 and plateau with ALL gates held.
+  1. C(7): auto_decouple — use pcb-placement auto_decouple.py / arrange_around_ic.py to move
+     each decoupling cap adjacent to its IC power pin (U3 first: +3V3/+1V1 caps; then U20/U21).
+     Wrap it as a place.py "ring" step driven by floorplan so it's reproducible. Target
+     decoupling_max_mm <= 2.0. Re-measure (watch overlaps stay 0); re-render.
+  2. C(8+): global optimizer — simulated annealing (baseline) minimizing ratsnest with
+     overlap + off-board + fixed-displacement + decoupling penalties; compare force-directed;
+     keep champion. Target ratsnest <1339, plateau with ALL gates held.
+  3. dfm_spacing: most are silk_overlap/silk_over_copper (cosmetic, fixable by silk regen) +
+     copper_edge_clearance/clearance (placement). Separate the placement-driven clearance
+     violations (must be 0) from silk (handle via a silk pass) — don't conflate. Re-measure.
   4. Render + LOOK every few iters; escalate (switch method / global re-place) if ratsnest
      plateaus short of gate — never repeat a stalled move.
 

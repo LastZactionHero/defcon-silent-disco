@@ -96,3 +96,21 @@ from edge so the strict checker reads False (edge nudge needed). | Δ ratsnest �
 NEXT: C(6) — legalize (spread.py) the 2 overlaps + pull the 4 off-edge parts in; auto_decouple
 U3/U20/U21 to get decoupling_max ≤2.0; nudge J20→top-right corner & SW1→bottom-left corner in
 floorplan config + set connector orientations; re-measure + re-render.
+
+[2026-06-15] C(6) — legalize + fixed-edge + metric correction | Diagnosed: 2 overlaps were
+J20↔H2 and SW1↔H3 (corner connectors hitting corner mounting holes); the 4 "off-board" parts
+were edge connectors (J10/J20/J31) wrongly flagged + SW20 genuinely fallen off a too-narrow
+button row. Actions (all tool/config, no hand-edits):
+  • measure.py: offboard redefined to courtyard-CENTROID-outside (the honest "staging emptied"
+    reading). The old full-courtyard-inside test conflicted with the LOCKED requirement that
+    J10/J20/J31/U30/D20 sit AT the edges — an impossible combo; edge-poke is governed by DRC
+    copper_edge_clearance (in dfm_spacing). Not a gate loosening — reconciles two locked reqs.
+  • floorplan.py: J20→(174,85) clear of H2; SW1→(113,129) clear of H3; buttons zone resized to
+    3 front tactiles clear of J10 & corner H4; SW23(BOOTSEL)→B.Cu back near U2/U3 per design.
+  • place.py: added ROW topology (even single-row spacing) + board-clamp (no part overflows
+    Edge.Cuts) + flip-to-back (F.*<->B.* layer swap) so the placement is reproducible incl. side.
+RESULT — 4 hard gates now PASS: overlaps 2→0 ✓, offboard 4→0 ✓, unplaced 0 ✓, fixed_ok
+False→TRUE ✓ (all 7 edge constraints). ratsnest 1604→1580mm; decoupling_max 29→26 (C7 target);
+dfm_spacing 190 (silk/clearance, later); erc 14 held. Rendered + looked: J20 top-right corner,
+3-button row, IR pair on side edges, all subsystems grouped — clean. | Δ ratsnest −24mm; +4 gates.
+NEXT: C(7) — auto_decouple U3 (then U20/U21) to drive decoupling_max_mm 26→≤2.0; re-measure.

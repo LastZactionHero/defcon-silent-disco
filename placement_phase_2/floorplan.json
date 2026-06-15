@@ -52,14 +52,14 @@
     },
     "buttons": {
       "bbox": [
-        152,
-        124,
-        186,
+        149,
+        122,
+        180,
         133
       ],
       "topology": "row",
       "flow": "right",
-      "note": "tactile buttons along the bottom-right edge"
+      "note": "3 front tactiles (CH/VOL+/VOL-) in a row, clear of J10 and corner hole H4"
     },
     "sao": {
       "bbox": [
@@ -85,13 +85,13 @@
   "fixed": {
     "J20": {
       "pos": [
-        178.0,
-        86.0
+        174.0,
+        85.0
       ],
       "rot": 180,
       "layer": "F.Cu",
       "edge": "top-right",
-      "why": "audio jack, plug exits up off top edge"
+      "why": "audio jack, plug exits up off top edge (inboard of corner hole H2)"
     },
     "J10": {
       "pos": [
@@ -105,13 +105,13 @@
     },
     "SW1": {
       "pos": [
-        107.0,
-        128.0
+        113.0,
+        129.0
       ],
       "rot": 0,
       "layer": "F.Cu",
       "edge": "bottom-left",
-      "why": "slide power switch, bottom-left corner"
+      "why": "slide power switch, bottom-left (inboard of corner hole H3)"
     },
     "U30": {
       "pos": [
@@ -152,6 +152,16 @@
       "layer": "B.Cu",
       "edge": "bottom-left",
       "why": "LiPo JST-PH on back near power zone"
+    },
+    "SW23": {
+      "pos": [
+        140.0,
+        113.0
+      ],
+      "rot": 0,
+      "layer": "B.Cu",
+      "edge": "back",
+      "why": "BOOTSEL tactile on the back near U2/U3 (flash CS), clear of J31/J11"
     },
     "H2": {
       "pos": [
@@ -235,7 +245,6 @@
     "SW21": "buttons",
     "C61": "leds",
     "SW22": "buttons",
-    "SW23": "buttons",
     "Y1": "mcu",
     "LED20": "leds",
     "C46": "audio",
@@ -266,7 +275,7 @@
   },
   "score": {
     "approach": "A",
-    "est_ratsnest_mm": 892.4,
+    "est_ratsnest_mm": 874.1,
     "capacity": {
       "leds": {
         "zone_area": 792,
@@ -289,9 +298,9 @@
         "util": 0.1
       },
       "buttons": {
-        "zone_area": 306,
-        "used_area": 204.0,
-        "util": 0.67
+        "zone_area": 341,
+        "used_area": 153.0,
+        "util": 0.45
       },
       "sao": {
         "zone_area": 360,

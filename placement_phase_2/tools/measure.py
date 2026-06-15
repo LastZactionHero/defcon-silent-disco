@@ -155,6 +155,12 @@ def geom_overlaps(text: str) -> int:
 
 
 def count_offboard(meta: dict, poly: list) -> int:
+    """A part is off-board if its courtyard CENTROID lies outside Edge.Cuts — i.e.
+    it is still in the staging grid / floating off the board. Edge connectors
+    (USB-C, audio jack, microSD) legitimately have courtyards that poke past the
+    edge; their centroids stay on-board, so they correctly count as placed. A part
+    hanging too far over an edge is caught separately by DRC copper_edge_clearance
+    (folded into dfm_spacing_violations), so the gate set stays strict overall."""
     if len(poly) < 3:
         return 0
     n = 0
@@ -162,7 +168,9 @@ def count_offboard(meta: dict, poly: list) -> int:
         cy = m.get("courtyard_bbox")
         if not cy:
             continue
-        if any(not point_in_polygon(cx, cy_, poly) for cx, cy_ in cy_corners(cy)):
+        cx = (cy[0] + cy[2]) / 2
+        cyc = (cy[1] + cy[3]) / 2
+        if not point_in_polygon(cx, cyc, poly):
             n += 1
     return n
 

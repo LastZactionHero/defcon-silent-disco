@@ -56,8 +56,8 @@ ZONES = {
                 "note": "DAC->amp->output coupling, flows up toward J20"},
     "power":   {"bbox": [101, 118, 152, 133],"topology": "chain",   "flow": "right",
                 "note": "USB-C/charger/LDO chain along the bottom toward J10/J11"},
-    "buttons": {"bbox": [152, 124, 186, 133],"topology": "row",     "flow": "right",
-                "note": "tactile buttons along the bottom-right edge"},
+    "buttons": {"bbox": [149, 122, 180, 133],"topology": "row",     "flow": "right",
+                "note": "3 front tactiles (CH/VOL+/VOL-) in a row, clear of J10 and corner hole H4"},
     "sao":     {"bbox": [101, 98, 121, 116], "topology": "cluster",
                 "note": "SAO header + I2C pullups, left edge"},
     "ir":      {"bbox": [176, 114, 186, 123],"topology": "cluster",
@@ -67,12 +67,12 @@ ZONES = {
 # Fixed / edge-locked parts (LOCKED per HARNESS). pos = anchor target, starting
 # point the placement engine legalizes; the *edge/side* is the hard part.
 FIXED = {
-    "J20": {"pos": [178.0, 86.0],  "rot": 180, "layer": "F.Cu", "edge": "top-right",
-            "why": "audio jack, plug exits up off top edge"},
+    "J20": {"pos": [174.0, 85.0],  "rot": 180, "layer": "F.Cu", "edge": "top-right",
+            "why": "audio jack, plug exits up off top edge (inboard of corner hole H2)"},
     "J10": {"pos": [144.0, 130.5], "rot": 90,  "layer": "F.Cu", "edge": "bottom",
             "why": "USB-C, plug down off bottom edge"},
-    "SW1": {"pos": [107.0, 128.0], "rot": 0,   "layer": "F.Cu", "edge": "bottom-left",
-            "why": "slide power switch, bottom-left corner"},
+    "SW1": {"pos": [113.0, 129.0], "rot": 0,   "layer": "F.Cu", "edge": "bottom-left",
+            "why": "slide power switch, bottom-left (inboard of corner hole H3)"},
     "U30": {"pos": [103.5, 110.0], "rot": 0,   "layer": "F.Cu", "edge": "left",
             "why": "IR-RX, left edge y=110 (mirror of D20)"},
     "D20": {"pos": [184.5, 110.0], "rot": 180, "layer": "F.Cu", "edge": "right",
@@ -81,6 +81,8 @@ FIXED = {
             "why": "microSD on back, slot accessible from bottom edge"},
     "J11": {"pos": [115.0, 124.0], "rot": 0,   "layer": "B.Cu", "edge": "bottom-left",
             "why": "LiPo JST-PH on back near power zone"},
+    "SW23": {"pos": [140.0, 113.0],"rot": 0,   "layer": "B.Cu", "edge": "back",
+             "why": "BOOTSEL tactile on the back near U2/U3 (flash CS), clear of J31/J11"},
 }
 # H1..H4 mounting holes stay where they are (corners) — read from board, locked.
 

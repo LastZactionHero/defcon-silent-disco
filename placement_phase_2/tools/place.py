@@ -33,6 +33,22 @@ from fp_meta import load_pcb            # noqa: E402
 MARGIN = 1.2     # gap inside a zone bbox edge
 GAP = 1.0        # gap between packed courtyards
 
+# F.*<->B.* layer pairs for flipping a footprint to the other side.
+SWAPS = [("F.Cu", "B.Cu"), ("F.SilkS", "B.SilkS"), ("F.Mask", "B.Mask"),
+         ("F.Paste", "B.Paste"), ("F.Fab", "B.Fab"), ("F.CrtYd", "B.CrtYd"),
+         ("F.Adhes", "B.Adhes")]
+
+
+def swap_layers(body: str) -> str:
+    """Bidirectional F.*<->B.* swap (placeholder-guarded) — flips a part's side."""
+    for f, _ in SWAPS:
+        body = body.replace(f, f"__FLIP_{f}__")
+    for f, b in SWAPS:
+        body = body.replace(b, f)
+    for f, b in SWAPS:
+        body = body.replace(f"__FLIP_{f}__", b)
+    return body
+
 
 def set_anchor(body: str, x: float, y: float, rot=None) -> str:
     pat = re.compile(r"(^\t\t\(at )(-?\d+\.?\d*)\s+(-?\d+\.?\d*)(\s+(-?\d+\.?\d*))?(\))",
@@ -94,9 +110,33 @@ def main() -> int:
     for ref, z in plan["assign"].items():
         by_zone.setdefault(z, []).append(ref)
 
+    def courtyard_center_offset(m):
+        """(anchor - courtyard_center) so we can land a courtyard center on a target."""
+        cyb = m.get("courtyard_bbox")
+        if not cyb:
+            return 0.0, 0.0
+        ccx, ccy = (cyb[0] + cyb[2]) / 2, (cyb[1] + cyb[3]) / 2
+        return m["anchor"]["x"] - ccx, m["anchor"]["y"] - ccy
+
     for zname, refs in by_zone.items():
         z = zones[zname]
         zx0, zy0, zx1, zy1 = z["bbox"]
+
+        # ROW topology: evenly space parts in a single horizontal line, courtyard
+        # centered in its slot — guarantees no overlap when slots are wide enough.
+        if z.get("topology") == "row":
+            ordered = sorted(refs, key=lambda r: (int(re.search(r"\d+", r).group())))
+            n = len(ordered)
+            slot = (zx1 - zx0) / n
+            widest = max(size_of(meta[r])[0] for r in ordered)
+            if slot >= widest + 0.4:                 # fits as a single clean row
+                row_cy = (zy0 + zy1) / 2
+                for i, ref in enumerate(ordered):
+                    ox, oy = courtyard_center_offset(meta[ref])
+                    tcx = zx0 + (i + 0.5) * slot
+                    moves[ref] = (tcx + ox, row_cy + oy, None)
+                continue                             # zone done
+
         refs = sorted(refs, key=lambda r: -size_of(meta[r])[0] * size_of(meta[r])[1])
         cx, cy_shelf, shelf_h = zx0 + MARGIN, zy0 + MARGIN, 0.0
         for ref in refs:
@@ -131,6 +171,24 @@ def main() -> int:
             if not placed:
                 moves[ref] = ((zx0 + zx1) / 2, (zy0 + zy1) / 2, None)
 
+    # clamp every non-fixed part so its courtyard stays inside the board AABB
+    bx = plan["board"]
+    CM = 0.6
+    for ref in list(moves):
+        if ref in plan["fixed"]:
+            continue
+        m = meta[ref]
+        cyb = m.get("courtyard_bbox")
+        if not cyb:
+            continue
+        ax, ay, rot = moves[ref]
+        off_x = m["anchor"]["x"] - cyb[0]
+        off_y = m["anchor"]["y"] - cyb[1]
+        w, h = cyb[2] - cyb[0], cyb[3] - cyb[1]
+        cx0 = min(max(ax - off_x, bx["x0"] + CM), bx["x1"] - CM - w)
+        cy0 = min(max(ay - off_y, bx["y0"] + CM), bx["y1"] - CM - h)
+        moves[ref] = (cx0 + off_x, cy0 + off_y, rot)
+
     print(f"placing {len(moves)} parts "
           f"({sum(1 for r in plan['fixed'] if r in moves)} fixed, "
           f"{len(moves) - sum(1 for r in plan['fixed'] if r in moves)} zoned)")
@@ -140,17 +198,25 @@ def main() -> int:
         print("  ... dry run")
         return 0
 
-    # 3) one-pass rewrite
+    # target layer per ref: fixed parts carry an explicit layer; zoned parts are front
+    target_layer = {r: fx.get("layer", "F.Cu") for r, fx in plan["fixed"].items()}
+
+    # 3) one-pass rewrite (move + flip side if the target layer differs)
     chunks = re.split(r"(\n\t\(footprint )", text)
     out = [chunks[0]]
     i = 1
     n = 0
+    flips = 0
     while i < len(chunks):
         delim = chunks[i]
         body = chunks[i + 1] if i + 1 < len(chunks) else ""
         mref = re.search(r'\(property "Reference" "([^"]+)"', body)
         ref = mref.group(1) if mref else None
         if ref in moves:
+            tl = target_layer.get(ref, "F.Cu")
+            if ref in meta and meta[ref]["layer"] != tl:
+                body = swap_layers(body)
+                flips += 1
             x, y, rot = moves[ref]
             body = set_anchor(body, x, y, rot)
             n += 1
@@ -158,7 +224,7 @@ def main() -> int:
         out.append(body)
         i += 2
     pcb.write_text("".join(out))
-    print(f"placed {n} footprints onto the board from {args.plan}")
+    print(f"placed {n} footprints onto the board from {args.plan} ({flips} flipped to back)")
     return 0
 
 
