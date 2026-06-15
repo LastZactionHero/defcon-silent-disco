@@ -71,16 +71,18 @@ ZONES = {
 FIXED = {
     "J20": {"pos": [174.0, 85.0],  "rot": 180, "layer": "F.Cu", "edge": "top-right",
             "why": "audio jack, plug exits up off top edge (inboard of corner hole H2)"},
-    "J10": {"pos": [144.0, 130.5], "rot": 90,  "layer": "F.Cu", "edge": "bottom",
-            "why": "USB-C, plug down off bottom edge"},
+    "J10": {"pos": [144.0, 125.3], "rot": 180, "layer": "F.Cu", "edge": "bottom",
+            "why": "USB-C, opening faces +Y (bottom edge); rot180 puts the receptacle mouth "
+                   "flush at the edge (shell/SH pads are native -Y)"},
     "SW1": {"pos": [113.0, 129.0], "rot": 0,   "layer": "F.Cu", "edge": "bottom-left",
             "why": "slide power switch, bottom-left (inboard of corner hole H3)"},
     "U30": {"pos": [103.5, 110.0], "rot": 0,   "layer": "F.Cu", "edge": "left",
             "why": "IR-RX, left edge y=110 (mirror of D20)"},
     "D20": {"pos": [184.5, 110.0], "rot": 180, "layer": "F.Cu", "edge": "right",
             "why": "IR-LED, right edge y=110 (mirror of U30)"},
-    "J31": {"pos": [130.0, 129.5], "rot": 0,   "layer": "B.Cu", "edge": "bottom",
-            "why": "microSD on back, slot accessible from bottom edge"},
+    "J31": {"pos": [130.0, 127.6], "rot": 0,   "layer": "B.Cu", "edge": "bottom",
+            "why": "microSD on back, slot opening flush at the bottom edge (body fully on-board, "
+                   "not overhanging)"},
     "J11": {"pos": [115.0, 124.0], "rot": 0,   "layer": "B.Cu", "edge": "bottom-left",
             "why": "LiPo JST-PH on back near power zone"},
     # SW23 (BOOTSEL) removed — no BOOTSEL button wanted; was an orphan footprint.

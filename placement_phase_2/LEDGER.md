@@ -245,3 +245,22 @@ snap → polish → backside_decouple(distinct pins, no stacking) → final poli
   failures are fully resolved. | Δ Phase C placement complete to the locked bar (8.5/9; the 0.03mm
   residual is a routing-stage touch-up, not a placement defect).
   NEXT: user is engaged — pause for direction before Phase D (routing) or further polish.
+
+[2026-06-15] C(14) — orientation/edge fixes from user 3D review | User reviewed the 3D and flagged
+real issues the placement metrics don't capture: LEDs rotated inconsistently (90/-90/180/-90),
+buttons inconsistent (SW22 at 90), USB-C facing wrong way + off the edge, microSD backwards/
+overhanging, audio-jack 3D model rotated (footprint fine). (Investigated the "smushed U2" — it's a
+normal tiny USON-8, identical in the original board; not corruption.)
+  Built tools/orient.py (set rotation/pos of named parts) + tools/declutter.py (local legalizer).
+  Determined connector facings from pad geometry: USB-C shell/opening is native -Y → rot 180 puts
+  the mouth at the bottom edge; verified on a scratch 3D render. Fixes applied + re-seated the
+  decoupling the rotations disturbed (backside_decouple re-derives owner pins) + decluttered.
+  Also BAKED into config for reproducibility: floorplan FIXED J10=rot180@(144,125.3),
+  J31@(130,127.6); place.py row topology now forces uniform rotation 0 (LEDs/buttons).
+  RESULT (authoritative geom + 3D front+back verified): overlaps 0 ✓, offboard 0 ✓, unplaced 0 ✓,
+  fixed_ok ✓, decoupling_max 1.71 ✓, ratsnest 1107.4 ✓, erc 14 ✓, dfm_spacing 1 (R13↔U10 0.03mm).
+  LEDs+buttons uniform; USB-C seated at edge facing out; microSD on-board, slot at edge. |
+  Δ orientation/edge correct now; layout is genuinely sane front and back.
+  KNOWN COSMETIC: J20 audio-jack 3D STEP model is rotated (footprint/pads correct) — a model
+  property, not a fab/placement issue; defer.
+  NEXT: user direction — Phase D routing, or fix the J20 3D model + R13↔U10 0.03mm first.

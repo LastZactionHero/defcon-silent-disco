@@ -124,7 +124,8 @@ def main() -> int:
         zx0, zy0, zx1, zy1 = z["bbox"]
 
         # ROW topology: evenly space parts in a single horizontal line, courtyard
-        # centered in its slot — guarantees no overlap when slots are wide enough.
+        # centered in its slot, all at a UNIFORM rotation (0) so the row looks
+        # consistent (LEDs, buttons). Offset from the rot-0 local courtyard center.
         if z.get("topology") == "row":
             ordered = sorted(refs, key=lambda r: (int(re.search(r"\d+", r).group())))
             n = len(ordered)
@@ -133,9 +134,10 @@ def main() -> int:
             if slot >= widest + 0.4:                 # fits as a single clean row
                 row_cy = (zy0 + zy1) / 2
                 for i, ref in enumerate(ordered):
-                    ox, oy = courtyard_center_offset(meta[ref])
+                    cl = meta[ref].get("courtyard_local") or [-1, -1, 1, 1]
+                    lcx, lcy = (cl[0] + cl[2]) / 2, (cl[1] + cl[3]) / 2
                     tcx = zx0 + (i + 0.5) * slot
-                    moves[ref] = (tcx + ox, row_cy + oy, None)
+                    moves[ref] = (tcx - lcx, row_cy - lcy, 0)   # uniform rot 0
                 continue                             # zone done
 
         refs = sorted(refs, key=lambda r: -size_of(meta[r])[0] * size_of(meta[r])[1])
