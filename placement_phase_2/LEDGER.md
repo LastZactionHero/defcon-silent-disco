@@ -114,3 +114,22 @@ False→TRUE ✓ (all 7 edge constraints). ratsnest 1604→1580mm; decoupling_ma
 dfm_spacing 190 (silk/clearance, later); erc 14 held. Rendered + looked: J20 top-right corner,
 3-button row, IR pair on side edges, all subsystems grouped — clean. | Δ ratsnest −24mm; +4 gates.
 NEXT: C(7) — auto_decouple U3 (then U20/U21) to drive decoupling_max_mm 26→≤2.0; re-measure.
+
+[2026-06-15] C(7) — decouple tool built; greedy decouple+spread plateaus → ESCALATE to SA |
+Built tools/decouple.py: auto-derives each bypass cap's owner from connectivity and drives the
+tested auto_decouple primitive per IC, reproducibly. Key fix: LOAD-BALANCED cap→owner assignment
+(most-constrained-first; penalise owners already holding caps) so the 4 SK9822 LEDs each get
+their own 10n bypass instead of all piling onto LED20 — resolves the rail-only-cap ambiguity that
+sank Approach B. Verified the mapping (D20←C63, LED20-23←C60-62/C70, U3←5, U2←5, U10/U11/U21←1).
+  RESULT of decouple + spread(--fixed=ICs/connectors/holes): decoupling_max 26.3→9.7mm — but it
+  PLATEAUS there and reintroduces 21 courtyard overlaps. Root cause: the objectives are coupled
+  (cramming caps to IC pins overlaps bodies/neighbours; spread resolving overlaps pushes caps
+  back out), and count-balancing over-loads small parts (U2 USON-8 can't host 5 caps). Greedy
+  local placement cannot jointly satisfy decoupling_max<=2.0 AND overlaps==0 AND ratsnest<1339.
+  ESCALATION (per HARNESS convergence rule — do not repeat a stalled move): switch to a GLOBAL
+  optimizer. Reverted the 21-overlap regression to the clean C(6) state. Committed: decouple.py
+  (kept as an SA initializer) + ANNEAL_SPEC.md (simulated-annealing optimizer: single cost
+  function over ratsnest + overlap + offboard + edge + decoupling, Metropolis/geometric cooling,
+  fixed parts frozen, warm-started from the constructive placement). | Δ board unchanged (reverted
+  bad move); decoupling approach found + escalated. | NEXT: C(8) — implement tools/anneal.py per
+  spec; run from the constructive warm start; keep champion vs constructive if all gates hold.
