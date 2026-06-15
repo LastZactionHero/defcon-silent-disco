@@ -29,7 +29,7 @@ SKILL = os.environ.get(
 )
 sys.path.insert(0, SKILL)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fp_meta import load_pcb            # noqa: E402
+from geom import load_pcb               # noqa: E402  (authoritative pcbnew geometry)
 import place as P                       # noqa: E402  (swap_layers, set_anchor)
 
 GROUND = {"GND", "/GND", "AGND", "PGND", "DGND"}
@@ -44,14 +44,19 @@ def cap_power_pad(m):
     return None
 
 
-def find_pin(meta, cap, capnet, cap_xy):
-    """Nearest non-passive part's pad on capnet (the IC power pin)."""
+def find_pin(meta, cap, capnet, cap_xy, used=None):
+    """Nearest non-passive part's pad on capnet (the IC power pin) not already
+    claimed by another back-side cap (distinct-pin, so caps don't stack)."""
+    used = used or set()
     best, bd = None, 1e9
     for ref, m in meta.items():
         if ref == cap or ref[0] in ("C", "R") or not ref[0].isalpha():
             continue
         for p in m["pads"]:
             if p.get("net") == capnet:
+                key = (round(p["x"], 2), round(p["y"], 2))
+                if key in used:
+                    continue
                 d = math.hypot(p["x"] - cap_xy[0], p["y"] - cap_xy[1])
                 if d < bd:
                     bd, best = d, (p["x"], p["y"], ref)
@@ -82,6 +87,7 @@ def main():
                 caps.append(ref)
 
     targets = {}
+    used = set()                       # claimed pins, so back caps don't stack
     for cap in caps:
         m = meta.get(cap)
         if not m:
@@ -89,9 +95,10 @@ def main():
         pp = cap_power_pad(m)
         if not pp:
             print(f"  skip {cap}: no power pad"); continue
-        pin = find_pin(meta, cap, pp["net"], (pp["x"], pp["y"]))
+        pin = find_pin(meta, cap, pp["net"], (pp["x"], pp["y"]), used)
         if not pin:
-            print(f"  skip {cap}: no owner pin on {pp['net']}"); continue
+            print(f"  skip {cap}: no free owner pin on {pp['net']}"); continue
+        used.add((round(pin[0], 2), round(pin[1], 2)))
         targets[cap] = (pin[0], pin[1], m["anchor"]["rot"], pin[2])
         print(f"  {cap} ({pp['net']}) -> B.Cu under {pin[2]} pin at ({pin[0]:.2f},{pin[1]:.2f})")
 

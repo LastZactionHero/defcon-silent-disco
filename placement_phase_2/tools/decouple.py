@@ -25,7 +25,8 @@ SKILL = os.environ.get(
     str(Path.home() / ".claude/skills/pcb-placement/scripts"),
 )
 sys.path.insert(0, SKILL)
-from fp_meta import load_pcb            # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from geom import load_pcb               # noqa: E402  (authoritative pcbnew geometry)
 
 GROUND = {"GND", "/GND", "AGND", "PGND", "DGND"}
 POWER_RE = re.compile(r"(^\+|3V3|3\.3|1V1|1V8|5V|VBUS|VBAT|VDD|VCC|VREG|BAT\b)", re.I)

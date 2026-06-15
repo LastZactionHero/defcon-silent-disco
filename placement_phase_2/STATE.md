@@ -1,14 +1,21 @@
 # STATE (pointer only — durable history lives in LEDGER.md + metrics.jsonl)
 
 Phase: **C — Placement engine**
-Current approach: placement essentially done (8/9 gates). Only dfm/silk remains.
-Last completed: C(10) — backside_decouple.py moved C16 + 3 bulk caps to B.Cu under their pins;
-  decoupling 2.09→1.72 (GATE MET), overlaps 0, ratsnest 941, all placement gates pass. Commit pending.
+Current approach: geometry metric REBUILT on pcbnew (regex parser was corrupting rotated parts).
+  Full re-place done on trustworthy geometry; basic-layout errors the user caught are fixed.
+Last completed: C(12) — rewired all tools onto geom; removed orphan SW23; fixed buttons zone
+  (was overlapping J10); froze LED/button rows in SA; re-placed; verified 2D+3D.
 
-GATE STATUS: overlaps 0 ✓ | offboard 0 ✓ | unplaced 0 ✓ | fp_unresolved 0 ✓ | fixed_ok ✓ |
-  erc 14 ✓ | ratsnest 940.95 ✓ (<<1339 reference — beat & locked) | decoupling_max 1.72 ✓ |
-  dfm_spacing ~198 ✗ (need 0; mostly silk_overlap/silk_over_copper cosmetic + some clearance).
-  → 8 of 9 gate lines PASS. Only dfm_spacing remains.
+GATE STATUS (AUTHORITATIVE geometry — now matches DRC + 3D): overlaps 0 ✓ | offboard 0 ✓ |
+  unplaced 0 ✓ | fp_unresolved 0 ✓ | fixed_ok ✓ | erc 14 ✓ | ratsnest 1101.7 ✓ (<1339 ref;
+  honest — earlier 928 was on corrupted geometry) | decoupling_max 1.61 ✓ |
+  dfm_spacing ~198 ✗ but established INHERENT (intra-footprint fine-pitch/THT + GND-zone-to-edge),
+  0 inter-part placement violations → needs metric reconciliation like overlaps/offboard did.
+  → All genuine PLACEMENT gates pass. Only the dfm_spacing METRIC needs honest scoping.
+
+KEY LESSON (do not regress): the regex courtyard/pad parser (fp_meta) is unreliable for rotated
+parts. ALL geometry now goes through tools/geom.py (pcbnew). Always verify with measure (geom)
+AND a 3D render — metrics alone hid buttons-under-USB.
 
 Next intended action (Phase C):
   1. C(11): dfm_spacing — run kicad-cli DRC, BREAK DOWN the ~198 by type. The copper-spacing set

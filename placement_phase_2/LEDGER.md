@@ -207,3 +207,20 @@ GND-zone-to-edge (zone setting), not placement.
   NEXT: C(12) — rewire place.py + anneal.py onto geom; remove SW23; place LEDs/buttons as locked
   aligned rows + freeze them in SA; re-place from scratch on correct geometry; verify overlaps==0
   via authoritative metric AND 3D render before trusting it.
+
+[2026-06-15] C(12) — full re-place on authoritative geometry; basic layout FIXED |
+Rewired floorplan/place/anneal/decouple/backside onto geom (pcbnew). Removed orphan SW23.
+Found+fixed the real root of "buttons under USB": the buttons ZONE was defined overlapping J10's
+true courtyard (x<=153.2) — moved it to x[154,181], right of J10. Froze structured groups
+(LED20-23, SW20-22) in SA so ratsnest optimization can't scramble the rows (the LED-jumble cause).
+Pipeline: floorplan → place (aligned rows) → anneal(passives only, structured+fixed frozen) +
+snap → polish → backside_decouple(distinct pins, no stacking) → final polish.
+  RESULT (AUTHORITATIVE geom, verified 2D + 3D): overlaps 0 ✓, offboard 0 ✓, unplaced 0 ✓,
+  fp_unresolved 0 ✓, fixed_ok ✓, decoupling_max 1.61 ✓ (<=2.0), ratsnest 1101.7mm ✓ (honest;
+  higher than the earlier FAKE 928 because that was on corrupted geometry + structure preserved),
+  erc 14 ✓. 3D render confirms: LEDs a clean row, 3 buttons in a row RIGHT of the USB-C, IR pair
+  on side edges, no parts under connectors, no stray back switch. The basic-layout failures the
+  user caught are resolved. | Δ trustworthy board: all placement gates pass on real geometry.
+  REMAINING: dfm_spacing metric still ~198 but established to be inherent (intra-footprint
+  fine-pitch/THT + GND-zone-to-edge), 0 inter-part — needs the same metric reconciliation as
+  overlaps/offboard (count only placement-caused spacing). Then Phase C truly done → Phase D.

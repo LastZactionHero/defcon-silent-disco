@@ -28,7 +28,8 @@ SKILL = os.environ.get(
     str(Path.home() / ".claude/skills/pcb-placement/scripts"),
 )
 sys.path.insert(0, SKILL)
-from fp_meta import load_pcb            # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from geom import load_pcb               # noqa: E402  (authoritative pcbnew geometry)
 
 MARGIN = 1.2     # gap inside a zone bbox edge
 GAP = 1.0        # gap between packed courtyards

@@ -30,10 +30,14 @@ SKILL = os.environ.get(
     str(Path.home() / ".claude/skills/pcb-placement/scripts"),
 )
 sys.path.insert(0, SKILL)
-from fp_meta import load_pcb            # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from geom import load_pcb               # noqa: E402  (authoritative pcbnew geometry)
 from validate_placement import parse_edge_cuts, point_in_polygon  # noqa: E402
 
 GROUND = {"GND", "/GND", "AGND", "PGND", "DGND"}
+
+# Structured groups placed as aligned rows by place.py and frozen during SA.
+STRUCTURED = {"LED20", "LED21", "LED22", "LED23", "SW20", "SW21", "SW22"}
 
 
 def rot(dx, dy, deg):
@@ -79,30 +83,30 @@ class Board:
         self.fixed = set(plan["fixed"])
         self.zones = plan["zones"]
         self.assign = plan["assign"]
+        # Structured groups are placed as aligned rows by place.py and FROZEN here so
+        # SA can't scramble them (ratsnest has no notion of alignment). Only free
+        # passives get optimized — which is where SA actually helps.
+        self.structured = set(STRUCTURED)
+        self.frozen = self.fixed | self.structured
 
         self.refs = list(self.meta)
         self.idx = {r: i for i, r in enumerate(self.refs)}
-        self.movable = [r for r in self.refs if r not in self.fixed]
+        self.movable = [r for r in self.refs if r not in self.frozen]
         self.edge_exempt = self.fixed  # only fixed connectors may poke past edge
 
-        # per-part state
+        # per-part state — local coords come straight from authoritative geom
         self.x = {}; self.y = {}; self.rot = {}; self.layer = {}
-        self.local_pads = {}        # ref -> [(ldx,ldy,net)]
+        self.local_pads = {}        # ref -> [(lx,ly,net)]
         self.local_cy = {}          # ref -> [(lx,ly)*4] courtyard corners (local)
         for r, m in self.meta.items():
             a = m["anchor"]
             self.x[r], self.y[r], self.rot[r] = a["x"], a["y"], a["rot"]
             self.layer[r] = m["layer"]
-            lp = []
-            for p in m["pads"]:
-                ldx, ldy = rot(p["x"] - a["x"], p["y"] - a["y"], -a["rot"])
-                lp.append((ldx, ldy, p.get("net")))
-            self.local_pads[r] = lp
-            cy = m.get("courtyard_bbox")
-            if cy:
-                corners = [(cy[0], cy[1]), (cy[2], cy[1]), (cy[2], cy[3]), (cy[0], cy[3])]
-                self.local_cy[r] = [rot(cx - a["x"], cyy - a["y"], -a["rot"])
-                                    for cx, cyy in corners]
+            self.local_pads[r] = [(p["lx"], p["ly"], p.get("net")) for p in m["pads"]]
+            cl = m.get("courtyard_local")
+            if cl:
+                self.local_cy[r] = [(cl[0], cl[1]), (cl[2], cl[1]),
+                                    (cl[2], cl[3]), (cl[0], cl[3])]
             else:
                 self.local_cy[r] = [(-2, -2), (2, -2), (2, 2), (-2, 2)]
 

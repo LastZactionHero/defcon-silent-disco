@@ -37,9 +37,10 @@ SKILL = os.environ.get(
     str(Path.home() / ".claude/skills/pcb-placement/scripts"),
 )
 sys.path.insert(0, SKILL)
-from fp_meta import load_pcb            # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from ratsnest import mst_length          # noqa: E402
-import _pcb                              # noqa: E402
+import geom                              # noqa: E402  (authoritative pcbnew geometry)
+from geom import load_pcb               # noqa: E402
 
 GROUND = {"GND", "/GND", "AGND", "PGND", "DGND"}
 
@@ -56,8 +57,9 @@ ZONES = {
                 "note": "DAC->amp->output coupling, flows up toward J20"},
     "power":   {"bbox": [101, 118, 152, 133],"topology": "chain",   "flow": "right",
                 "note": "USB-C/charger/LDO chain along the bottom toward J10/J11"},
-    "buttons": {"bbox": [149, 122, 180, 133],"topology": "row",     "flow": "right",
-                "note": "3 front tactiles (CH/VOL+/VOL-) in a row, clear of J10 and corner hole H4"},
+    "buttons": {"bbox": [154, 124, 181, 133],"topology": "row",     "flow": "right",
+                "note": "3 front tactiles (CH/VOL+/VOL-) in a row, RIGHT of J10's real courtyard "
+                        "(x<=153.2), clear of corner hole H4"},
     "sao":     {"bbox": [101, 98, 121, 116], "topology": "cluster",
                 "note": "SAO header + I2C pullups, left edge"},
     "ir":      {"bbox": [176, 114, 186, 123],"topology": "cluster",
@@ -81,8 +83,7 @@ FIXED = {
             "why": "microSD on back, slot accessible from bottom edge"},
     "J11": {"pos": [115.0, 124.0], "rot": 0,   "layer": "B.Cu", "edge": "bottom-left",
             "why": "LiPo JST-PH on back near power zone"},
-    "SW23": {"pos": [140.0, 113.0],"rot": 0,   "layer": "B.Cu", "edge": "back",
-             "why": "BOOTSEL tactile on the back near U2/U3 (flash CS), clear of J31/J11"},
+    # SW23 (BOOTSEL) removed — no BOOTSEL button wanted; was an orphan footprint.
 }
 # H1..H4 mounting holes stay where they are (corners) — read from board, locked.
 
@@ -140,9 +141,8 @@ def zone_centroid(z):
 
 
 def build_plan(pcb: Path) -> dict:
-    text = pcb.read_text()
     meta = load_pcb(pcb)
-    outline = _pcb.board_outline(text)
+    outline = geom.board_outline(pcb)
     sheets = sheet_membership(pcb.parent)
 
     assign = {}
