@@ -46,3 +46,18 @@ RESULT: spec frozen; board unchanged so metrics row B(2) == baseline (ratsnest 2
 offboard 75, erc 14) — expected during a planning iteration. | Δ none (planning iteration).
 NEXT: B(3) — implement Approach A (constructive) in tools/floorplan.py, emit + validate
 floorplan.json, score it.
+
+[2026-06-15] B(3) — Approach A (constructive floor-planner) implemented | Built
+tools/floorplan.py: generic engine (classify each part by its schematic SHEET = ground-truth
+subsystem, with net/refdes fallbacks; assign to a zone; pin fixed/edge parts; emit + validate
++ score) with board geometry as config. Sheet membership parsed from defcon_badge/*.kicad_sch
+(definitive — 58/79 had it via nets, the rest resolved by sheet). 7 zones: leds(top),
+mcu(center ring), audio(right→J20), power(bottom→J10/J11), buttons(bottom-right), sao(left),
+ir(near D20). |
+RESULT: floorplan.json emitted, validation OK (all 79 parts placed: 68 zoned + 11 fixed incl.
+H1-4; every zone inside Edge.Cuts; no capacity overflow, max util 0.67 buttons). Approach-A
+score est_ratsnest=892.4mm (centroid proxy) — well below the 1339mm reference, grouping looks
+strong. Board itself unchanged (floor plan is a plan, not a placement) so metrics row B(3) ==
+baseline. | Δ floorplan quality: first scored plan (892mm proxy).
+NEXT: B(4) — implement Approach B (connectivity-driven min-cut partition) reusing floorplan.py's
+classify/validate/score; compare est_ratsnest + capacity vs A; record CHAMPION:.

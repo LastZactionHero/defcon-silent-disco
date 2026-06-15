@@ -1,20 +1,23 @@
 # STATE (pointer only — durable history lives in LEDGER.md + metrics.jsonl)
 
 Phase: **B — Floor-plan tool**
-Current approach: spec frozen (FLOORPLAN_SPEC.md); implementing approaches next.
-Last completed: B(2) — committed FLOORPLAN_SPEC.md (zone model, per-subsystem assignment,
-  2 approaches, scoring metric, validation gate). Board unchanged. Commit pending this iter.
+Current approach: Approach A (constructive) DONE & valid; Approach B next.
+Last completed: B(3) — tools/floorplan.py + floorplan.json (Approach A). Valid: 79 parts
+  placed (68 zoned + 11 fixed), est_ratsnest proxy 892mm. Commit pending this iter.
 
 Next intended action (Phase B):
   1. [done B2] Committed floor-planner SPEC — see placement_phase_2/FLOORPLAN_SPEC.md.
-  2. B(3): implement Approach A (constructive intent-driven) in tools/floorplan.py per the
-     spec: pin fixed parts, lay zones (LEDs top, IR pair sides@y110, audio upper-right→J20,
-     power bottom→J10/J11, MCU center ring, buttons bottom, SAO free edge), pack to courtyard
-     area, emit placement_phase_2/floorplan.json, validate, score (est_ratsnest + violations).
-  3. B(4): implement Approach B (connectivity-driven min-cut partition); score both; record
-     CHAMPION: in LEDGER; keep the winning floorplan.json.
+  2. [done B3] Approach A (constructive) — tools/floorplan.py, floorplan.json, valid,
+     est_ratsnest proxy 892mm.
+  3. B(4): implement Approach B (connectivity-driven min-cut partition) as
+     tools/floorplan_partition.py, reusing floorplan.py classify/validate/score; build the
+     component graph weighted by shared non-power nets, partition into the same zones, map
+     partitions to regions via their fixed anchors; score both; record CHAMPION: in LEDGER;
+     keep the winning floorplan.json.
   4. Document the floor-planner as a skill; list under HARNESS "Skills authored".
-  5. When Phase B gate holds, advance STATE to Phase C (placement engine).
+  5. When Phase B gate holds (>=2 approaches scored + champion + plan validates), advance
+     STATE to Phase C (placement engine) — build the tool that moves staged parts onto the
+     board per the champion floor plan, then optimize to the locked gates.
 
 Exit gate (Phase B): floor-planner tool WITH committed spec exists; emitted plan validates
 (one zone per component, zones fit Edge.Cuts, fixed/edge parts at required spots, grouping
