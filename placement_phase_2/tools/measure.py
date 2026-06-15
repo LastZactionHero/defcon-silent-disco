@@ -236,10 +236,12 @@ def check_fixed(meta: dict, outline: tuple) -> tuple[bool, dict]:
     def fp(ref):
         return meta.get(ref)
 
-    def near_top(m):    return m and (m["anchor"]["y"] - y0) < EDGE
-    def near_bot(m):    return m and (y1 - m["anchor"]["y"]) < EDGE
-    def near_left(m):   return m and (m["anchor"]["x"] - x0) < EDGE
-    def near_right(m):  return m and (x1 - m["anchor"]["x"]) < EDGE
+    # "near edge" means just *inside* the board band — a part swept below the
+    # outline (negative distance) must NOT count as on-edge.
+    def near_top(m):    return m and 0 <= (m["anchor"]["y"] - y0) < EDGE
+    def near_bot(m):    return m and 0 <= (y1 - m["anchor"]["y"]) < EDGE
+    def near_left(m):   return m and 0 <= (m["anchor"]["x"] - x0) < EDGE
+    def near_right(m):  return m and 0 <= (x1 - m["anchor"]["x"]) < EDGE
     def y_about(m, y):  return m and abs(m["anchor"]["y"] - y) < 8.0
 
     detail["J20_top_right"]   = bool(near_top(fp("J20")) and fp("J20") and fp("J20")["anchor"]["x"] > xm)
