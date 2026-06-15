@@ -1,29 +1,27 @@
 # STATE (pointer only — durable history lives in LEDGER.md + metrics.jsonl)
 
 Phase: **C — Placement engine**
-Current approach: SA + decoupling term + snap finisher. decoupling 0.09mm short → back-side caps.
-Last completed: C(9) — added decoupling cost term (distinct-pin) + coordinate-descent snap to
-  anneal.py; decouple.py owner map now capacity/sheet-aware. decoupling 18→2.09, overlaps 0,
-  ratsnest 941. Commit pending this iter.
+Current approach: placement essentially done (8/9 gates). Only dfm/silk remains.
+Last completed: C(10) — backside_decouple.py moved C16 + 3 bulk caps to B.Cu under their pins;
+  decoupling 2.09→1.72 (GATE MET), overlaps 0, ratsnest 941, all placement gates pass. Commit pending.
 
 GATE STATUS: overlaps 0 ✓ | offboard 0 ✓ | unplaced 0 ✓ | fp_unresolved 0 ✓ | fixed_ok ✓ |
-  erc 14 ✓ | ratsnest 941.6 ✓ (<<1339 reference — beat & locked) |
-  decoupling_max 2.09 ✗ (need <=2.0; 0.09 short — U3 front-ring density limit → back-side caps) |
-  dfm_spacing ~194 ✗ (need 0; mostly silk_overlap/silk_over_copper cosmetic + some clearance).
-  → 7 of 9 gate lines pass. Remaining: decoupling (0.09mm, C10 back-side), dfm/silk (C11).
+  erc 14 ✓ | ratsnest 940.95 ✓ (<<1339 reference — beat & locked) | decoupling_max 1.72 ✓ |
+  dfm_spacing ~198 ✗ (need 0; mostly silk_overlap/silk_over_copper cosmetic + some clearance).
+  → 8 of 9 gate lines PASS. Only dfm_spacing remains.
 
 Next intended action (Phase C):
-  1. C(10): BACK-SIDE decoupling to close the last 0.09mm. The U3 front ring (9 caps + bulk) is
-     too dense for all ≤2.0 with 0 overlaps. Move the 2-3 tightest U3 caps (e.g. C16, C11, C7)
-     to B.Cu directly under their power pins (place.py flip-to-back + the snap finisher adapted
-     for B.Cu; pad-distance metric is layer-agnostic so a back cap under the pin is ≤2.0).
-     Verify front overlaps drop to 0 and decoupling_max ≤2.0. Re-measure + render front & back.
-  2. C(11): dfm_spacing — separate placement-driven copper/edge clearance (must be 0; nudge via
-     SA edge term) from silk_overlap/silk_over_copper (cosmetic — handle with a silk-regen pass
-     tool, NOT placement). Target dfm copper/edge clearance 0; track silk separately. Re-measure.
-  3. When ALL Phase C gates hold and ratsnest plateaus (<2% over 5 iters), advance to Phase D
-     (routing via Freerouting DSN/SES or alternative). Update STATE pointer.
-  4. Render + LOOK every few iters; escalate if a metric plateaus short of gate.
+  1. C(11): dfm_spacing — run kicad-cli DRC, BREAK DOWN the ~198 by type. The copper-spacing set
+     (clearance/copper_edge_clearance/hole_clearance) is what the gate counts; many are likely
+     silk (silk_overlap/silk_over_copper/silk_edge) which measure.py already EXCLUDES from
+     dfm_spacing — so recheck what dfm_spacing actually is now (=198? verify the type breakdown).
+     If real copper/edge-clearance violations exist, nudge the offending parts (tool/anneal edge
+     term) to clear them. If they are unrouted-net artifacts, note that DRC clearance on an
+     unrouted board is dominated by pad-to-pad of unconnected nets — decide the honest gate
+     reading (placement clearance vs routing). Silk is cosmetic → optional silk-declutter tool.
+  2. When ALL Phase C gates hold and ratsnest plateaus (<2% over 5 iters — already stable ~940),
+     advance STATE to Phase D (routing via Freerouting DSN/SES or alternative).
+  3. Render + LOOK; escalate if a metric plateaus short of gate.
 
 LOCKED Phase C exit gates (ALL must hold; tighten only):
   overlaps==0; offboard==0; unplaced==0; fp_unresolved==0; fixed_ok==true

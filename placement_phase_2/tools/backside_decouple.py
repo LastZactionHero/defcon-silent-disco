@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""backside_decouple.py — move selected decoupling caps to B.Cu directly under
+their IC power pin.
+
+Standard dense-IC practice: when an IC's front perimeter is saturated, put the
+last decoupling caps on the back, under the power pins (short via to the plane).
+The placement metric is pad-XY (layer-agnostic), so a back cap under the pin is
+<=2mm by construction, and the front courtyard frees up.
+
+For each named cap: find its power net, the nearest non-passive part's pad on
+that net (the pin), flip the cap to B.Cu, and set its anchor at that pin's XY.
+
+Usage:
+  backside_decouple.py defcon_badge/defcon_badge.kicad_pcb --caps C16[,C11,...]
+  backside_decouple.py PCB --auto 2.0    # auto-pick every cap currently >2.0mm
+"""
+from __future__ import annotations
+
+import argparse
+import math
+import os
+import re
+import sys
+from pathlib import Path
+
+SKILL = os.environ.get(
+    "PCB_PLACEMENT_SCRIPTS",
+    str(Path.home() / ".claude/skills/pcb-placement/scripts"),
+)
+sys.path.insert(0, SKILL)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from fp_meta import load_pcb            # noqa: E402
+import place as P                       # noqa: E402  (swap_layers, set_anchor)
+
+GROUND = {"GND", "/GND", "AGND", "PGND", "DGND"}
+POWER_RE = re.compile(r"(^\+|3V3|3\.3|1V1|1V8|5V|VBUS|VBAT|VDD|VCC|VREG|BAT\b)", re.I)
+
+
+def cap_power_pad(m):
+    for p in m["pads"]:
+        n = p.get("net")
+        if n and n not in GROUND and POWER_RE.search(n):
+            return p
+    return None
+
+
+def find_pin(meta, cap, capnet, cap_xy):
+    """Nearest non-passive part's pad on capnet (the IC power pin)."""
+    best, bd = None, 1e9
+    for ref, m in meta.items():
+        if ref == cap or ref[0] in ("C", "R") or not ref[0].isalpha():
+            continue
+        for p in m["pads"]:
+            if p.get("net") == capnet:
+                d = math.hypot(p["x"] - cap_xy[0], p["y"] - cap_xy[1])
+                if d < bd:
+                    bd, best = d, (p["x"], p["y"], ref)
+    return best
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("pcb")
+    ap.add_argument("--caps", default="")
+    ap.add_argument("--auto", type=float, default=None,
+                    help="auto-select caps whose decoupling distance exceeds this mm")
+    args = ap.parse_args()
+
+    pcb = Path(args.pcb)
+    meta = load_pcb(pcb)
+
+    caps = [c for c in args.caps.split(",") if c]
+    if args.auto is not None:
+        for ref, m in meta.items():
+            if not ref.startswith("C"):
+                continue
+            pp = cap_power_pad(m)
+            if not pp:
+                continue
+            pin = find_pin(meta, ref, pp["net"], (pp["x"], pp["y"]))
+            if pin and math.hypot(pp["x"] - pin[0], pp["y"] - pin[1]) > args.auto:
+                caps.append(ref)
+
+    targets = {}
+    for cap in caps:
+        m = meta.get(cap)
+        if not m:
+            print(f"  skip {cap}: not found"); continue
+        pp = cap_power_pad(m)
+        if not pp:
+            print(f"  skip {cap}: no power pad"); continue
+        pin = find_pin(meta, cap, pp["net"], (pp["x"], pp["y"]))
+        if not pin:
+            print(f"  skip {cap}: no owner pin on {pp['net']}"); continue
+        targets[cap] = (pin[0], pin[1], m["anchor"]["rot"], pin[2])
+        print(f"  {cap} ({pp['net']}) -> B.Cu under {pin[2]} pin at ({pin[0]:.2f},{pin[1]:.2f})")
+
+    if not targets:
+        print("no caps to move"); return 0
+
+    text = pcb.read_text()
+    chunks = re.split(r"(\n\t\(footprint )", text)
+    out = [chunks[0]]
+    i = 1
+    while i < len(chunks):
+        body = chunks[i + 1] if i + 1 < len(chunks) else ""
+        mref = re.search(r'\(property "Reference" "([^"]+)"', body)
+        ref = mref.group(1) if mref else None
+        if ref in targets:
+            x, y, rotd, _ = targets[ref]
+            if meta[ref]["layer"] == "F.Cu":
+                body = P.swap_layers(body)
+            body = P.set_anchor(body, x, y, rotd)
+        out.append(chunks[i]); out.append(body)
+        i += 2
+    pcb.write_text("".join(out))
+    print(f"moved {len(targets)} cap(s) to the back side")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

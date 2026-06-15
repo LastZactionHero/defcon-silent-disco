@@ -169,3 +169,19 @@ REVIEW: the 2.0mm pad-center threshold for every cap simultaneously, single-side
 feasibility for a dense QFN ring; complying (not loosening) and closing it via back-side caps in C(10).
 NEXT: C(10) — back-side decoupling: flip the tightest 2-3 U3 caps to B.Cu directly under their
 power pins (place.py flip + snap), re-measure; expect decoupling ≤2.0 with overlaps 0. Then dfm/silk.
+
+[2026-06-15] C(10) — back-side decoupling — decoupling 2.09→1.72mm, GATE MET, 8/9 gates pass |
+Built tools/backside_decouple.py: for selected caps, find the owner IC's power pin on the cap's
+net, flip the cap to B.Cu (reusing place.swap_layers) and anchor it under that pin (pad-XY metric
+is layer-agnostic ⇒ ≤2mm by construction). `--auto 2.0` selected C16 (the lone >2.0 100n) plus
+the three 10µF bulk caps C4/C41/C71 (large bodies that naturally sat >2mm from their IC pin) →
+moved all 4 to the back under U3/U20/LED20 pins. |
+RESULT: decoupling_max 2.09→1.72mm (C14 now worst, ≤2.0 ✓); overlaps 0 (both layers, verified
+check_courtyards); offboard 0; unplaced 0; fp_unresolved 0; fixed_ok ✓; ratsnest 940.95 ✓;
+erc 14 ✓. Back-side parts now C4,C16,C41,C71 + J11,J31,SW23 — consistent (board is already
+2-sided). Rendered front: U3 ring decluttered, layout coherent. | Δ decoupling −0.37mm → GATE MET.
+GATE STATUS: 8 of 9 gate lines PASS. Only dfm_spacing left (~198: mostly silk_overlap/
+silk_over_copper cosmetic + some copper/edge clearance).
+NEXT: C(11) — dfm: classify the dfm violations; copper/edge clearance (real, placement) must hit
+0 via nudges; silk_overlap/silk_over_copper are cosmetic → build a silk-regen/declutter pass tool
+(reference values, hide overlapping courtyard text) rather than moving parts. Re-measure.
