@@ -5555,7 +5555,7 @@
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
 		(uuid "06990cd3-1522-46fd-b69b-2c619a79c223")
-		(at 177.000 116.000 0)
+		(at 180.500 110.000 0)
 		(descr "Resistor SMD 0402 (1005 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf)")
 		(tags "resistor")
 		(property "Reference" "R30"
@@ -10636,7 +10636,7 @@
 	(footprint "Button_Switch_SMD:SW_SPST_TL3342"
 		(layer "F.Cu")
 		(uuid "5bd36b86-219b-4c76-a489-7e70b2ed65ef")
-		(at 174.000 101.500 0)
+		(at 181.500 97.500 0)
 		(descr "Low-profile SMD Tactile Switch, https://www.e-switch.com/system/asset/product_line/data_sheet/165/TL3342.pdf")
 		(tags "SPST Tactile Switch")
 		(property "Reference" "SW21"
@@ -11410,7 +11410,7 @@
 	(footprint "Button_Switch_SMD:SW_SPST_TL3342"
 		(layer "F.Cu")
 		(uuid "5e59fd32-5993-49fe-b86d-91ee10255e8d")
-		(at 176.000 107.000 0)
+		(at 172.500 105.000 0)
 		(descr "Low-profile SMD Tactile Switch, https://www.e-switch.com/system/asset/product_line/data_sheet/165/TL3342.pdf")
 		(tags "SPST Tactile Switch")
 		(property "Reference" "SW22"
@@ -12012,7 +12012,7 @@
 	(footprint "Button_Switch_SMD:SW_SPST_TL3342"
 		(layer "F.Cu")
 		(uuid "eadb0919-b687-44b6-ab32-9f6059b8fa08")
-		(at 178.000 112.500 0)
+		(at 183.000 106.000 0)
 		(descr "Low-profile SMD Tactile Switch, https://www.e-switch.com/system/asset/product_line/data_sheet/165/TL3342.pdf")
 		(tags "SPST Tactile Switch")
 		(property "Reference" "SW23"
@@ -13168,7 +13168,7 @@
 	(footprint "Capacitor_SMD:CP_Elec_6.3x5.4"
 		(layer "F.Cu")
 		(uuid "6ca3c587-942b-4b33-902d-547d20d3e045")
-		(at 162.800 100.000 0)
+		(at 162.750 100.000 0)
 		(descr "SMD capacitor, aluminum electrolytic, Panasonic C55, 6.3x5.4mm")
 		(tags "capacitor electrolytic")
 		(property "Reference" "C46"
@@ -13775,7 +13775,7 @@
 	(footprint "Button_Switch_SMD:SW_SPST_TL3342"
 		(layer "F.Cu")
 		(uuid "70f53ace-04ad-4f49-8331-eeb44331f19e")
-		(at 172.000 96.000 0)
+		(at 171.800 96.500 0)
 		(descr "Low-profile SMD Tactile Switch, https://www.e-switch.com/system/asset/product_line/data_sheet/165/TL3342.pdf")
 		(tags "SPST Tactile Switch")
 		(property "Reference" "SW20"
@@ -15180,7 +15180,7 @@
 	(footprint "OptoDevice:Vishay_MINICAST-3Pin"
 		(layer "F.Cu")
 		(uuid "8a2a66c4-c26b-4fad-a5bf-076a0b21a806")
-		(at 104.400 116.000 0)
+		(at 104.400 110.000 0)
 		(descr "IR Receiver Vishay TSOP-xxxx, MINICAST package, see https://www.vishay.com/docs/82669/tsop32s40f.pdf")
 		(tags "IR Receiver Vishay TSOP-xxxx MINICAST")
 		(property "Reference" "U30"
@@ -16169,7 +16169,7 @@
 	(footprint "LED_SMD:LED_0805_2012Metric"
 		(layer "F.Cu")
 		(uuid "aa8578fa-a480-43f1-86e1-3d774c9f256f")
-		(at 180.000 116.000 0)
+		(at 184.000 110.000 0)
 		(descr "LED SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: https://docs.google.com/spreadsheets/d/1BsfQQcO9C6DZCsRaXUlFlo91Tg2WpOkGARC1WS5S8t0/edit?usp=sharing)")
 		(tags "LED")
 		(property "Reference" "D20"
@@ -23361,8 +23361,8 @@
 	(gr_line (start 168.000 109.000) (end 178.000 109.000) (stroke (width 0.12) (type default)) (layer "F.SilkS") (uuid "meca7a91-0b9ba968-0000-0000-0000-aa76159d7a05"))
 	(gr_line (start 108.000 124.000) (end 116.000 124.000) (stroke (width 0.12) (type default)) (layer "F.SilkS") (uuid "meca7a91-5561b55b-0000-0000-0000-20c7840ba101"))
 	(gr_line (start 170.000 124.000) (end 178.000 124.000) (stroke (width 0.12) (type default)) (layer "F.SilkS") (uuid "meca7a91-2c0e6a99-0000-0000-0000-ee9d274fdb36"))
-	(gr_text "Vol+" (at 178.000 96.000 0) (layer "F.SilkS") (uuid "c1eanup1e5f34c85f27d4340963f0d1e") (effects (font (size 0.90 0.90) (thickness 0.18))))
-	(gr_text "Vol-" (at 180.000 101.500 0) (layer "F.SilkS") (uuid "c1eanup1b8c42220bd7a4659a2fdecde") (effects (font (size 0.90 0.90) (thickness 0.18))))
-	(gr_text "Channel" (at 182.500 107.000 0) (layer "F.SilkS") (uuid "c1eanup116296e0dde924f6a919715a6") (effects (font (size 0.90 0.90) (thickness 0.18))))
-	(gr_text "Sync" (at 183.500 112.500 0) (layer "F.SilkS") (uuid "c1eanup16463ae7966a64b148b3cf8c0") (effects (font (size 0.90 0.90) (thickness 0.18))))
+	(gr_text "Vol+" (at 171.000 93.000 0) (layer "F.SilkS") (uuid "c1eanup1d800871515934a30ac7e26ed") (effects (font (size 0.90 0.90) (thickness 0.18))))
+	(gr_text "Vol-" (at 181.500 94.000 0) (layer "F.SilkS") (uuid "c1eanup13c530149053b4cd9be44db3b") (effects (font (size 0.90 0.90) (thickness 0.18))))
+	(gr_text "Channel" (at 172.500 108.500 0) (layer "F.SilkS") (uuid "c1eanup1ce572f820cb34e4d8c585be1") (effects (font (size 0.90 0.90) (thickness 0.18))))
+	(gr_text "Sync" (at 183.000 109.500 0) (layer "F.SilkS") (uuid "c1eanup100e7c856265c4903849f6021") (effects (font (size 0.90 0.90) (thickness 0.18))))
 )

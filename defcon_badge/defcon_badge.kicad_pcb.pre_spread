@@ -13168,7 +13168,7 @@
 	(footprint "Capacitor_SMD:CP_Elec_6.3x5.4"
 		(layer "F.Cu")
 		(uuid "6ca3c587-942b-4b33-902d-547d20d3e045")
-		(at 162.800 100.000 0)
+		(at 162.750 100.000 0)
 		(descr "SMD capacitor, aluminum electrolytic, Panasonic C55, 6.3x5.4mm")
 		(tags "capacitor electrolytic")
 		(property "Reference" "C46"
