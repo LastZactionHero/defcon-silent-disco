@@ -81,3 +81,18 @@ shared-signal-net graph). Scored both on the identical centroid-proxy metric.
   parts onto the board per zone topology, and optimizes ratsnest to the LOCKED gates
   (overlaps=0, offboard=0, ratsnest ≤2358 & ideally <1339, decoupling≤2.0, dfm=0, fixed_ok,
   erc≤14). Start with a constructive per-zone placer, then add SA/force-directed refinement.
+
+[2026-06-15] C(5) — PLACEMENT_SPEC + constructive placer | Wrote PLACEMENT_SPEC.md
+(plan-before-build) then tools/place.py: pins fixed/edge parts at floorplan.json positions and
+shelf-packs each zone's parts into its bbox (courtyard-aware, skips cells colliding with fixed
+parts on the same layer). Ran it: all 75 staged parts moved onto the board, grouped by subsystem.
+Rendered renders/views/area_100_80_188_134.png and LOOKED — recognizable badge: LEDs across top,
+U30 left edge / D20 right edge, MCU+decoupling center, audio upper-right, power bottom-left,
+buttons bottom-right, USB-C+microSD bottom-center. Floor plan translated correctly. |
+RESULT: ratsnest 2947 → 1604.55mm (−45%, already past the ≤2358 20% floor); offboard 75→4;
+overlaps 0→2; unplaced 0; decoupling_max 29.1 (ring not done); dfm_spacing 192 (silk/clearance,
+pre-cleanup); erc 14 (held). fixed_detail: U30/D20/J10/J31/holes OK; J20 & SW1 sit exactly 6mm
+from edge so the strict checker reads False (edge nudge needed). | Δ ratsnest −1342.6mm (−45.6%).
+NEXT: C(6) — legalize (spread.py) the 2 overlaps + pull the 4 off-edge parts in; auto_decouple
+U3/U20/U21 to get decoupling_max ≤2.0; nudge J20→top-right corner & SW1→bottom-left corner in
+floorplan config + set connector orientations; re-measure + re-render.

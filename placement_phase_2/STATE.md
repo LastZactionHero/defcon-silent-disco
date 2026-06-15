@@ -1,25 +1,23 @@
 # STATE (pointer only — durable history lives in LEDGER.md + metrics.jsonl)
 
 Phase: **C — Placement engine**
-Current approach: (none yet — Phase C just opened). Champion floor plan: floorplan.json (A).
-Last completed: B(4) — Phase B gate MET. Floor-planner (spec + floorplan.py Approach A
-  champion @892mm proxy + floorplan_partition.py Approach B challenger) documented as the
-  `badge-placement` skill. Commit pending this iter.
+Current approach: constructive placement landed (place.py); refining toward gates.
+Last completed: C(5) — PLACEMENT_SPEC + tools/place.py; all 75 parts on-board, grouped.
+  ratsnest 2947 → 1604.55mm (−45%). offboard 4, overlaps 2, decoupling_max 29.1, erc 14.
+  Rendered + looked (renders/views/area_100_80_188_134.png). Commit pending this iter.
 
 Next intended action (Phase C):
-  1. C(5): write a short PLACEMENT_SPEC (purpose, objective=ratsnest s.t. locked gates,
-     how validated) — plan-before-build — then build tools/place.py: a CONSTRUCTIVE per-zone
-     placer that reads floorplan.json and lays each zone's parts by its topology
-     (ring=decoupling around anchor IC pins via the auto_decouple primitive; chain=signal-flow
-     line; row/column=evenly spaced; cluster=compact pack), pins fixed/edge parts at their
-     locked positions/rotations, keeps everything inside Edge.Cuts. Emit + measure.
-  2. C(6+): legalize overlaps (pcb-placement spread.py / check_courtyards) and pull parts to
-     real pin proximity; drive ratsnest down. Then add a global optimizer (simulated annealing
-     or force-directed, per placement_research.md) as champion/challenger vs the constructive
-     placement; keep the champion. Re-measure every iteration; escalate if the metric plateaus
-     short of the gate (no repeating a stalled move).
-  3. Render and LOOK every few iterations (pcb-views render_all.sh / render_area.py) — catch
-     wrong-facing connectors, off-edge parts, collisions the metrics miss.
+  1. C(6): legalize — pcb-placement spread.py to clear the 2 courtyard overlaps; pull the 4
+     off-edge parts inside via validate_placement. Nudge J20→top-right corner (y~84) and
+     SW1→bottom-left corner (y~130) in floorplan.py FIXED config so fixed_ok passes; set
+     connector orientations (J20 plug up, J10 plug down). Re-place, re-measure, re-render.
+  2. C(7): auto_decouple U3 (and U20/U21) to drive decoupling_max_mm 29→≤2.0 (caps to IC
+     power pins). Build/extend a tool; don't hand-edit.
+  3. C(8+): global optimizer — simulated annealing (baseline) minimizing ratsnest with
+     courtyard-overlap + off-board + fixed-displacement penalties; compare a 2nd method
+     (force-directed); keep champion. Target ratsnest <1339 and plateau with ALL gates held.
+  4. Render + LOOK every few iters; escalate (switch method / global re-place) if ratsnest
+     plateaus short of gate — never repeat a stalled move.
 
 LOCKED Phase C exit gates (ALL must hold; tighten only):
   overlaps==0; offboard==0; unplaced==0; fp_unresolved==0; fixed_ok==true
