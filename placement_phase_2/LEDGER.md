@@ -185,3 +185,25 @@ silk_over_copper cosmetic + some copper/edge clearance).
 NEXT: C(11) — dfm: classify the dfm violations; copper/edge clearance (real, placement) must hit
 0 via nudges; silk_overlap/silk_over_copper are cosmetic → build a silk-regen/declutter pass tool
 (reference values, hide overlapping courtyard text) rather than moving parts. Re-measure.
+
+[2026-06-15] CRITICAL: C(11) — geometry metric was UNTRUSTWORTHY; rebuilt on pcbnew |
+USER INTERVENED with 3D renders showing gross layout errors the metrics missed: buttons stacked
+UNDER the USB-C connector, LEDs scrambled out of their row. Root cause found: fp_meta (regex
+courtyard/pad parser) MIS-HANDLES ROTATED footprints — J10 (USB-C, rot90) pad positions off by up
+to 5.1mm (mirrored), courtyard reported in the wrong region (~10mm off). So the overlap metric had
+a blind spot (reported 0 while DRC saw 4) and the SA optimized on corrupted geometry for every
+rotated part. The dfm classification (C11-as-planned) also showed the 91 clearance + 92 hole are
+ALL intra-footprint (inherent fine-pitch/THT geometry), 0 inter-part — and the 15 copper_edge are
+GND-zone-to-edge (zone setting), not placement.
+  FIX: built tools/geom.py — AUTHORITATIVE geometry via the pcbnew API (real pad XY, real
+  courtyard polygon/bbox, anchor, layer, local coords for the optimizer). Rewired measure.py onto
+  it. Now measure.overlaps == DRC courtyards_overlap (blind spot gone).
+  TRUE STATE (corrected, current board): overlaps 4 (= buttons under J10 + R11), ratsnest 981.1mm,
+  decoupling_max 7.61mm (my earlier 1.72/941 were on corrupted geometry — wrong), offboard 0,
+  fixed_ok true, erc 14. | Δ none to board; the metric is now honest (the prior "8/9 gates" was
+  partly false on rotated parts). | Decisions from user: LOCK structured groups (LEDs/buttons as
+  fixed aligned rows; SA only refines passives); REMOVE orphan SW23 (no BOOTSEL wanted; SW23 not
+  in any schematic sheet, net dup of SW22).
+  NEXT: C(12) — rewire place.py + anneal.py onto geom; remove SW23; place LEDs/buttons as locked
+  aligned rows + freeze them in SA; re-place from scratch on correct geometry; verify overlaps==0
+  via authoritative metric AND 3D render before trusting it.

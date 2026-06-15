@@ -49,12 +49,13 @@ SKILL = os.environ.get(
     str(Path.home() / ".claude/skills/pcb-placement/scripts"),
 )
 sys.path.insert(0, SKILL)
-from fp_meta import load_pcb                       # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from ratsnest import mst_length                    # noqa: E402
 from validate_placement import (                   # noqa: E402
     parse_edge_cuts, point_in_polygon, cy_corners,
 )
-import _pcb                                         # noqa: E402
+import geom                                         # noqa: E402  (authoritative pcbnew geometry)
+from geom import load_pcb                           # noqa: E402
 
 GROUND = {"GND", "/GND", "gnd", "AGND", "PGND", "DGND", "GNDA"}
 # nets we treat as "power" for decoupling/ownership reasoning
@@ -134,14 +135,14 @@ def sev(v: dict) -> str:
 # --------------------------------------------------------------------------- #
 # metric computations
 # --------------------------------------------------------------------------- #
-def geom_overlaps(text: str) -> int:
-    fps = _pcb.load_footprints(text)
+def geom_overlaps(meta: dict) -> int:
+    """Authoritative courtyard-overlap count from pcbnew courtyard AABBs
+    (same-layer pairs). Matches what KiCad DRC reports."""
     boxes = []
-    for fp in fps:
-        if not fp.courtyard_pts:
-            continue
-        x0, y0, x1, y1 = _pcb.aabb(_pcb.world_courtyard(fp))
-        boxes.append((x0, y0, x1, y1, fp.layer))
+    for ref, m in meta.items():
+        cbb = m.get("courtyard_bbox")
+        if cbb:
+            boxes.append((cbb[0], cbb[1], cbb[2], cbb[3], m["layer"]))
     n = 0
     for i in range(len(boxes)):
         ax0, ay0, ax1, ay1, al = boxes[i]
@@ -278,9 +279,9 @@ def measure(pcb: Path, do_drc: bool = True) -> dict:
     text = pcb.read_text()
     meta = load_pcb(pcb)
     poly = parse_edge_cuts(text)
-    outline = _pcb.board_outline(text)
+    outline = geom.board_outline(pcb)
 
-    overlaps = geom_overlaps(text)
+    overlaps = geom_overlaps(meta)
     deco_max, deco_detail = decoupling_worst(meta)
     fixed_ok, fixed_detail = check_fixed(meta, outline)
 
