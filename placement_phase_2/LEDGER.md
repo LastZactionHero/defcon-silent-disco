@@ -431,3 +431,28 @@ adjudicating the open REVIEWs. Changes:
   floorplan.json zone assignments unchanged (C1/C17 already 'mcu'; audio parts 'audio').
   Renders archived in analysis/audio_cleanup/ (audio_before.png, audio_FINAL.png). NOT git-committed
   (left for the user to review/commit).
+  [committed by user as 906b83b "Audio realignment"; pushed to origin/placement-phase-2.]
+
+[2026-06-16] MANUAL(user-directed) — Power-section cleanup (same workflow as the audio one above).
+  Loop idle (no cron/task/lock/kicad proc). User: "do the same cleanup to this cluster of power ICs".
+  ACTION: re-placed the 12 power parts (U10 TP4056 charger, U11 ME6211 LDO, C20-C23, R10-R15) into a
+  clean signal-flow layout — VBUS in from J10(right) -> U10 charger(rot180, x129 balancing VBUS=14.2mm
+  / BAT=14.1mm) -> BAT -> battery J11 + switch SW1 (left) -> U11 LDO(rot0: BAT_SW left to SW1, +3V3
+  right toward MCU) -> +3V3. Decoupling tight: C20(VBUS)=1.50, C22(BAT_SW)=1.91, C23(+3V3)=2.31mm.
+  R14/R15 VBAT divider a tidy pair below U10; R12 PROG / R13 CHRG-pullup flank U10; the two USB-C CC
+  pulldowns R10/R11 tucked as an aligned pair directly above J10's CC pads (R10->CC1 1.73mm; R11->CC2
+  ~3.0mm, the best achievable — CC2 sits inside J10's courtyard). Designed via the 3-strategy
+  design-panel workflow + judge synthesis; ALL writes via geom.apply (no (at) text-edit; no
+  depopulate/place/anneal).
+  RESULT (real board, measure.py, project file present): overlaps_drc 0 | divergence 0 | offboard 0 |
+  unplaced 0 | orientation_ok true (orient_check PASS) | fixed_ok true | dfm_spacing_violations 0 |
+  decoupling_ok true (3.47 = pre-existing C9, unchanged) | erc 6 (=baseline).
+  ratsnest_mm 1241.84 -> 1202.05 (-39.8mm / -3.2% — IMPROVED; tightening the cluster + tucking
+  R10/R11 to J10 shortened nets). All Phase-C gates hold.
+  GOTCHA RESOLVED (see [[placement_phase_2_autoloop]] memory): measure.py on a bare /tmp copy reported
+  dfm_spacing_violations=2 (SW1 copper_edge_clearance). Cause: kicad-cli DRC reads clearance/net-class
+  settings from the sibling .kicad_pro; a /tmp copy has none -> stricter defaults flag SW1's
+  edge-mounted pads. With the .kicad_pro alongside (and on the real board) dfm=0. The audio/power
+  design-panel agents' "dfm=2" self-reports were this same artifact, NOT real violations.
+  NOTE FOR A RESUMED LOOP: these 12 positions are USER-APPROVED — freeze/respect them.
+  Renders: analysis/audio_cleanup/power_before.png, power_FINAL.png. NOT git-committed yet.
