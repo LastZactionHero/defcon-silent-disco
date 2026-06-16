@@ -138,10 +138,10 @@
         130.0,
         127.3
       ],
-      "rot": 180,
-      "layer": "B.Cu",
+      "rot": 0,
+      "layer": "F.Cu",
       "edge": "bottom",
-      "why": "microSD on back; rot180 puts the SLOT MOUTH at the bottom edge (card inserts from outside, contacts inboard) \u2014 rot0 was backwards (contacts at edge)"
+      "why": "microSD on FRONT for single-sided assembly (user-directed 2026-06-16); flip:false+rot0 keeps the slot mouth at the bottom edge, contacts inboard. Battery JST J11 is now the only B.Cu part."
     },
     "J11": {
       "pos": [

@@ -455,4 +455,34 @@ adjudicating the open REVIEWs. Changes:
   edge-mounted pads. With the .kicad_pro alongside (and on the real board) dfm=0. The audio/power
   design-panel agents' "dfm=2" self-reports were this same artifact, NOT real violations.
   NOTE FOR A RESUMED LOOP: these 12 positions are USER-APPROVED — freeze/respect them.
-  Renders: analysis/audio_cleanup/power_before.png, power_FINAL.png. NOT git-committed yet.
+  Renders: analysis/audio_cleanup/power_before.png, power_FINAL.png.
+  [committed by user as 60bc9c2 "Power section cleanup"; pushed.]
+
+[2026-06-16] MANUAL(user-directed) + REVIEW(design-change) — Whole-board redistribution + microSD
+  to the FRONT (single-sided assembly). User: "make the board look better — something off about
+  component distribution" + "move microSD to the top [side] so there's just one side for assembly;
+  battery connector [on back] is fine". Diagnosed (full-board renders): components clumped at the
+  periphery + a dense MCU ring with a big EMPTY VOID in the lower-center and orphan parts (R3,R4,R5,
+  TP1,TP2) floating in it.
+  PROCESS: 3 full-board candidates designed via the board-redistribution workflow + block helper
+  (/tmp/blocks.py translates tidy clusters as units), rendered, shown to the user, who picked
+  DIRECTION A.
+  DIRECTION A applied (16 moves, geom.apply): J31 microSD flipped to FRONT (flip:false, rot0) at the
+  bottom-center (130,127.3) — slot still at the bottom edge, contacts inboard; the POWER block lifted
+  as a unit into the former lower-center void (centroid ~128,113.5, between the MCU ring and the SD);
+  the 5 orphans homed in a tidy column just right of U3 (R5 by the crystal, R3/R4 toward J10, TP1/TP2
+  a front-accessible BOOTSEL pad pair). LEDs unchanged across the top; audio + all FIXED parts +
+  R10/R11 untouched.
+  DESIGN-CHANGE (REVIEW, user is the sign-off): microSD is no longer a B.Cu part. Updated its FIXED
+  definition in THREE places to F.Cu/bottom: floorplan.json fixed.J31 (layer F.Cu, rot 0);
+  measure.py check_fixed (J31_microSD_back_edge -> J31_microSD_front_edge, now requires F.Cu);
+  orient_check.py DEFAULT_EDGE_PARTS.J31 (rot0/F.Cu). Battery JST J11 is now the ONLY B.Cu part
+  (user accepted) => effectively single-sided assembly.
+  RESULT (real board, UPDATED canonical tooling, .kicad_pro present): overlaps_drc 0 | divergence 0 |
+  offboard 0 | unplaced 0 | orientation_ok true (orient_check PASS) | fixed_ok true
+  (J31_microSD_front_edge true) | dfm_spacing 0 | decoupling_ok true (3.47, unchanged C9) | erc 6
+  (=baseline). ratsnest 1202.05 -> 1213.58 (+11.5mm / ~1% — negligible for the layout win).
+  NOTE FOR A RESUMED LOOP: J31 is now F.Cu/bottom (not B.Cu) — see the updated floorplan/measure/
+  orient_check. The power block now sits ABOVE its floorplan 'power' zone bbox (lifted to fill the
+  void); these 16 positions are USER-APPROVED — freeze/respect them, don't re-anneal into the void.
+  Renders: analysis/audio_cleanup/board_front.png (before), board_FINAL.png (after). NOT git-committed yet.

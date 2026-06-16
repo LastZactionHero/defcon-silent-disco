@@ -46,7 +46,7 @@ import geom                                         # noqa: E402  authoritative 
 DEFAULT_EDGE_PARTS = {
     "J10": {"edge": "bottom", "rot": 0,   "layer": "F.Cu"},   # USB-C mouth at bottom
     "J20": {"edge": "top",    "rot": 180, "layer": "F.Cu"},   # audio jack exits top
-    "J31": {"edge": "bottom", "rot": 180, "layer": "B.Cu"},   # microSD slot mouth at edge
+    "J31": {"edge": "bottom", "rot": 0,   "layer": "F.Cu"},   # microSD on FRONT (single-sided assy, user-directed 2026-06-16); flip:false+rot0 keeps slot mouth at bottom edge
     "U30": {"edge": "left",   "rot": 0,   "layer": "F.Cu"},   # IR-RX left
     "D20": {"edge": "right",  "rot": 180, "layer": "F.Cu"},   # IR-LED right (mirror)
     "SW1": {"edge": "bottom", "rot": 0,   "layer": "F.Cu"},   # power slide at bottom

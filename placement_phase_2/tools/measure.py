@@ -303,8 +303,10 @@ def check_fixed(meta: dict, outline: tuple) -> tuple[bool, dict]:
     detail["U30_left_y110"]   = bool(near_left(fp("U30")) and y_about(fp("U30"), 110))
     detail["D20_right_y110"]  = bool(near_right(fp("D20")) and y_about(fp("D20"), 110))
     j31 = fp("J31")
-    detail["J31_microSD_back_edge"] = bool(
-        j31 and j31["layer"] == "B.Cu" and
+    # microSD moved to the FRONT for single-sided assembly (user-directed 2026-06-16);
+    # slot still reaches a board edge. Was B.Cu/bottom; now F.Cu/bottom.
+    detail["J31_microSD_front_edge"] = bool(
+        j31 and j31["layer"] == "F.Cu" and
         (near_left(j31) or near_right(j31) or near_top(j31) or near_bot(j31)))
 
     # 4 mounting holes, one in each corner quadrant, near a corner
