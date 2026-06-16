@@ -19203,7 +19203,7 @@
 	(footprint "Connector_Card:microSD_HC_Hirose_DM3D-SF"
 		(layer "B.Cu")
 		(uuid "23c006e0-e19a-437b-884e-42adcf5f2926")
-		(at 130.000 127.600 0)
+		(at 130.000 127.300 180.0)
 		(descr "Micro SD, SMD, right-angle, push-pull (https://media.digikey.com/PDF/Data%20Sheets/Hirose%20PDFs/DM3D-SF.pdf)")
 		(tags "Micro SD")
 		(property "Reference" "J31"

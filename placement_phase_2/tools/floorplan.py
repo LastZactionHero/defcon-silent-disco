@@ -80,9 +80,9 @@ FIXED = {
             "why": "IR-RX, left edge y=110 (mirror of D20)"},
     "D20": {"pos": [184.5, 110.0], "rot": 180, "layer": "F.Cu", "edge": "right",
             "why": "IR-LED, right edge y=110 (mirror of U30)"},
-    "J31": {"pos": [130.0, 127.6], "rot": 0,   "layer": "B.Cu", "edge": "bottom",
-            "why": "microSD on back, slot opening flush at the bottom edge (body fully on-board, "
-                   "not overhanging)"},
+    "J31": {"pos": [130.0, 127.3], "rot": 180, "layer": "B.Cu", "edge": "bottom",
+            "why": "microSD on back; rot180 puts the SLOT MOUTH at the bottom edge (card inserts "
+                   "from outside, contacts inboard) — rot0 was backwards (contacts at edge)"},
     "J11": {"pos": [115.0, 124.0], "rot": 0,   "layer": "B.Cu", "edge": "bottom-left",
             "why": "LiPo JST-PH on back near power zone"},
     # SW23 (BOOTSEL) removed — no BOOTSEL button wanted; was an orphan footprint.

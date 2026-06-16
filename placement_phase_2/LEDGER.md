@@ -285,3 +285,11 @@ layout as fixed). Also my J10=rot180 conclusion was from those crashed-orient re
   USB-C at edge facing out, microSD slot at edge on-board, IR pair on edges. | Δ Phase C COMPLETE.
   KNOWN COSMETIC: J20 audio-jack 3D STEP model rotation (footprint/pads correct) — model property.
   NEXT: Phase C done & reproducible. User direction: Phase D (routing) or wrap.
+
+[2026-06-15] C(16) — microSD orientation fix (user catch) | User saw J31 backwards in the
+layout: contacts were at the board edge with the slot extending inboard (card couldn't insert
+from outside). Determined correct facing from the footprint pads + a real back render: rot 180
+puts the SLOT MOUTH at the bottom edge (contacts inboard, card inserts from outside). Baked into
+floorplan FIXED (J31=rot180@130,127.3). RESULT: all gates still pass — overlaps 0, offboard 0,
+decoupling 1.73, dfm 0, fixed_ok TRUE, ratsnest 1003.2 (improved from 1057, J31 nets shorter),
+erc 14. Verified back render. | Δ J31 correct; Phase C placement fully correct & user-approved.
