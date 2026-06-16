@@ -33,8 +33,9 @@ SKILL = os.environ.get(
     str(Path.home() / ".claude/skills/pcb-placement/scripts"),
 )
 sys.path.insert(0, SKILL)
-from fp_meta import load_pcb          # noqa: E402
-import _pcb                           # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import geom                          # noqa: E402  (authoritative pcbnew geometry + apply)
+from geom import load_pcb            # noqa: E402
 
 KEEP_PREFIX = ("H", "MH", "FID", "MK")   # mechanical / fixed anchors
 
@@ -63,9 +64,8 @@ def main() -> int:
     args = ap.parse_args()
 
     pcb = Path(args.pcb)
-    text = pcb.read_text()
     meta = load_pcb(pcb)
-    x0, y0, x1, y1 = _pcb.board_outline(text)
+    x0, y0, x1, y1 = geom.board_outline(pcb)
     board_w = x1 - x0
 
     # Movable parts, packed largest-first so big connectors get clean shelves.
@@ -116,24 +116,9 @@ def main() -> int:
         print("  ... (dry run, no changes written)")
         return 0
 
-    # Apply: walk footprint chunks and rewrite anchors.
-    chunks = re.split(r"(\n\t\(footprint )", text)
-    out = [chunks[0]]
-    i = 1
-    n = 0
-    while i < len(chunks):
-        delim = chunks[i]
-        body = chunks[i + 1] if i + 1 < len(chunks) else ""
-        m_ref = re.search(r'\(property "Reference" "([^"]+)"', body)
-        ref = m_ref.group(1) if m_ref else None
-        if ref in moves:
-            body = replace_anchor(body, *moves[ref])
-            n += 1
-        out.append(delim)
-        out.append(body)
-        i += 2
-
-    pcb.write_text("".join(out))
+    # Apply via pcbnew (reset to canonical rot 0; placement re-derives orientations).
+    apply_moves = {r: {"x": moves[r][0], "y": moves[r][1], "rot": 0} for r in moves}
+    n = geom.apply(pcb, apply_moves)
     print(f"depopulated: moved {n} footprints to staging. Edge.Cuts untouched.")
     return 0
 

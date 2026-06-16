@@ -309,3 +309,19 @@ achievable on this dense board via back-side-under-IC caps, which the user rejec
 Conventional front-side decoupling beside the ICs gives ~3.4mm pad-center — normal practice for a
 0402 next to a SOIC/QFN. Recommend accepting the conventional layout; awaiting user decision on
 whether to relax the decoupling gate to ~3.5mm or pursue tighter front placement.
+
+[2026-06-15] C(18) — CRITICAL ROOT-CAUSE FIX: rotation via pcbnew (was text-editing) | User
+correctly pushed back: rotation is normal and must be allowed; resetting to 0 (C17) was removing
+the test, not fixing the bug. REAL BUG FOUND: all my tools set rotation by text-editing the
+footprint (at) line — which rotates pad POSITIONS but NOT pad orientations, so pads smear into
+unusable junk at any non-zero angle (proved: KiCad-native rot90 → pad orientation 90; my text-edit
+→ pad orientation 0). Every connector/part I'd rotated (J20/J31 @180, SA-rotated ICs) was mushed.
+  FIX: added geom.apply() — the single authoritative writer using pcbnew SetOrientationDegrees /
+  SetPosition / Flip (rotates pads correctly). Refactored ALL tools (place/anneal/orient/depopulate/
+  declutter/backside_decouple) to write through it; removed the regex (at)-editing. Re-ENABLED
+  rotation for all parts in the SA.
+  VERIFIED: zero real self-overlapping pads on the whole board (the only flag is U3's tiled EP,
+  identical to main) — i.e. no mush. U2 now clean at rot 90. Pipeline re-ran clean.
+  RESULT: overlaps 0, offboard 0, unplaced 0, fp_unresolved 0, fixed_ok TRUE, ratsnest 1084.7,
+  erc 14, dfm 3 (minor), decoupling_max 3.35 (conventional front-side; see C17 REVIEW). |
+  Δ rotation now correct everywhere; the "mangled footprints" class of bug is eliminated at root.

@@ -29,8 +29,8 @@ SKILL = os.environ.get(
 )
 sys.path.insert(0, SKILL)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from geom import load_pcb               # noqa: E402  (authoritative pcbnew geometry)
-import place as P                       # noqa: E402  (swap_layers, set_anchor)
+import geom                             # noqa: E402  (authoritative pcbnew geometry + apply)
+from geom import load_pcb               # noqa: E402
 
 GROUND = {"GND", "/GND", "AGND", "PGND", "DGND"}
 POWER_RE = re.compile(r"(^\+|3V3|3\.3|1V1|1V8|5V|VBUS|VBAT|VDD|VCC|VREG|BAT\b)", re.I)
@@ -113,22 +113,9 @@ def main():
     if not targets:
         print("no caps to move"); return 0
 
-    text = pcb.read_text()
-    chunks = re.split(r"(\n\t\(footprint )", text)
-    out = [chunks[0]]
-    i = 1
-    while i < len(chunks):
-        body = chunks[i + 1] if i + 1 < len(chunks) else ""
-        mref = re.search(r'\(property "Reference" "([^"]+)"', body)
-        ref = mref.group(1) if mref else None
-        if ref in targets:
-            x, y, rotd, _ = targets[ref]
-            if meta[ref]["layer"] == "F.Cu":
-                body = P.swap_layers(body)
-            body = P.set_anchor(body, x, y, rotd)
-        out.append(chunks[i]); out.append(body)
-        i += 2
-    pcb.write_text("".join(out))
+    # apply via pcbnew: flip to back + position under the pin (rotation preserved)
+    geom.apply(pcb, {cap: {"x": x, "y": y, "rot": rotd, "flip": True}
+                     for cap, (x, y, rotd, _) in targets.items()})
     print(f"moved {len(targets)} cap(s) to the back side")
     return 0
 

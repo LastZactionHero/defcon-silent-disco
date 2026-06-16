@@ -31,7 +31,8 @@ SKILL = os.environ.get(
 )
 sys.path.insert(0, SKILL)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from geom import load_pcb               # noqa: E402  (authoritative pcbnew geometry)
+import geom                             # noqa: E402  (authoritative pcbnew geometry + apply)
+from geom import load_pcb               # noqa: E402
 from validate_placement import parse_edge_cuts, point_in_polygon  # noqa: E402
 
 GROUND = {"GND", "/GND", "AGND", "PGND", "DGND"}
@@ -260,9 +261,8 @@ def anneal(b: Board, iters: int, seed: int, t0: float, t1: float, slack: float):
         a_deco = b.part_deco.get(r, ())
         old_deco = {di: deco_cache[di] for di in a_deco}
 
-        # Rotate ONLY small 2-pad passives — never ICs/multi-pad parts (a human
-        # keeps ICs at clean canonical orientations; free IC rotation looks wrong).
-        if rng.random() < 0.15 and len(b.local_pads[r]) <= 2:
+        # Rotation is allowed for any part (pcbnew rotates pads correctly now).
+        if rng.random() < 0.15:
             b.rot[r] = (orot + 90) % 360
         else:
             zx0, zy0, zx1, zy1 = zone_bbox[r]
@@ -343,25 +343,10 @@ def snap_decouple(b: Board):
     return len(b.deco)
 
 
-def set_anchor_body(body, x, y, rotdeg):
-    pat = re.compile(r"(^\t\t\(at )(-?\d+\.?\d*)\s+(-?\d+\.?\d*)(\s+-?\d+\.?\d*)?(\))", re.M)
-    return pat.sub(lambda m: f"{m.group(1)}{x:.3f} {y:.3f} {rotdeg:.0f}{m.group(5)}", body, count=1)
-
-
 def write_back(pcb: Path, b: Board):
-    text = pcb.read_text()
-    chunks = re.split(r"(\n\t\(footprint )", text)
-    out = [chunks[0]]
-    i = 1
-    while i < len(chunks):
-        body = chunks[i + 1] if i + 1 < len(chunks) else ""
-        mref = re.search(r'\(property "Reference" "([^"]+)"', body)
-        r = mref.group(1) if mref else None
-        if r in b.movable:
-            body = set_anchor_body(body, b.x[r], b.y[r], b.rot[r])
-        out.append(chunks[i]); out.append(body)
-        i += 2
-    pcb.write_text("".join(out))
+    # apply via pcbnew (rotates pads correctly); only movable parts moved
+    moves = {r: {"x": b.x[r], "y": b.y[r], "rot": b.rot[r]} for r in b.movable}
+    geom.apply(pcb, moves)
 
 
 def main():

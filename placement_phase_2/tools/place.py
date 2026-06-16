@@ -29,7 +29,8 @@ SKILL = os.environ.get(
 )
 sys.path.insert(0, SKILL)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from geom import load_pcb               # noqa: E402  (authoritative pcbnew geometry)
+import geom                             # noqa: E402  (authoritative pcbnew geometry + apply)
+from geom import load_pcb               # noqa: E402
 
 MARGIN = 1.2     # gap inside a zone bbox edge
 GAP = 1.0        # gap between packed courtyards
@@ -201,33 +202,17 @@ def main() -> int:
         print("  ... dry run")
         return 0
 
-    # target layer per ref: fixed parts carry an explicit layer; zoned parts are front
+    # 3) apply via pcbnew (single authoritative writer — rotates pads correctly,
+    #    handles flips). Target layer: fixed parts carry it; zoned parts are front.
     target_layer = {r: fx.get("layer", "F.Cu") for r, fx in plan["fixed"].items()}
-
-    # 3) one-pass rewrite (move + flip side if the target layer differs)
-    chunks = re.split(r"(\n\t\(footprint )", text)
-    out = [chunks[0]]
-    i = 1
-    n = 0
-    flips = 0
-    while i < len(chunks):
-        delim = chunks[i]
-        body = chunks[i + 1] if i + 1 < len(chunks) else ""
-        mref = re.search(r'\(property "Reference" "([^"]+)"', body)
-        ref = mref.group(1) if mref else None
-        if ref in moves:
-            tl = target_layer.get(ref, "F.Cu")
-            if ref in meta and meta[ref]["layer"] != tl:
-                body = swap_layers(body)
-                flips += 1
-            x, y, rot = moves[ref]
-            body = set_anchor(body, x, y, rot)
-            n += 1
-        out.append(delim)
-        out.append(body)
-        i += 2
-    pcb.write_text("".join(out))
-    print(f"placed {n} footprints onto the board from {args.plan} ({flips} flipped to back)")
+    apply_moves = {}
+    for ref, (x, y, rot) in moves.items():
+        apply_moves[ref] = {"x": x, "y": y, "rot": rot,
+                            "flip": target_layer.get(ref, "F.Cu") == "B.Cu"}
+    n = geom.apply(pcb, apply_moves)
+    flips = sum(1 for r, mv in apply_moves.items()
+                if mv["flip"] != (meta[r]["layer"] == "B.Cu"))
+    print(f"placed {n} footprints from {args.plan} ({flips} flipped to back)")
     return 0
 
 

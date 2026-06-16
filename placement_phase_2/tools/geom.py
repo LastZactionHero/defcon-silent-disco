@@ -92,6 +92,35 @@ def load_pcb(path):
     return out
 
 
+def apply(pcb_path, moves):
+    """Apply placement via the pcbnew API (NOT text-editing the (at) line).
+
+    moves: { refdes: {x?, y? (mm), rot? (deg), flip? (bool)} }
+
+    CRITICAL: rotation MUST go through SetOrientationDegrees so pad shapes rotate
+    with the part. Text-editing only the footprint (at) angle rotates pad POSITIONS
+    but not their orientations — pads smear together into unusable junk. This is
+    the single writer for all placement tools."""
+    b = pcbnew.LoadBoard(str(pcb_path))
+    n = 0
+    for fp in b.GetFootprints():
+        r = fp.GetReference()
+        if r not in moves:
+            continue
+        mv = moves[r]
+        tgt_flip = mv.get("flip")
+        if tgt_flip is not None and bool(tgt_flip) != fp.IsFlipped():
+            fp.Flip(fp.GetPosition(), False)
+        if mv.get("rot") is not None:
+            fp.SetOrientationDegrees(float(mv["rot"]))
+        if mv.get("x") is not None:
+            fp.SetPosition(pcbnew.VECTOR2I(int(round(mv["x"] * NM)),
+                                           int(round(mv["y"] * NM))))
+        n += 1
+    pcbnew.SaveBoard(str(pcb_path), b)
+    return n
+
+
 def board_outline(path):
     """Edge.Cuts AABB (mm) from pcbnew."""
     b = pcbnew.LoadBoard(str(path))

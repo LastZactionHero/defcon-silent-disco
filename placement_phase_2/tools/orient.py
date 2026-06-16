@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import place as P     # set_anchor
+import geom           # authoritative pcbnew apply (rotates pads correctly)
 
 
 def parse_spec(s):
@@ -43,27 +43,17 @@ def main():
     spec = parse_spec(args.set)
 
     pcb = Path(args.pcb)
-    text = pcb.read_text()
-    chunks = re.split(r"(\n\t\(footprint )", text)
-    out = [chunks[0]]
-    i = 1
-    done = set()
-    while i < len(chunks):
-        body = chunks[i + 1] if i + 1 < len(chunks) else ""
-        m = re.search(r'\(property "Reference" "([^"]+)"', body)
-        ref = m.group(1) if m else None
-        if ref in spec:
-            rot, x, y = spec[ref]
-            if x is None:
-                cur = re.search(r"^\t\t\(at (-?\d+\.?\d*) (-?\d+\.?\d*)", body, re.M)
-                x, y = float(cur.group(1)), float(cur.group(2))
-            body = P.set_anchor(body, x, y, rot)
-            done.add(ref)
-        out.append(chunks[i]); out.append(body)
-        i += 2
-    pcb.write_text("".join(out))
-    print(f"oriented: {sorted(done)}")
-    miss = set(spec) - done
+    meta = geom.load_pcb(pcb)
+    moves = {}
+    for ref, (rot, x, y) in spec.items():
+        if ref not in meta:
+            continue
+        if x is None:
+            x, y = meta[ref]["anchor"]["x"], meta[ref]["anchor"]["y"]
+        moves[ref] = {"x": x, "y": y, "rot": rot}
+    geom.apply(pcb, moves)                 # pcbnew apply — rotates pads correctly
+    print(f"oriented: {sorted(moves)}")
+    miss = set(spec) - set(moves)
     if miss:
         print(f"NOT FOUND: {sorted(miss)}")
     return 0

@@ -195,6 +195,7 @@
     }
   },
   "assign": {
+    "C4": "mcu",
     "C10": "mcu",
     "C8": "mcu",
     "C5": "mcu",
@@ -208,10 +209,12 @@
     "C7": "mcu",
     "C1": "mcu",
     "C11": "mcu",
+    "C16": "mcu",
     "U3": "mcu",
     "R4": "mcu",
     "C6": "mcu",
     "C17": "mcu",
+    "C41": "audio",
     "R30": "ir",
     "J30": "sao",
     "C20": "power",
@@ -228,6 +231,7 @@
     "LED23": "leds",
     "U21": "audio",
     "U10": "power",
+    "C71": "leds",
     "SW21": "buttons",
     "C61": "leds",
     "SW22": "buttons",
@@ -257,11 +261,7 @@
     "R5": "mcu",
     "R10": "power",
     "R23": "audio",
-    "U11": "power",
-    "C4": "mcu",
-    "C16": "mcu",
-    "C41": "audio",
-    "C71": "leds"
+    "U11": "power"
   },
   "score": {
     "approach": "A",

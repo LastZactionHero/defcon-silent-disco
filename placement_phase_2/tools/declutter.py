@@ -165,18 +165,8 @@ def main():
     if args.dry_run or not changed:
         return 0
 
-    text = pcb.read_text()
-    chunks = re.split(r"(\n\t\(footprint )", text)
-    out = [chunks[0]]; i = 1
-    while i < len(chunks):
-        body = chunks[i + 1] if i + 1 < len(chunks) else ""
-        mref = re.search(r'\(property "Reference" "([^"]+)"', body)
-        r = mref.group(1) if mref else None
-        if r in changed:
-            body = set_anchor_body(body, changed[r][0], changed[r][1])
-        out.append(chunks[i]); out.append(body)
-        i += 2
-    pcb.write_text("".join(out))
+    # apply via pcbnew; declutter only translates (rotation unchanged)
+    geom.apply(pcb, {r: {"x": changed[r][0], "y": changed[r][1]} for r in changed})
     print(f"wrote {pcb}")
     return 0
 
