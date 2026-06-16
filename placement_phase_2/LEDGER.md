@@ -403,3 +403,31 @@ adjudicating the open REVIEWs. Changes:
     TOOL NOTE: tools/sync_nets_pcbnew.py supersedes sync_nets.py for any RE-sync — the old regex tool
     silently skips pads that already carry a net code (which is why the first sync left R3/R4/C1/C17
     stale). Consider pointing the Makefile sync/fab targets at it.
+
+[2026-06-16] MANUAL(user-directed) — Audio-section cleanup + C1/C17 relocation. Loop was IDLE
+  (CronList+TaskList empty, no writer lock, no kicad process); stale ~*.lck were removed only after
+  the user confirmed KiCad closed. User asked to "clean up the audio portion" (it looked thrown
+  together) and "what's C17 doing way out there?".
+  ACTION: re-placed the 15 audio parts (U20,U21,C40-C46,R20-R25) into a clean, L/R-symmetric,
+  signal-flow layout — DAC(U20 rot180, I2S facing the MCU) + amp(U21) on a level row at y=106.5;
+  the two 220uF output caps C45/C46 as mirror pillars directly under J20; amp U21 rotated 180 to
+  UN-CROSS AMP_OUTL/R to the jack-pinned output caps (C45->JACK_L right, C46->JACK_R left);
+  coupling C42/C43 in the IC gap; input/feedback/vground passives in tidy rows below. Relocated the
+  two stranded RP2040 +3V3 BULK caps C1->(123.5,105) rot180 and C17->(132.5,105) rot0 into U3's
+  decoupling ring (they sat ~22mm out — the "C17 way out there" the user saw — netless until the
+  2026-06-16 schematic re-sync wired them, which is why decoupling_ok had gone red).
+  HOW: designed via a 3-strategy design-panel workflow (compact-mirror / flow-ladder / presentation)
+  + judge synthesis; verified on copies first; ALL writes via geom.apply (no text-edited (at); no
+  depopulate/place/anneal — targeted 17-move set only).
+  RESULT (real board, measure.py): overlaps_drc 0 | divergence 0 | offboard 0 | unplaced 0 |
+  orientation_ok true (orient_check PASS) | fixed_ok true | dfm_spacing_violations 0 | erc 6 (=baseline).
+  decoupling_max_mm 19.6 -> 3.47  => decoupling_ok FALSE->TRUE (worst is now the pre-existing C9).
+  ratsnest_mm 1222.85 -> 1241.84 (+1.55%, within the <=2% plateau band — the honest cost of
+  un-cramming the overlapping blob into a manufacturable layout; still 58% under the 2358 gate).
+  Net effect: the one RED Phase-C gate (decoupling) is now GREEN, all others hold => board is
+  strictly better than before this edit.
+  NOTE FOR A RESUMED LOOP: these 17 positions are USER-APPROVED — FREEZE/respect them (treat the
+  audio zone + C1/C17 as structured, per Resolution 2) rather than re-annealing them away.
+  floorplan.json zone assignments unchanged (C1/C17 already 'mcu'; audio parts 'audio').
+  Renders archived in analysis/audio_cleanup/ (audio_before.png, audio_FINAL.png). NOT git-committed
+  (left for the user to review/commit).
