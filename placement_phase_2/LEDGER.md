@@ -325,3 +325,11 @@ unusable junk at any non-zero angle (proved: KiCad-native rot90 → pad orientat
   RESULT: overlaps 0, offboard 0, unplaced 0, fp_unresolved 0, fixed_ok TRUE, ratsnest 1084.7,
   erc 14, dfm 3 (minor), decoupling_max 3.35 (conventional front-side; see C17 REVIEW). |
   Δ rotation now correct everywhere; the "mangled footprints" class of bug is eliminated at root.
+
+[2026-06-15] C(19) — removed silkscreen art (user request) | Removed all 280 board-level
+silk graphics (270 shapes + 10 texts: DEFCON, // SILENT DISCO //, DC32, 0xC0FFEE, @LZH, github
+URL, arrows, hatching, and the functional Vol+/Vol-/Channel/Sync labels) via pcbnew
+b.Remove(GetDrawings on F/B.SilkS). Kept footprint reference labels (78 refdes, 74 visible on
+silk) + footprint outlines. Verified: 0 board-level silk graphics remain; 0 footprint VALUE text
+on silk (values are on F.Fab). Placement gates unchanged (overlaps 0, decoupling 3.35, fixed_ok,
+ratsnest 1085). Rendered silk-only: clean labels + outlines, no art.
