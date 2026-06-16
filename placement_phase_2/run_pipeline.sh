@@ -23,8 +23,9 @@ Q $T/anneal.py $PCB --plan placement_phase_2/floorplan.json --iters 120000 --see
 echo "== polish (overlap priority) =="
 Q $T/anneal.py $PCB --plan placement_phase_2/floorplan.json --iters 60000 --seed 7 \
    --w-dec 6 --w-ov 500 --deco-target 1.2 --t0 1.0 --t1 0.003 | grep -i ratsnest || true
-echo "== back-side decouple stragglers =="
-Q $T/backside_decouple.py $PCB --auto 2.0 | tail -1
+# NOTE: back-side decoupling (caps under the ICs) intentionally DISABLED — it reads as
+# "mangled"/doubled pads in 2D and is unconventional for this 2-layer badge. Decoupling
+# stays on the front beside the ICs (placed by the SA snap step above).
 echo "== declutter (legalize) =="
 Q $T/declutter.py $PCB --clear 0.1 --pad-clear 0.3 | grep -i nudged || true
 echo "== final measure =="

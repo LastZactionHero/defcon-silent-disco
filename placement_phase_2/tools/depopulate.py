@@ -45,8 +45,9 @@ def replace_anchor(body: str, x: float, y: float) -> str:
                      re.M)
 
     def sub(m):
-        rot = f" {m.group(5)}" if m.group(5) else ""
-        return f"{m.group(1)}{x:.3f} {y:.3f}{rot}{m.group(6)}"
+        # reset to canonical rotation 0 — placement re-derives orientations cleanly
+        # (fixed parts via floorplan, passives via SA); avoids inheriting odd rotations.
+        return f"{m.group(1)}{x:.3f} {y:.3f} 0{m.group(6)}"
 
     return pat.sub(sub, body, count=1)
 

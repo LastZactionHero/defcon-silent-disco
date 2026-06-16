@@ -260,7 +260,9 @@ def anneal(b: Board, iters: int, seed: int, t0: float, t1: float, slack: float):
         a_deco = b.part_deco.get(r, ())
         old_deco = {di: deco_cache[di] for di in a_deco}
 
-        if rng.random() < 0.15:
+        # Rotate ONLY small 2-pad passives — never ICs/multi-pad parts (a human
+        # keeps ICs at clean canonical orientations; free IC rotation looks wrong).
+        if rng.random() < 0.15 and len(b.local_pads[r]) <= 2:
             b.rot[r] = (orot + 90) % 360
         else:
             zx0, zy0, zx1, zy1 = zone_bbox[r]

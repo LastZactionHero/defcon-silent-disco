@@ -293,3 +293,19 @@ puts the SLOT MOUTH at the bottom edge (contacts inboard, card inserts from outs
 floorplan FIXED (J31=rot180@130,127.3). RESULT: all gates still pass — overlaps 0, offboard 0,
 decoupling 1.73, dfm 0, fixed_ok TRUE, ratsnest 1003.2 (improved from 1057, J31 nets shorter),
 erc 14. Verified back render. | Δ J31 correct; Phase C placement fully correct & user-approved.
+
+[2026-06-15] REVIEW: C(17) — conventional layout (user catch: ICs rotated + caps under chips) |
+User saw "nearly every footprint mangled" on the branch vs clean on main. DIAGNOSIS: footprints
+are NOT corrupted (pad geometry diff vs main is identical — pads just rotated). Real causes:
+(1) SA freely rotated ICs (U2/U3/U10/U11/U20/U21 to 90/180/-90); (2) back-side decoupling placed
+caps directly UNDER the ICs (pads overlap IC pads in 2D → "doubled" look). Both = optimizer
+ignoring conventional design. FIXES: anneal rotates ONLY 2-pad passives (never ICs/multi-pad);
+depopulate resets movable parts to canonical rot 0; removed back-side decoupling from the pipeline
+(decoupling now on the FRONT beside ICs). Re-ran pipeline. RESULT: ICs all rot 0 ✓, no caps under
+chips ✓, overlaps 0, offboard 0, unplaced 0, fp_unresolved 0, dfm 0, fixed_ok TRUE, ratsnest
+1143.6 ✓, erc 14 — but decoupling_max 3.42mm (> the self-imposed 2.0 gate). 
+REVIEW (for human adjudication): the locked decoupling_max<=2.0 (pad-center, every cap) is only
+achievable on this dense board via back-side-under-IC caps, which the user rejects as mangled.
+Conventional front-side decoupling beside the ICs gives ~3.4mm pad-center — normal practice for a
+0402 next to a SOIC/QFN. Recommend accepting the conventional layout; awaiting user decision on
+whether to relax the decoupling gate to ~3.5mm or pursue tighter front placement.

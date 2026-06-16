@@ -136,12 +136,12 @@
     "J31": {
       "pos": [
         130.0,
-        127.6
+        127.3
       ],
-      "rot": 0,
+      "rot": 180,
       "layer": "B.Cu",
       "edge": "bottom",
-      "why": "microSD on back, slot opening flush at the bottom edge (body fully on-board, not overhanging)"
+      "why": "microSD on back; rot180 puts the SLOT MOUTH at the bottom edge (card inserts from outside, contacts inboard) \u2014 rot0 was backwards (contacts at edge)"
     },
     "J11": {
       "pos": [
@@ -265,7 +265,7 @@
   },
   "score": {
     "approach": "A",
-    "est_ratsnest_mm": 854.8,
+    "est_ratsnest_mm": 853.5,
     "capacity": {
       "leds": {
         "zone_area": 792,
