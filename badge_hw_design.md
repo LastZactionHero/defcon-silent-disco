@@ -52,6 +52,7 @@ USB-C 5V ──→ TP4056 ──→ BAT+ (503450 LiPo, protected cell)
 | GP16 | SAO SDA | 4.7k pullups |
 | GP17 | SAO SCL | " |
 | GP18 | CHRG̅ sense | from TP4056 |
+| GP19 | BTN_SYNC | internal pullup, switch to GND |
 | GP26 | ADC0 VBAT | 100k/100k divider |
 
 ## Audio chain
@@ -90,7 +91,7 @@ Badges sync by touching face-to-face. No radio — at DEFCON specifically, any u
 
 ## Buttons / switch
 
-- 3× **TS-1187A** 6 mm tactile (CH big cap if doing caps, else silkscreen labels), to GND, internal pullups.
+- 4× **TS-1187A** 6 mm tactile (CH / VOL+ / VOL- / SYNC; silkscreen labels), to GND, internal pullups. Front face, 2×2 grid (CH·SYNC top, VOL+·VOL- bottom) — a single row of 4 doesn't fit between USB-C and the corner mounting hole.
 - 1× **MSK-12C02 / SS-12D00** slide power switch.
 - 1× BOOTSEL tactile, back side.
 
@@ -180,6 +181,6 @@ Verified LCSC C-numbers: RP2040 C2040, W25Q16 C2843335, TP4056 C16581, ME6211C33
 
 ## Layout notes
 
-- Badge outline is free real estate — front face: 3 buttons bottom edge, jack top or bottom edge (cable hangs down → bottom), LEDs spread across front, art everywhere else.
+- Badge outline is free real estate — front face: 4 buttons (2×2 grid) bottom edge, jack top or bottom edge (cable hangs down → bottom), LEDs spread across front, art everywhere else.
 - All silicon on back except LEDs if you want a clean front. Single-side placement target: put LEDs on back firing through FR4 windows? No — reverse-mount adds cost; two-side placement is fine, it's your own line.
 - IR LED + TSOP front face, mirror-symmetric about vertical centerline (face-to-face mating cross-aligns them). Audio lower left, USB/charge lower right, SD back center.

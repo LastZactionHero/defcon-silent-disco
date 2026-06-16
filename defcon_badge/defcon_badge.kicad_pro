@@ -897,7 +897,7 @@
         "uuid": "8c0b3d8b-46d3-4173-ab1e-a61765f77d61"
       }
     ],
-    "used_designators": "#PWR_U10_T1,#PWR_U10_G1,#PWR_J31_SH1,#PWR_Q20E1,#PWR_J10_SH1,#FLG_VBUS1,#FLG_BSW1,#FLG_BAT1",
+    "used_designators": "",
     "variants": []
   },
   "sheets": [

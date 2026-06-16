@@ -25,6 +25,9 @@ tables win wherever they conflict.
 - Minimize the cap→pin→via loop; short wide connections or direct via-to-plane.
 - Nuance: with tightly-spaced power/ground planes the exact cap location matters
   far less — loop inductance is the real target, not raw distance.
+- GATE = `decoupling_max_mm <= 3.5` (recalibrated from 2.0, see HARNESS v2 / C17 REVIEW):
+  a 0402 beside a SOIC/QFN sits ~3.5mm pad-center (accepted worst cap 3.47mm). Conventional
+  FRONT-side decoupling beside the IC — NOT under-IC back-side caps (the "mangled" doubled pads).
 
 ## Crystal / oscillator
 - Adjacent to the MCU, short symmetric traces, load caps close, ground guard/pour,
@@ -58,4 +61,4 @@ tables win wherever they conflict.
 - Subsystems: MCU (U3) + flash (U2) + 12MHz xtal (Y1) + decoupling ring;
   Power chain USB-C→TP4056 (U10)→LiPo (J11)→switch (SW1)→LDO (U11)→+3V3;
   4× SK9822 LEDs across the top; Audio TM8211 (U20)→FDA1308 (U21)→coupling→J20;
-  IR (U30/D20); 3× buttons; SAO / Dev-SWD / UART connectors.
+  IR (U30/D20); 4× buttons (CH/VOL+/VOL-/SYNC, 2×2 grid); SAO / Dev-SWD / UART connectors.

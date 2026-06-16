@@ -342,3 +342,64 @@ bootloader for first programming. Placed in clear center area, decluttered. All 
 overlaps 0, offboard 0, fixed_ok, decoupling 3.47, ratsnest 1110, erc 14. n_footprints 80.
 CAVEAT: added PCB-only — TP1/TP2/BOOTSEL net are not in the schematic (parity drift); schematic
 sync pending user decision.
+
+[2026-06-15] HARNESS v2 — run-2 post-mortem resolutions implemented (human-directed) | The user
+analyzed run 2 and directed five fixes. NOT an autonomous iteration — a supervised harness upgrade
+adjudicating the open REVIEWs. Changes:
+ R1 GEOMETRY AUTHORITATIVE: measure.py overlap GATE now reads KiCad DRC courtyards_overlap
+   (`overlaps_drc`), not the cheap AABB proxy; emits `overlaps_divergence` so a mis-parsed
+   courtyard can't read 0 while DRC reads 4 (run 2's defining failure). geom.py already the sole
+   pcbnew writer.
+ R2 STRUCTURE ENCODED: aligned rows + mirror pairs declared in the floor plan
+   (`structured`, `mirror_pairs`); floorplan.py emits them; anneal.py freezes them from the plan
+   (was a buried hardcoded set). SA can't jitter the LED/button rows or the IR pair away anymore.
+ R3 ENFORCED 3D GATE: new orient_check.py — automated edge-facing / on-board / no-shadow /
+   axis-aligned / symmetry checks from authoritative geometry; `orientation_ok` is now a hard
+   Phase-C gate + a mandatory render at phase exit. Adversarially verified it catches the three
+   run-2 classes (microSD facing inward, SW1 off edge, button under USB-C).
+ R4 LOCK DEFINITIONS: HARNESS now forbids redefining a metric's meaning or deleting a broken
+   capability to pass (same as lowering a gate) — REVIEW + sign-off only. ADJUDICATED the C17
+   REVIEW: decoupling gate relaxed 2.0 -> 3.5mm (measure.DECOUPLING_GATE_MM; `decoupling_ok`).
+   The accepted conventional layout's worst cap is C9 (+3V3) at 3.47mm — normal for a 0402 beside
+   a SOIC/QFN — so the gate is 3.5mm (admits it with margin; the original "3.4" was that cap
+   rounded). The 2.0mm bar was only reachable via under-IC back-side caps the user rejected as
+   "mangled". SIGN-OFF: accepted.
+ R5 SINGLE-WRITER: writer_lock.py detects KiCad lock/autosave; geom.apply() refuses to write a
+   board KiCad holds open (override ALLOW_WRITE_LOCKED=1, human only); harness step 0 + pipeline
+   preflight. Verified it refuses while KiCad is currently open on the board.
+ Files: tools/{writer_lock,orient_check}.py (new), geom/measure/anneal/floorplan.py, run_pipeline.sh,
+   HARNESS.md (v2), STATE.md, placement_rules.md. All checks pass on the committed board;
+   orientation gate calibrated against it (PASS) and against injected defects (FAIL as expected).
+
+[2026-06-16] OUT-OF-BAND — schematic connectivity review + netlist re-sync (NOT a placement
+  iteration: no metrics.jsonl row, no STATE change, NO GEOMETRY TOUCHED — those are left for the
+  loop). User-directed full schematic review, triggered by an R10 render showing both CC pads on
+  GND. This changed the NETLIST only; placement is untouched. Net-only PCB write via the pcbnew API
+  (tools/sync_nets_pcbnew.py); writer_lock preflight clean; diff vs a session-start board backup =
+  32 net + 4 value lines, ZERO (at) changes (no footprint/orientation moves; verified part-position
+  set identical).
+  SCHEMATIC FIXES (each verified via kicad-cli netlist + ERC, then synced to PCB pads):
+    1. CC1 was SHORTED TO GND — gen_power_sheet.py placed R10 pin1 exactly on J10's stacked GND
+       power-symbols, welding the CC1 Rd and net to GND. R10 relocated; CC1 = {J10.A5, R10.1}.
+    2/3. USB D+/D- were OPEN — the 27R series resistors' connector-side pins (R3.1/R4.1) were never
+       labeled, so the RP2040 USB never reached the port. Added USB_DP/USB_DM (patch_mcu_usb_bulk.py).
+    4/5. C1/C17 were floating 10u caps — wired as +3V3 bulk (corrected to 1u per badge_hw_design.md).
+    6. TP4056 CE +3V3 -> VBUS (CE on the switched rail couldn't charge while off / bootstrap a dead cell).
+    7. R30 150 -> 68 (schematic now matches the PCB and the doc's IR-drive spec).
+  NEW BASELINE via the loop's OWN measure.py (current board) vs iter 18:
+    ratsnest_mm        1084.74 -> 1225.61   (+141: NEW real nets CC1 + USB D± + C1/C17 bulk — this is
+                                            ADDED CONNECTIVITY to route, NOT a placement regression)
+    unconnected        133 -> 200           (same cause)
+    erc_errors         14 -> 6              (IMPROVED — satisfies the "do not regress erc" gate)
+    decoupling_max_mm  3.35 -> 19.6         (decoupling_ok GATE NOW FAILS: C1+C17 became active +3V3
+                                            bulk caps but sit ~19.6mm from U3's +3V3 pins — SA had
+                                            ignored them while they were netless)
+    overlaps / overlaps_drc / offboard / orientation_ok / fixed_ok: UNCHANGED, all still PASS.
+  ACTION FOR THE LOOP: re-baseline ratsnest at ~1225.61 (do NOT read the +141mm / +67 unconnected as
+    a regression — it is new real connectivity). decoupling_ok stays red until your next SA/decouple
+    pass pulls C1 and C17 in beside U3's +3V3 pins; they are now valid decoupling targets in the MCU
+    zone and re-floorplan/decouple will pick them up. (BOOTSEL pogo intact: TP1.1+R1.2 on
+    /MCU_Core/BOOTSEL, TP2 on GND — TP1/TP2 schematic parity drift is still the open C20 item.)
+    TOOL NOTE: tools/sync_nets_pcbnew.py supersedes sync_nets.py for any RE-sync — the old regex tool
+    silently skips pads that already carry a net code (which is why the first sync left R3/R4/C1/C17
+    stale). Consider pointing the Makefile sync/fab targets at it.

@@ -8,15 +8,20 @@ skill primitives (fp_meta / ratsnest / validate_placement / check_courtyards),
 which are the project's KEEP-and-build-on geometry layer.
 
 Emitted metric keys (the locked schema from HARNESS.md):
-  overlaps                 courtyard-pair overlaps (geometric, layer-aware)
+  overlaps                 AUTHORITATIVE courtyard overlaps = DRC courtyards_overlap
+                           when DRC runs, else the fast AABB estimate (Resolution 1)
+  overlaps_drc             DRC courtyards_overlap count (None if DRC skipped)
+  overlaps_geom            fast AABB estimate (tool-dev / --no-drc)
+  overlaps_divergence      |geom - drc| — >0 means the cheap metric is lying; investigate
   offboard                 placed parts whose courtyard leaves Edge.Cuts
   unplaced                 footprints still at the (0,0) origin
   fp_unresolved            footprints with no resolvable pads/footprint
   ratsnest_mm              total MST wirelength across signal nets (excl GND)
-  courtyard_violations     DRC courtyards_overlap count (falls back to overlaps)
-  decoupling_max_mm        worst cap->owner-IC-power-pin distance
+  courtyard_violations     == overlaps_drc (kept for schema compatibility)
+  decoupling_max_mm        worst cap->owner-IC-power-pin distance (gate <= 3.4mm)
   dfm_spacing_violations   DRC clearance violations (IPC nominal)
   fixed_ok                 bool: all fixed/edge constraints satisfied
+  orientation_ok           bool: automated 3D/orientation gate clean (Resolution 3)
   erc_errors               schematic ERC error count
   drc_errors               PCB DRC error count (excl. unconnected)
 
@@ -56,6 +61,7 @@ from validate_placement import (                   # noqa: E402
 )
 import geom                                         # noqa: E402  (authoritative pcbnew geometry)
 from geom import load_pcb                           # noqa: E402
+import orient_check                                 # noqa: E402  (3D/orientation gate, Resolution 3)
 
 GROUND = {"GND", "/GND", "gnd", "AGND", "PGND", "DGND", "GNDA"}
 # nets we treat as "power" for decoupling/ownership reasoning
@@ -163,8 +169,12 @@ def placement_spacing(v: dict) -> bool:
 # metric computations
 # --------------------------------------------------------------------------- #
 def geom_overlaps(meta: dict) -> int:
-    """Authoritative courtyard-overlap count from pcbnew courtyard AABBs
-    (same-layer pairs). Matches what KiCad DRC reports."""
+    """FAST courtyard-overlap estimate from pcbnew courtyard AABBs (same-layer
+    pairs). Used for --no-drc tool-dev passes. The AUTHORITATIVE overlap count is
+    KiCad DRC's courtyards_overlap (see `overlaps_drc` / Resolution 1): an AABB of
+    a rotated or L-shaped courtyard can both miss and over-report true polygon
+    overlaps, which is exactly how run 2's metric read 0 while DRC read 4. When
+    DRC runs, the gate uses DRC and `overlaps_divergence` flags any disagreement."""
     boxes = []
     for ref, m in meta.items():
         cbb = m.get("courtyard_bbox")
@@ -308,16 +318,45 @@ def check_fixed(meta: dict, outline: tuple) -> tuple[bool, dict]:
     return all(detail.values()), detail
 
 
+# default plan path for the orientation gate; override with PLACEMENT_PLAN env
+PLAN_PATH = os.environ.get("PLACEMENT_PLAN", "placement_phase_2/floorplan.json")
+
+
+def orientation_gate(pcb: Path, meta: dict, outline: tuple) -> tuple[bool, list]:
+    """Resolution 3: automated 3D/orientation/assembly gate. Returns (ok, fails)
+    where fails is the list of failing checks (empty when the board is clean).
+    The plan supplies edge-facing/mirror intent; falls back to orient_check's
+    built-in defaults if no plan is on disk."""
+    plan = None
+    pp = Path(PLAN_PATH)
+    if pp.exists():
+        try:
+            plan = json.loads(pp.read_text())
+        except json.JSONDecodeError:
+            plan = None
+    return orient_check.check(meta, outline, plan)
+
+
 # --------------------------------------------------------------------------- #
+# Locked gate thresholds (Resolution 4 — a DEFINITION change, not just the
+# number, needs a REVIEW: ledger entry + human sign-off; see HARNESS.md).
+DECOUPLING_GATE_MM = 3.5   # recalibrated 2.0 -> 3.5 (adjudicated; see HARNESS-v2 ledger).
+                           # The accepted conventional layout's worst cap is C9 (+3V3) at
+                           # 3.47mm — normal for a 0402 beside a SOIC/QFN — so the gate is
+                           # 3.5mm (admits it with margin). The 2.0mm bar was only reachable
+                           # via the under-IC back-side caps the user rejected as "mangled".
+
+
 def measure(pcb: Path, do_drc: bool = True) -> dict:
     text = pcb.read_text()
     meta = load_pcb(pcb)
     poly = parse_edge_cuts(text)
     outline = geom.board_outline(pcb)
 
-    overlaps = geom_overlaps(meta)
+    overlaps_geom = geom_overlaps(meta)
     deco_max, deco_detail = decoupling_worst(meta)
     fixed_ok, fixed_detail = check_fixed(meta, outline)
+    orient_ok, orient_detail = orientation_gate(pcb, meta, outline)
 
     erc_errors = drc_errors = dfm_spacing = courtyard_drc = unconnected = None
     if do_drc:
@@ -334,21 +373,39 @@ def measure(pcb: Path, do_drc: bool = True) -> dict:
             uc = drc_report.get("unconnected_items")
             unconnected = len(uc) if isinstance(uc, list) else None
 
+    # Resolution 1: the overlap GATE is what DRC sees. DRC's courtyards_overlap is
+    # authoritative; the AABB geom count is only a fast fallback for --no-drc
+    # tool-dev passes. `overlaps_divergence` surfaces any disagreement so a cheap
+    # metric can never quietly read 0 while DRC reads 4 (run 2's defining failure).
+    if courtyard_drc is not None:
+        overlaps = courtyard_drc
+        divergence = abs(overlaps_geom - courtyard_drc)
+    else:
+        overlaps = overlaps_geom
+        divergence = None
+
     return {
         "overlaps": overlaps,
         "offboard": count_offboard(meta, poly),
         "unplaced": count_unplaced(meta),
         "fp_unresolved": count_unresolved(meta),
         "ratsnest_mm": total_ratsnest(meta),
-        "courtyard_violations": courtyard_drc if courtyard_drc is not None else overlaps,
+        "courtyard_violations": courtyard_drc if courtyard_drc is not None else overlaps_geom,
         "decoupling_max_mm": deco_max,
+        "decoupling_ok": deco_max <= DECOUPLING_GATE_MM,
         "dfm_spacing_violations": dfm_spacing if dfm_spacing is not None else -1,
         "fixed_ok": fixed_ok,
+        "orientation_ok": orient_ok,
         "erc_errors": erc_errors if erc_errors is not None else -1,
         "drc_errors": drc_errors if drc_errors is not None else -1,
+        # geometry-truth bookkeeping (Resolution 1)
+        "overlaps_geom": overlaps_geom,
+        "overlaps_drc": courtyard_drc,
+        "overlaps_divergence": divergence,
         # human-eyes extras (not part of the locked schema)
         "unconnected": unconnected,
         "fixed_detail": fixed_detail,
+        "orientation_detail": orient_detail,
         "decoupling_detail": deco_detail,
         "n_footprints": len(meta),
         "outline": [round(v, 1) for v in outline],
@@ -386,7 +443,7 @@ def main() -> int:
     else:
         keys = ["overlaps", "offboard", "unplaced", "fp_unresolved", "ratsnest_mm",
                 "courtyard_violations", "decoupling_max_mm", "dfm_spacing_violations",
-                "fixed_ok", "erc_errors", "drc_errors"]
+                "fixed_ok", "orientation_ok", "erc_errors", "drc_errors"]
         print(f"[{row['phase']}({row['iter']})] " +
               "  ".join(f"{k}={row[k]}" for k in keys))
     return 0

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "project": "defcon_badge.kicad_pro",
+  "current": "2026-06-16_0751",
+  "runs": {
+    "2026-06-15_2340": {
+      "source_hashes": {
+        "defcon_badge.kicad_sch": "sha256:fd1f453161ee9d7e303b8865e85c19777f3e853daad81a545d631eb6a2b7df7f",
+        "defcon_badge.kicad_pcb": "sha256:c87a3567df76d8a776c15ed3d2b1912b0fb33428eb7c29f1fa97450ada5567a6",
+        "schematic.json": "sha256:fb55975be2b67f2cf10e8f85f78719656b8f6238c305a1fb5090cf00f925a93f",
+        "pcb.json": "sha256:0c80f3e7c9a6d7fcfc2d8f02345929b1dadbbd1b504603003eb8059b7364926e"
+      },
+      "outputs": {
+        "schematic": "schematic.json",
+        "pcb": "pcb.json",
+        "cross_analysis": "cross_analysis.json",
+        "emc": "emc.json"
+      },
+      "scripts": {
+        "schematic": "analyze_schematic.py defcon_badge.kicad_sch"
+      },
+      "generated": "2026-06-16T07:47:23-06:00",
+      "pinned": false
+    },
+    "2026-06-16_0751": {
+      "source_hashes": {
+        "defcon_badge.kicad_sch": "sha256:fd1f453161ee9d7e303b8865e85c19777f3e853daad81a545d631eb6a2b7df7f"
+      },
+      "outputs": {
+        "schematic": "schematic.json",
+        "pcb": "pcb.json",
+        "cross_analysis": "cross_analysis.json",
+        "emc": "emc.json"
+      },
+      "scripts": {
+        "schematic": "analyze_schematic.py defcon_badge.kicad_sch"
+      },
+      "generated": "2026-06-16T07:51:53-06:00",
+      "pinned": false
+    }
+  }
+}

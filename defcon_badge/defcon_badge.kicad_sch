@@ -225,6 +225,16 @@
 	)
 	(wire
 		(pts
+			(xy 150.5 236.22) (xy 165.1 236.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d1fbe172-0df9-46b7-b3c0-7fc8b20a61b9")
+	)
+	(wire
+		(pts
 			(xy 255.27 63.5) (xy 304.8 63.5)
 		)
 		(stroke
@@ -658,6 +668,16 @@
 				(justify right)
 			)
 		)
+		(pin "BTN_SYNC" output
+			(at 150.5 236.22 0)
+			(uuid "c3ae0121-281b-495e-9522-bbba35d92aa4")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
 	)
 	(sheet
 		(at 165.1 45.72)
@@ -930,6 +950,16 @@
 		(pin "UART_RX" input
 			(at 165.1 231.14 180)
 			(uuid "5ae5aa38-83da-452e-9d83-0181a5a2dfed")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "BTN_SYNC" input
+			(at 165.1 236.22 180)
+			(uuid "ac1965e4-8f43-4354-b3a4-8d9aef26857c")
 			(effects
 				(font
 					(size 1.27 1.27)

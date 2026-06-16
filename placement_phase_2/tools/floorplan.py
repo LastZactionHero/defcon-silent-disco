@@ -89,6 +89,21 @@ FIXED = {
 }
 # H1..H4 mounting holes stay where they are (corners) — read from board, locked.
 
+# STRUCTURED GROUPS (Resolution 2): aligned rows / mirror pairs the design intends
+# as a unit. place.py lays each group on its shared axis; anneal.py FREEZES the
+# members so the ratsnest objective — which has no notion of "aligned row" — can't
+# jitter the clean 4-LED row or the button row into garbage to shave a millimetre.
+# Declared HERE (not buried in the optimizer) so the freeze is first-class design
+# intent shared by place / anneal / orient_check.
+STRUCTURED_GROUPS = {
+    "led_row":    {"members": ["LED20", "LED21", "LED22", "LED23"], "axis": "y",
+                   "zone": "leds",    "note": "4x SK9822 share a horizontal row (constant y)"},
+    "button_row": {"members": ["SW20", "SW23", "SW21", "SW22"],    "axis": "grid",
+                   "zone": "buttons", "note": "4 tactiles in a 2x2 D-pad grid (CH/SYNC top, VOL+/VOL- bottom); frozen. A single row of 4 won't fit between USB-C (J10) and corner hole H4."},
+}
+# Mirror pairs kept symmetric about the board centre-line (board-to-board pairing).
+MIRROR_PAIRS = [["U30", "D20"]]   # IR-RX (left) / IR-LED (right) at y=110
+
 # Subsystem (schematic sheet) -> zone. LEDs_IR and IO split by role below.
 SHEET_ZONE = {
     "MCU_Core": "mcu",
@@ -166,6 +181,8 @@ def build_plan(pcb: Path) -> dict:
         "zones": ZONES,
         "fixed": fixed,
         "assign": assign,
+        "structured": STRUCTURED_GROUPS,    # Resolution 2: aligned rows frozen during SA
+        "mirror_pairs": MIRROR_PAIRS,       # Resolution 2/3: symmetry intent (orient_check + SA)
     }
     plan["score"] = score_plan(plan, meta)
     plan["validation"] = validate_plan(plan, meta)

@@ -240,6 +240,8 @@
     "C46": "audio",
     "C23": "power",
     "SW20": "buttons",
+    "SW23": "buttons",
+    "TP2": "mcu",
     "C70": "leds",
     "R24": "audio",
     "R12": "power",
@@ -260,9 +262,40 @@
     "C40": "audio",
     "R5": "mcu",
     "R10": "power",
+    "TP1": "mcu",
     "R23": "audio",
     "U11": "power"
   },
+  "structured": {
+    "led_row": {
+      "members": [
+        "LED20",
+        "LED21",
+        "LED22",
+        "LED23"
+      ],
+      "axis": "y",
+      "zone": "leds",
+      "note": "4x SK9822 share a horizontal row (constant y)"
+    },
+    "button_row": {
+      "members": [
+        "SW20",
+        "SW23",
+        "SW21",
+        "SW22"
+      ],
+      "axis": "grid",
+      "zone": "buttons",
+      "note": "4 tactiles in a 2x2 D-pad grid (CH/SYNC top, VOL+/VOL- bottom); frozen in place. A single row of 4 does not fit between USB-C (J10) and corner hole H4."
+    }
+  },
+  "mirror_pairs": [
+    [
+      "U30",
+      "D20"
+    ]
+  ],
   "score": {
     "approach": "A",
     "est_ratsnest_mm": 853.5,
@@ -274,8 +307,8 @@
       },
       "mcu": {
         "zone_area": 768,
-        "used_area": 140.7,
-        "util": 0.18
+        "used_area": 153.1,
+        "util": 0.2
       },
       "audio": {
         "zone_area": 870,

@@ -37,8 +37,22 @@ from validate_placement import parse_edge_cuts, point_in_polygon  # noqa: E402
 
 GROUND = {"GND", "/GND", "AGND", "PGND", "DGND"}
 
-# Structured groups placed as aligned rows by place.py and frozen during SA.
-STRUCTURED = {"LED20", "LED21", "LED22", "LED23", "SW20", "SW21", "SW22"}
+# Fallback if the plan predates Resolution-2 structure declarations. The live
+# source of truth is plan["structured"] (aligned rows) + plan["mirror_pairs"].
+STRUCTURED_FALLBACK = {"LED20", "LED21", "LED22", "LED23", "SW20", "SW21", "SW22"}
+
+
+def structured_members(plan):
+    """All refs in declared aligned-row groups + both halves of every mirror pair
+    (Resolution 2). These are FROZEN during SA so the ratsnest objective — which
+    has no concept of 'aligned row' or 'symmetric pair' — cannot trade the board's
+    structure away for a millimetre of wirelength."""
+    refs = set()
+    for g in (plan.get("structured") or {}).values():
+        refs.update(g.get("members", []))
+    for a, b in (plan.get("mirror_pairs") or []):
+        refs.update((a, b))
+    return refs or set(STRUCTURED_FALLBACK)
 
 
 def rot(dx, dy, deg):
@@ -84,10 +98,11 @@ class Board:
         self.fixed = set(plan["fixed"])
         self.zones = plan["zones"]
         self.assign = plan["assign"]
-        # Structured groups are placed as aligned rows by place.py and FROZEN here so
-        # SA can't scramble them (ratsnest has no notion of alignment). Only free
+        # Structured groups (aligned rows + mirror pairs) are placed by place.py and
+        # FROZEN here so SA can't scramble them (ratsnest has no notion of alignment
+        # or symmetry). Declared in the plan (Resolution 2), not hardcoded. Only free
         # passives get optimized — which is where SA actually helps.
-        self.structured = set(STRUCTURED)
+        self.structured = structured_members(plan)
         self.frozen = self.fixed | self.structured
 
         self.refs = list(self.meta)
@@ -170,7 +185,8 @@ class Board:
                     used.add((owner, best))
                     self.deco.append((cap, capk, owner, best))
 
-    deco_target = 1.2     # pull caps to <=this mm of the pin so measured max stays <2.0
+    deco_target = 1.2     # SA pulls caps to <=this mm of the pin (tighter than the
+                          # 3.4mm gate — conventional front-side decoupling; see R4)
 
     def deco_excess(self, di):
         cap, capk, owner, ok = self.deco[di]

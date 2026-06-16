@@ -1391,7 +1391,7 @@
 		(fields_autoplaced yes)
 		(uuid "3d1863b3-d45a-45d1-9a36-9c7048b7eb2b")
 		(property "Reference" "R30" (at 59.69 137.16 0) (effects (font (size 1.27 1.27))))
-		(property "Value" "68" (at 59.69 152.40 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "150" (at 59.69 152.40 0) (effects (font (size 1.27 1.27))))
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric" (at 59.69 144.78 0) (show_name no) (hide yes) (effects (font (size 1.27 1.27))))
 		(property "Datasheet" "" (at 59.69 144.78 0) (show_name no) (hide yes) (effects (font (size 1.27 1.27))))
 		(property "Description" "IR LED current limit for direct GPIO drive (~12 mA pulsed)" (at 59.69 144.78 0) (show_name no) (hide yes) (effects (font (size 1.27 1.27))))

@@ -30,13 +30,18 @@ Next intended action (Phase C):
      advance STATE to Phase D (routing via Freerouting DSN/SES or alternative).
   3. Render + LOOK; escalate if a metric plateaus short of gate.
 
-LOCKED Phase C exit gates (ALL must hold; tighten only):
-  overlaps==0; offboard==0; unplaced==0; fp_unresolved==0; fixed_ok==true
+LOCKED Phase C exit gates (ALL must hold; tighten only) — HARNESS v2:
+  overlaps==0 (DRC-backed: overlaps_drc; overlaps_divergence==0); offboard==0; unplaced==0;
+  fp_unresolved==0; fixed_ok==true
   (J20 top-right plug-up; J10 USB-C bottom; SW1 bottom-left; U30 left y=110 & D20 right y=110;
    J31 microSD B.Cu edge; 4× M2.5 holes corners);
-  decoupling_max_mm<=2.0; dfm_spacing_violations==0;
+  orientation_ok==true (edge-facing/on-board/no-shadow/axis-aligned/symmetry + a render at exit);
+  decoupling_max_mm<=3.5 (decoupling_ok; recalibrated from 2.0 — C17 REVIEW adjudicated;
+   accepted worst cap C9 +3V3 = 3.47mm);
+  dfm_spacing_violations==0 (inter-part only; intra-fp/THT/GND-zone scoped out, locked C13);
   ratsnest_mm >= 20% better than baseline 2947 (i.e. <=2358) AND non-regressing — beat & lock
   the ~1339mm phase-1 reference; erc_errors<=14 (no regression).
-  Placement produced BY TOOLS, not hand-placing parts. Then plateau (<2% over 5 iters) to finish.
+  Placement produced BY TOOLS via geom.apply (single writer); never hand-place or text-edit (at).
+  Then plateau (<2% over 5 iters) to finish.
 
 Board: 88×54mm, x[100,188] y[80,134]. Staging grid currently holds 75 movable parts below y=134.

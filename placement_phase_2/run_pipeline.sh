@@ -11,6 +11,12 @@ PCB=defcon_badge/defcon_badge.kicad_pcb
 T=placement_phase_2/tools
 Q() { python3 "$@" 2>/dev/null; }   # silence pcbnew enum asserts
 
+echo "== single-writer preflight (Resolution 5) =="
+if ! Q $T/writer_lock.py $PCB; then
+  echo "ABORT: board is open in KiCad — close it (loop owns the file) or set ALLOW_WRITE_LOCKED=1." >&2
+  exit 3
+fi
+
 echo "== depopulate =="
 Q $T/depopulate.py $PCB
 echo "== floorplan (champion A) =="
@@ -28,5 +34,8 @@ Q $T/anneal.py $PCB --plan placement_phase_2/floorplan.json --iters 60000 --seed
 # stays on the front beside the ICs (placed by the SA snap step above).
 echo "== declutter (legalize) =="
 Q $T/declutter.py $PCB --clear 0.1 --pad-clear 0.3 | grep -i nudged || true
+echo "== orientation / 3D gate (Resolution 3) =="
+Q $T/orient_check.py $PCB --plan placement_phase_2/floorplan.json || \
+  echo "  WARNING: orientation gate FAILED — render and inspect before declaring done."
 echo "== final measure =="
-Q $T/measure.py $PCB --json | python3 -c "import json,sys; d=json.load(sys.stdin); [print(f'  {k:22} {d[k]}') for k in ['overlaps','offboard','unplaced','fp_unresolved','ratsnest_mm','decoupling_max_mm','dfm_spacing_violations','fixed_ok','erc_errors']]"
+Q $T/measure.py $PCB --json | python3 -c "import json,sys; d=json.load(sys.stdin); [print(f'  {k:24} {d[k]}') for k in ['overlaps','overlaps_drc','overlaps_divergence','offboard','unplaced','fp_unresolved','ratsnest_mm','decoupling_max_mm','decoupling_ok','dfm_spacing_violations','fixed_ok','orientation_ok','erc_errors']]"

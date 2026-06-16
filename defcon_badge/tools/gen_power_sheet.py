@@ -79,7 +79,11 @@ def build() -> SheetGen:
              "Connector_USB:USB_C_Receptacle_GCT_USB4085", 50, 100,
              mpn="USB4085", lcsc="C404969",
              desc="USB-C 16P top-mount (GCT USB4085; USB4520/USB4500 mid-mount drop-in if preferred)")
-    sg.place("Device:R", "R10", "5.1k", "Resistor_SMD:R_0402_1005Metric", 50, 130,
+    # NOTE: R10 sits at y=150, well clear of J10's GND power-symbol cluster
+    # (which lands at ~y=125.73). An earlier y=130 placement put R10 pin 1
+    # exactly on those GND symbols, welding the CC1 pulldown — and the CC1
+    # net — to GND. Keep R10 below the connector's GND stubs.
+    sg.place("Device:R", "R10", "5.1k", "Resistor_SMD:R_0402_1005Metric", 50, 150,
              desc="USB-C CC1 pulldown (UFP)")
     sg.place("Device:R", "R11", "5.1k", "Resistor_SMD:R_0402_1005Metric", 63, 130,
              desc="USB-C CC2 pulldown (UFP)")
@@ -148,7 +152,11 @@ def build() -> SheetGen:
     sg.label_at_pin("U10", "5", "BAT")
     sg.nc_at_pin("U10", "6")  # STDBY open-drain — leave floating
     sg.label_at_pin("U10", "7", "~{CHRG}")
-    sg.label_at_pin("U10", "8", "+3V3")
+    # CE → VBUS (charger input), NOT the switched +3V3 rail. Tying CE to the
+    # post-switch LDO output disabled charging when the badge was off and made
+    # a flat battery unable to bootstrap. VBUS keeps CE high whenever USB is
+    # present — matches badge_hw_design.md "CE tied high / charges fastest when off".
+    sg.label_at_pin("U10", "8", "VBUS")
 
     sg.label_at_pin("R12", "1", "PROG_SET")
     sg.power_at_pin("R12", "2", "GND", pwr_ref="#PWR_R12")
