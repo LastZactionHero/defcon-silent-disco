@@ -28,6 +28,9 @@ renders/
 fab/3d/*.step
 fab/3d/*.glb
 
+# KiCad Local History (auto snapshots; each is a nested git repo)
+.history/
+
 # Claude Code session state
 .claude/
 
