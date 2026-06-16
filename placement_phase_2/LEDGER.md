@@ -264,3 +264,24 @@ normal tiny USON-8, identical in the original board; not corruption.)
   KNOWN COSMETIC: J20 audio-jack 3D STEP model is rotated (footprint/pads correct) — a model
   property, not a fab/placement issue; defer.
   NEXT: user direction — Phase D routing, or fix the J20 3D model + R13↔U10 0.03mm first.
+
+[2026-06-15] C(15) — orientation bug found+fixed; reproducible pipeline; ALL GATES PASS |
+ROOT CAUSE of "changes didn't stick": orient.py's --set parser split on commas, so every
+'@x,y' spec crashed the tool BEFORE writing — so NONE of my C14 orientation edits ever applied,
+and every "verified in 3D" earlier was actually the UNCHANGED board (I was misreading the old
+layout as fixed). Also my J10=rot180 conclusion was from those crashed-orient renders → wrong.
+  FIXES: (1) orient.py parser rewritten with a regex (handles @x,y). (2) check_fixed metric now
+  uses the COURTYARD edge, not the anchor (a big connector seats at the edge while its anchor is
+  mid-body — the bug that failed J10). (3) backside_decouple no longer stacks caps (skips pins
+  within 1.3mm of an already-placed back cap). (4) J10 correct orientation determined by ACTUAL
+  render = rot 0 (courtyard bottom flush at y=134), baked into floorplan. (5) buttons zone widened
+  to [152,180] so 3×8.5mm tactiles actually fit one row (was shelf-packing/stacking). (6) place.py
+  forces uniform rot 0 on row groups (LEDs/buttons). (7) wrote run_pipeline.sh — full reproducible
+  pipeline (depopulate→floorplan→place→SA+snap→polish→backside→declutter→measure).
+  Also: removed orphan SW23 earlier; confirmed U2/U21 are normal footprints (not corrupted).
+  FINAL (fresh pipeline run, authoritative geom, 3D front+back verified): overlaps 0 ✓, offboard 0
+  ✓, unplaced 0 ✓, fp_unresolved 0 ✓, decoupling_max 1.73 ✓, dfm_spacing 0 ✓, fixed_ok TRUE ✓,
+  ratsnest 1057 ✓ (<1339 ref), erc 14 ✓ — ALL 9 PHASE-C GATES PASS. LEDs+buttons uniform rows,
+  USB-C at edge facing out, microSD slot at edge on-board, IR pair on edges. | Δ Phase C COMPLETE.
+  KNOWN COSMETIC: J20 audio-jack 3D STEP model rotation (footprint/pads correct) — model property.
+  NEXT: Phase C done & reproducible. User direction: Phase D (routing) or wrap.

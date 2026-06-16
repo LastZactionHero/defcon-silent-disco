@@ -270,25 +270,28 @@ def check_fixed(meta: dict, outline: tuple) -> tuple[bool, dict]:
     right edge/corner', not 'is it pixel-perfect'."""
     x0, y0, x1, y1 = outline
     xm = (x0 + x1) / 2
-    EDGE = 6.0       # within this of an edge counts as "on" that edge
+    EDGE = 3.0       # how close the COURTYARD edge must reach the board edge
     detail = {}
 
     def fp(ref):
         return meta.get(ref)
 
-    # "near edge" means just *inside* the board band — a part swept below the
-    # outline (negative distance) must NOT count as on-edge.
-    def near_top(m):    return m and 0 <= (m["anchor"]["y"] - y0) < EDGE
-    def near_bot(m):    return m and 0 <= (y1 - m["anchor"]["y"]) < EDGE
-    def near_left(m):   return m and 0 <= (m["anchor"]["x"] - x0) < EDGE
-    def near_right(m):  return m and 0 <= (x1 - m["anchor"]["x"]) < EDGE
-    def y_about(m, y):  return m and abs(m["anchor"]["y"] - y) < 8.0
+    # Use the COURTYARD edge, not the anchor — a large connector sits at the edge
+    # while its anchor is mid-body several mm inboard (the bug that failed J10).
+    def cy(m):       return m.get("courtyard_bbox") if m else None
+    def near_top(m):    c = cy(m); return bool(c) and abs(c[1] - y0) < EDGE
+    def near_bot(m):    c = cy(m); return bool(c) and abs(c[3] - y1) < EDGE
+    def near_left(m):   c = cy(m); return bool(c) and abs(c[0] - x0) < EDGE
+    def near_right(m):  c = cy(m); return bool(c) and abs(c[2] - x1) < EDGE
+    def cx_of(m):       c = cy(m); return (c[0] + c[2]) / 2 if c else None
+    def cyc_of(m):      c = cy(m); return (c[1] + c[3]) / 2 if c else None
+    def y_about(m, y):  v = cyc_of(m); return v is not None and abs(v - y) < 8.0
 
-    detail["J20_top_right"]   = bool(near_top(fp("J20")) and fp("J20") and fp("J20")["anchor"]["x"] > xm)
+    detail["J20_top_right"]   = bool(near_top(fp("J20")) and cx_of(fp("J20")) and cx_of(fp("J20")) > xm)
     detail["J10_usb_bottom"]  = bool(near_bot(fp("J10")))
-    detail["SW1_bottom_left"] = bool(fp("SW1") and near_bot(fp("SW1")) and fp("SW1")["anchor"]["x"] < xm)
-    detail["U30_left_y110"]   = bool(fp("U30") and near_left(fp("U30")) and y_about(fp("U30"), 110))
-    detail["D20_right_y110"]  = bool(fp("D20") and near_right(fp("D20")) and y_about(fp("D20"), 110))
+    detail["SW1_bottom_left"] = bool(fp("SW1") and near_bot(fp("SW1")) and cx_of(fp("SW1")) < xm)
+    detail["U30_left_y110"]   = bool(near_left(fp("U30")) and y_about(fp("U30"), 110))
+    detail["D20_right_y110"]  = bool(near_right(fp("D20")) and y_about(fp("D20"), 110))
     j31 = fp("J31")
     detail["J31_microSD_back_edge"] = bool(
         j31 and j31["layer"] == "B.Cu" and

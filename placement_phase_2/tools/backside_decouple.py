@@ -44,10 +44,12 @@ def cap_power_pad(m):
     return None
 
 
-def find_pin(meta, cap, capnet, cap_xy, used=None):
-    """Nearest non-passive part's pad on capnet (the IC power pin) not already
-    claimed by another back-side cap (distinct-pin, so caps don't stack)."""
+def find_pin(meta, cap, capnet, cap_xy, used=None, placed=None, min_gap=1.3):
+    """Nearest non-passive part's pad on capnet (the IC power pin), not already
+    claimed and not within min_gap of an already-placed back cap (so caps land on
+    distinct, non-overlapping pins instead of stacking on adjacent ones)."""
     used = used or set()
+    placed = placed or []
     best, bd = None, 1e9
     for ref, m in meta.items():
         if ref == cap or ref[0] in ("C", "R") or not ref[0].isalpha():
@@ -56,6 +58,8 @@ def find_pin(meta, cap, capnet, cap_xy, used=None):
             if p.get("net") == capnet:
                 key = (round(p["x"], 2), round(p["y"], 2))
                 if key in used:
+                    continue
+                if any(math.hypot(p["x"] - qx, p["y"] - qy) < min_gap for qx, qy in placed):
                     continue
                 d = math.hypot(p["x"] - cap_xy[0], p["y"] - cap_xy[1])
                 if d < bd:
@@ -87,7 +91,8 @@ def main():
                 caps.append(ref)
 
     targets = {}
-    used = set()                       # claimed pins, so back caps don't stack
+    used = set()                       # claimed pins (exact)
+    placed = []                        # placed cap centers, to keep spacing
     for cap in caps:
         m = meta.get(cap)
         if not m:
@@ -95,10 +100,13 @@ def main():
         pp = cap_power_pad(m)
         if not pp:
             print(f"  skip {cap}: no power pad"); continue
-        pin = find_pin(meta, cap, pp["net"], (pp["x"], pp["y"]), used)
+        pin = find_pin(meta, cap, pp["net"], (pp["x"], pp["y"]), used, placed)
+        if not pin:   # all distinct pins exhausted/blocked — allow nearest (declutter fixes)
+            pin = find_pin(meta, cap, pp["net"], (pp["x"], pp["y"]), used)
         if not pin:
-            print(f"  skip {cap}: no free owner pin on {pp['net']}"); continue
+            print(f"  skip {cap}: no owner pin on {pp['net']}"); continue
         used.add((round(pin[0], 2), round(pin[1], 2)))
+        placed.append((pin[0], pin[1]))
         targets[cap] = (pin[0], pin[1], m["anchor"]["rot"], pin[2])
         print(f"  {cap} ({pp['net']}) -> B.Cu under {pin[2]} pin at ({pin[0]:.2f},{pin[1]:.2f})")
 

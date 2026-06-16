@@ -52,14 +52,14 @@
     },
     "buttons": {
       "bbox": [
-        154,
+        152,
         124,
-        181,
-        133
+        180,
+        132
       ],
       "topology": "row",
       "flow": "right",
-      "note": "3 front tactiles (CH/VOL+/VOL-) in a row, RIGHT of J10's real courtyard (x<=153.2), clear of corner hole H4"
+      "note": "3 front 8.5mm tactiles in a row in the ~28mm gap between J10 (right edge ~152) and corner hole H4 (left ~180); slot width >= part+0.4 so they fit"
     },
     "sao": {
       "bbox": [
@@ -96,12 +96,12 @@
     "J10": {
       "pos": [
         144.0,
-        130.5
+        124.9
       ],
-      "rot": 90,
+      "rot": 0,
       "layer": "F.Cu",
       "edge": "bottom",
-      "why": "USB-C, plug down off bottom edge"
+      "why": "USB-C, opening faces +Y so the receptacle mouth seats flush at the bottom edge (rot 0 verified by render; courtyard bottom lands on y=134)"
     },
     "SW1": {
       "pos": [
@@ -136,12 +136,12 @@
     "J31": {
       "pos": [
         130.0,
-        129.5
+        127.6
       ],
       "rot": 0,
       "layer": "B.Cu",
       "edge": "bottom",
-      "why": "microSD on back, slot accessible from bottom edge"
+      "why": "microSD on back, slot opening flush at the bottom edge (body fully on-board, not overhanging)"
     },
     "J11": {
       "pos": [
@@ -265,7 +265,7 @@
   },
   "score": {
     "approach": "A",
-    "est_ratsnest_mm": 880.0,
+    "est_ratsnest_mm": 854.8,
     "capacity": {
       "leds": {
         "zone_area": 792,
@@ -288,9 +288,9 @@
         "util": 0.1
       },
       "buttons": {
-        "zone_area": 243,
+        "zone_area": 224,
         "used_area": 152.6,
-        "util": 0.63
+        "util": 0.68
       },
       "sao": {
         "zone_area": 360,

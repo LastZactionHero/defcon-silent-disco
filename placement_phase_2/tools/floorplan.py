@@ -57,9 +57,9 @@ ZONES = {
                 "note": "DAC->amp->output coupling, flows up toward J20"},
     "power":   {"bbox": [101, 118, 152, 133],"topology": "chain",   "flow": "right",
                 "note": "USB-C/charger/LDO chain along the bottom toward J10/J11"},
-    "buttons": {"bbox": [154, 124, 181, 133],"topology": "row",     "flow": "right",
-                "note": "3 front tactiles (CH/VOL+/VOL-) in a row, RIGHT of J10's real courtyard "
-                        "(x<=153.2), clear of corner hole H4"},
+    "buttons": {"bbox": [152, 124, 180, 132],"topology": "row",     "flow": "right",
+                "note": "3 front 8.5mm tactiles in a row in the ~28mm gap between J10 (right edge "
+                        "~152) and corner hole H4 (left ~180); slot width >= part+0.4 so they fit"},
     "sao":     {"bbox": [101, 98, 121, 116], "topology": "cluster",
                 "note": "SAO header + I2C pullups, left edge"},
     "ir":      {"bbox": [176, 114, 186, 123],"topology": "cluster",
@@ -71,9 +71,9 @@ ZONES = {
 FIXED = {
     "J20": {"pos": [174.0, 85.0],  "rot": 180, "layer": "F.Cu", "edge": "top-right",
             "why": "audio jack, plug exits up off top edge (inboard of corner hole H2)"},
-    "J10": {"pos": [144.0, 125.3], "rot": 180, "layer": "F.Cu", "edge": "bottom",
-            "why": "USB-C, opening faces +Y (bottom edge); rot180 puts the receptacle mouth "
-                   "flush at the edge (shell/SH pads are native -Y)"},
+    "J10": {"pos": [144.0, 124.9], "rot": 0,   "layer": "F.Cu", "edge": "bottom",
+            "why": "USB-C, opening faces +Y so the receptacle mouth seats flush at the bottom "
+                   "edge (rot 0 verified by render; courtyard bottom lands on y=134)"},
     "SW1": {"pos": [113.0, 129.0], "rot": 0,   "layer": "F.Cu", "edge": "bottom-left",
             "why": "slide power switch, bottom-left (inboard of corner hole H3)"},
     "U30": {"pos": [103.5, 110.0], "rot": 0,   "layer": "F.Cu", "edge": "left",

@@ -23,18 +23,15 @@ import place as P     # set_anchor
 
 
 def parse_spec(s):
+    """Parse 'REF=ROT' or 'REF=ROT@X,Y' tokens. Uses a regex so the X,Y comma
+    doesn't collide with the token separator (the bug that silently no-op'd this
+    tool: comma-splitting first broke every @x,y spec)."""
     out = {}
-    for tok in s.split(","):
-        tok = tok.strip()
-        if not tok:
-            continue
-        ref, val = tok.split("=")
-        if "@" in val:
-            rot, xy = val.split("@")
-            x, y = xy.split(",")
-            out[ref.strip()] = (float(rot), float(x), float(y))
-        else:
-            out[ref.strip()] = (float(val), None, None)
+    for m in re.finditer(
+            r"([A-Za-z]+\d+)\s*=\s*(-?\d+\.?\d*)(?:@\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*))?",
+            s):
+        ref, rot, x, y = m.group(1), float(m.group(2)), m.group(3), m.group(4)
+        out[ref] = (rot, float(x) if x else None, float(y) if y else None)
     return out
 
 
