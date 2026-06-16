@@ -22,9 +22,13 @@ the same R stays consistent with what KiCad will render.
 from __future__ import annotations
 
 import math
+import sys
 from pathlib import Path
 
 import pcbnew
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from writer_lock import assert_writable   # noqa: E402  single-writer discipline
 
 NM = 1e6
 
@@ -100,7 +104,12 @@ def apply(pcb_path, moves):
     CRITICAL: rotation MUST go through SetOrientationDegrees so pad shapes rotate
     with the part. Text-editing only the footprint (at) angle rotates pad POSITIONS
     but not their orientations — pads smear together into unusable junk. This is
-    the single writer for all placement tools."""
+    the single writer for all placement tools.
+
+    Single-writer discipline (Resolution 5): refuses to write a board that an
+    interactive KiCad holds open, so the loop and the editor never clobber each
+    other. Override with ALLOW_WRITE_LOCKED=1 for a supervised write."""
+    assert_writable(pcb_path)
     b = pcbnew.LoadBoard(str(pcb_path))
     n = 0
     for fp in b.GetFootprints():

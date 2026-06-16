@@ -333,3 +333,12 @@ b.Remove(GetDrawings on F/B.SilkS). Kept footprint reference labels (78 refdes, 
 silk) + footprint outlines. Verified: 0 board-level silk graphics remain; 0 footprint VALUE text
 on silk (values are on F.Fab). Placement gates unchanged (overlaps 0, decoupling 3.35, fixed_ok,
 ratsnest 1085). Rendered silk-only: clean labels + outlines, no art.
+
+[2026-06-15] C(20) — BOOTSEL pogo pads added (user request) | The BOOTSEL button (SW23) was
+removed earlier but never replaced — R1 (1k series) had a floating pad, so no way to enter the
+bootloader. Added 2 pogo test pads (TestPoint_Pad_D1.5mm): TP1 on a new BOOTSEL net (reconnected
+R1.2 to it) and TP2 on GND. Bridge TP1↔TP2 at power-up → pulls flash CS low through R1 → RP2040
+bootloader for first programming. Placed in clear center area, decluttered. All gates hold:
+overlaps 0, offboard 0, fixed_ok, decoupling 3.47, ratsnest 1110, erc 14. n_footprints 80.
+CAVEAT: added PCB-only — TP1/TP2/BOOTSEL net are not in the schematic (parity drift); schematic
+sync pending user decision.
