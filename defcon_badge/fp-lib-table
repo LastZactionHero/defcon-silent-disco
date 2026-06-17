@@ -1,4 +1,5 @@
 (fp_lib_table
 	(version 7)
 	(lib (name "RP2040_minimal") (type "KiCad") (uri "${KIPRJMOD}/defcon_badge.pretty") (options "") (descr ""))
+	(lib (name "badge") (type "KiCad") (uri "${KIPRJMOD}/badge.pretty") (options "") (descr "Badge custom footprints (SK9822 5050, etc.)"))
 )
