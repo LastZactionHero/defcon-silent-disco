@@ -145,3 +145,16 @@ pattern in the PCB phase (= the +4 footprint-link warnings, now 64). ERC errors 
   REMAINING: #8 TP4056 EP+ESOP-8; #6 RUN 10k + #d ADC ferrite+cap (both in MCU_Core, gen path TBD);
   #7 microSD CD part; then PCB PHASE = net re-sync + create/swap footprints (SK9822-5050, TP4056
   ESOP-8, microSD-CD) + re-place; then P3 cleanup.
+
+[2026-06-16] FIX: S3 — TP4056 exposed thermal pad (#8). Added CustomPin 9 "EP" (power_in) tied to
+GND in BOTH TP4056 defs (gen_badge_lib + inline in gen_power_sheet); footprint -> stock
+Package_SO:HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm_ThermalVias (exists, no creation needed, unlike
+SK9822); wired U10.9->GND. Verified U10.9=GND, U10.7=~CHRG, ERC 0.
+  GENERATOR BUG FIXED (bonus, kicad_sheet_gen.py): adding the 9th pin (5 left / 4 right) exposed a
+  pin_y layout bug — the shorter side was distributed over the taller body to OFF-GRID Y, so the
+  label stubs snapped off pins 6/7 -> 2 spurious opens. Fixed pin_y to snap to the 1.27mm grid
+  (no-op for equal-side symbols, verified). Now the generator handles odd/unequal pin counts.
+  MCU_Core INVESTIGATED: it has NO gen_*_sheet.py — maintained by PATCH scripts (inject_dev_header,
+  wire_mcu_hier_labels, patch_mcu_usb_bulk...). So #6 RUN 10k pull-up + #d ADC_AVDD ferrite+cap need
+  a small patch script (model: inject_dev_header.py), not a regen — that's the next step.
+  STATE: ERC 0 errors / 64 warnings (4 = SK9822 footprint TODO). metrics S3 appended.

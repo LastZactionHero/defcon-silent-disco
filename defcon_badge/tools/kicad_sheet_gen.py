@@ -132,7 +132,11 @@ def custom_symbol(
             return 0.0
         y_top = half_h - 2.54
         step = (2 * y_top) / (total - 1)
-        return y_top - step * slot
+        # Snap to the 1.27mm pin grid. With even L/R counts the result is already
+        # on-grid (no-op), but when the two sides differ (e.g. the TP4056 9-pin
+        # ESOP: 5 left / 4 right) the shorter side is otherwise distributed over the
+        # taller body to off-grid Y, and the label stubs snap OFF the pin -> opens.
+        return round((y_top - step * slot) / 1.27) * 1.27
 
     pin_lines: list[str] = []
     pin_positions: dict[str, tuple[float, float]] = {}

@@ -37,7 +37,7 @@ def build() -> SheetGen:
     # ----- lib_symbols: custom -----
     sg.add_custom(
         "badge:TP4056", "TP4056",
-        "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+        "Package_SO:HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm_ThermalVias",
         [
             CustomPin("1", "TEMP",     "input",          "L"),
             CustomPin("2", "PROG",     "output",         "L"),
@@ -47,8 +47,9 @@ def build() -> SheetGen:
             CustomPin("6", "~{STDBY}", "open_collector", "R"),
             CustomPin("7", "~{CHRG}",  "open_collector", "R"),
             CustomPin("8", "CE",       "input",          "R"),
+            CustomPin("9", "EP",       "power_in",       "L"),  # exposed thermal pad -> GND (ESOP-8)
         ],
-        description="1A Li-Ion linear charger (LCSC C16581)",
+        description="1A Li-Ion linear charger, ESOP-8 (LCSC C16581)",
     )
     sg.add_custom(
         "badge:ME6211C33M5G", "ME6211C33M5G",
@@ -90,8 +91,8 @@ def build() -> SheetGen:
     sg.place("Device:C", "C20", "1u", "Capacitor_SMD:C_0402_1005Metric", 95, 70,
              desc="TP4056 VCC bypass")
     sg.place("badge:TP4056", "U10", "TP4056",
-             "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm", 130, 90,
-             mpn="TP4056", lcsc="C16581", desc="Li-Ion 1A linear charger")
+             "Package_SO:HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm_ThermalVias", 130, 90,
+             mpn="TP4056", lcsc="C16581", desc="Li-Ion 1A linear charger (ESOP-8)")
     sg.place("Device:R", "R12", "2.4k", "Resistor_SMD:R_0402_1005Metric", 115, 130,
              desc="TP4056 PROG → 500 mA")
     sg.place("Device:R", "R13", "100k", "Resistor_SMD:R_0402_1005Metric", 160, 70,
@@ -157,6 +158,7 @@ def build() -> SheetGen:
     # a flat battery unable to bootstrap. VBUS keeps CE high whenever USB is
     # present — matches badge_hw_design.md "CE tied high / charges fastest when off".
     sg.label_at_pin("U10", "8", "VBUS")
+    sg.power_at_pin("U10", "9", "GND", pwr_ref="#PWR_U10_EP")  # exposed thermal pad -> GND
 
     sg.label_at_pin("R12", "1", "PROG_SET")
     sg.power_at_pin("R12", "2", "GND", pwr_ref="#PWR_R12")

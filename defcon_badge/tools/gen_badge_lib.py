@@ -13,7 +13,7 @@ from kicad_sheet_gen import custom_symbol, CustomPin
 SYMBOLS: list[tuple[str, str, str, list[CustomPin], str]] = [
     # (lib_id, default_value, footprint, pins, description)
     ("badge:TP4056", "TP4056",
-     "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+     "Package_SO:HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.3x2.3mm_ThermalVias",
      [
          CustomPin("1", "TEMP",     "input",          "L"),
          CustomPin("2", "PROG",     "output",         "L"),
@@ -23,8 +23,9 @@ SYMBOLS: list[tuple[str, str, str, list[CustomPin], str]] = [
          CustomPin("6", "~{STDBY}", "open_collector", "R"),
          CustomPin("7", "~{CHRG}",  "open_collector", "R"),
          CustomPin("8", "CE",       "input",          "R"),
+         CustomPin("9", "EP",       "power_in",       "L"),  # exposed thermal pad -> GND (ESOP-8)
      ],
-     "1A Li-Ion linear charger (LCSC C16581)"),
+     "1A Li-Ion linear charger, ESOP-8 (LCSC C16581)"),
 
     ("badge:ME6211C33M5G", "ME6211C33M5G",
      "Package_TO_SOT_SMD:SOT-23-5",
