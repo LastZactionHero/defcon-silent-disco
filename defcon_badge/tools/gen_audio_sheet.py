@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate Audio.kicad_sch — TM8211 DAC + TDA1308 amp + PJ-320A jack.
+"""Generate Audio.kicad_sch — TM8211 DAC + TDA1308 amp + 3.5mm stereo TRS jack.
 
 Topology (badge_hw_design.md §Audio):
-  RP2040 PIO I2S → TM8211 → 10µF coupling → TDA1308 → 220µF coupling → PJ-320A
+  RP2040 PIO I2S → TM8211 → 10µF coupling → TDA1308 → 220µF coupling → 3.5mm TRS jack
 """
 import sys
 from pathlib import Path
@@ -21,7 +21,7 @@ def build() -> SheetGen:
         comments=[
             "TM8211 (PT8211 clone, 2.0-5.5V) — LSBJ-format 16-bit I2S in, stereo current-out",
             "TDA1308 dual opamp headphone amp, ~2.1× gain (100k/47k), virtual ground 10k/10k",
-            "PJ-320A wired as TRS stereo, sleeve to GND, mic ring and detect left NC",
+            "CUI SJ1-3523N stereo TRS jack, sleeve to GND (mic-ring/detect N/A on this part)",
         ],
     )
 
@@ -70,10 +70,10 @@ def build() -> SheetGen:
         description="Dual headphone opamp, rail-to-rail",
     )
 
-    # PJ-320A 3.5mm TRRS jack — wired as TRS stereo
+    # 3.5mm stereo TRS jack (5-pin TRS+detect symbol; detect/mic-ring pins NC)
     sg.add_custom(
-        "badge:PJ-320A", "PJ-320A",
-        "Connector_Audio:Jack_3.5mm_QingPu_WQP-PJ398SM_Vertical_CircularHoles",
+        "badge:PJ-320A", "SJ1-3523N",
+        "Connector_Audio:Jack_3.5mm_CUI_SJ1-3523N_Horizontal",
         [
             CustomPin("T", "TIP",     "passive",    "R"),   # left output
             CustomPin("R", "RING",    "passive",    "R"),   # right output
@@ -81,12 +81,12 @@ def build() -> SheetGen:
             CustomPin("R2","RING2",   "no_connect", "L"),   # mic (NC)
             CustomPin("D", "DETECT",  "no_connect", "L"),   # NC
         ],
-        description="3.5mm TRRS jack, used as TRS stereo (sleeve = GND)",
+        description="3.5mm stereo TRS jack, sleeve = GND",
     )
 
     sg.add_text(
         "Audio chain — badge_hw_design.md §Audio chain.\\n"
-        "I2S BCK/LRCK/DIN → TM8211 DAC → 10µF coupling → TDA1308 amp → 220µF coupling → PJ-320A.\\n"
+        "I2S BCK/LRCK/DIN → TM8211 DAC → 10µF coupling → TDA1308 amp → 220µF coupling → 3.5mm TRS jack.\\n"
         "Gain ≈ 2.1× (100k feedback / 47k input). Virtual ground 10k/10k + 10µF.\\n"
         "220µF/32Ω → −3 dB at 23 Hz; into 16Ω earbuds → 45 Hz. Don't cheap to 100µF — this is a disco.\\n"
         "DAC needs LSBJ-format I2S (WS shifted by one BCK vs standard I2S) — firmware PIO note.",
@@ -196,15 +196,19 @@ def build() -> SheetGen:
     sg.label_at_pin("C46", "2", "JACK_R")
 
     # ----- Jack -----
-    sg.place("badge:PJ-320A", "J20", "PJ-320A",
-             "Connector_Audio:Jack_3.5mm_QingPu_WQP-PJ398SM_Vertical_CircularHoles",
-             215, 80, mpn="PJ-320A", lcsc="C720466",
-             desc="3.5mm TRRS jack wired as TRS stereo")
+    # CUI SJ1-3523N: 3.5mm stereo TRS, through-hole, horizontal/edge-mount.
+    # Mainstream, in-stock, and has a verified KiCad library footprint (the
+    # earlier WQP-PJ398SM was a *mono* Thonkiconn — wrong for a stereo badge).
+    # Through-hole survives repeated plug/unplug better than an SMD jack.
+    sg.place("badge:PJ-320A", "J20", "SJ1-3523N",
+             "Connector_Audio:Jack_3.5mm_CUI_SJ1-3523N_Horizontal",
+             215, 80, mpn="SJ1-3523N",
+             desc="3.5mm stereo TRS jack (CUI SJ1-3523N), edge-mount")
     sg.label_at_pin("J20", "T", "JACK_L")
     sg.label_at_pin("J20", "R", "JACK_R")
     sg.power_at_pin("J20", "S", "GND", pwr_ref="#PWR_J20")
-    sg.nc_at_pin("J20", "R2")  # mic ring — TRS-only use
-    sg.nc_at_pin("J20", "D")   # sleeve-detect not used
+    sg.nc_at_pin("J20", "R2")  # mic ring — TRS-only use, not on this footprint
+    sg.nc_at_pin("J20", "D")   # sleeve-detect — not on this footprint
 
     # ----- Cross-sheet hier_labels (matching top sheet pins) -----
     sg.add_hier("I2S_BCK",  35, 55, shape="input", rot=0)
