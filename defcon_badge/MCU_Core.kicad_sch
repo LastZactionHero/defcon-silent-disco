@@ -7404,13 +7404,14 @@
 		)
 		(uuid "bc913f6b-1cc0-42b9-b1c5-85d0fa97f014")
 	)
-	(label "GPIO22"
+	(global_label "SD_CD"
+		(shape bidirectional)
 		(at 245.11 167.64 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify right)
 		)
 		(uuid "bce0a61c-ee66-4e5d-b854-7adb107509e9")
 	)

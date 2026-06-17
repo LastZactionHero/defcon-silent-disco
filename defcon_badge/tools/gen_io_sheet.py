@@ -115,8 +115,14 @@ def build() -> SheetGen:
     sg.power_at_pin("J31", "6", "GND", pwr_ref="#PWR_J31_6")
     sg.label_at_pin("J31", "7", "SD_MISO")
     sg.nc_at_pin("J31", "8")     # DAT1 / RSV
-    sg.nc_at_pin("J31", "9")     # CD switch — not wired this rev
+    sg.global_label_at_pin("J31", "9", "SD_CD")  # CD switch -> spare GPIO (GP22) via global net
     sg.power_at_pin("J31", "SH", "GND", pwr_ref="#PWR_J31_SH")
+    # Card-detect pull-up: the DET switch shorts pin 9 to the grounded shield when a
+    # card is inserted, so SD_CD reads LOW = card present; R42 holds it high when empty.
+    sg.place("Device:R", "R42", "10k", "Resistor_SMD:R_0402_1005Metric", 110, 110,
+             desc="microSD card-detect pull-up to +3V3")
+    sg.global_label_at_pin("R42", "1", "SD_CD")
+    sg.label_at_pin("R42", "2", "+3V3")
 
     # ----- Debug UART header (3-pin: GND, TX, RX). DNP -----
     sg.place("Connector_Generic:Conn_01x03", "J32", "UART debug",

@@ -181,3 +181,23 @@ SK9822); wired U10.9->GND. Verified U10.9=GND, U10.7=~CHRG, ERC 0.
   bugs fixed (power tree, DAC, LEDs, charger EP). 4/5 sch_health gates PASS; the 5th is the waived GPIO
   spares. Ready for the PCB phase (net re-sync + the 3 footprints + re-place) once #7 scope is decided.
   metrics S4 appended.
+
+[2026-06-16] FIX: S5 — microSD card-detect (#7) WIRED (user: "wire it up").
+  Found the top-sheet wires cross-sheet nets by placing the IO + MCU_Core sheet symbols FACING each
+  other with matching pins at the same Y, joined by short wires (25 wires total; my first grep missed
+  them — trailing-space pattern bug). Rather than edit the top sheet's two sheet-symbols + add a wire,
+  used a GLOBAL LABEL for SD_CD (connects across the whole hierarchy by name, no top-sheet plumbing).
+  - kicad_sheet_gen.py: added global_label support (global_labels field, _render_global, and a
+    global_label_at_pin() method) — a clean reusable generator capability.
+  - gen_io_sheet.py: J31.9 (DET) -> global SD_CD; added R42 10k pull-up (SD_CD -> +3V3). DET shorts
+    pin 9 to the grounded shield when a card is inserted, so SD_CD reads LOW = card present.
+  - MCU_Core.kicad_sch: repurposed the GP22 spare — changed its (label "GPIO22") to a
+    (global_label "SD_CD") at U3.34 (targeted edit; MCU_Core is edit/patch-maintained, no generator).
+  Verified netlist: SD_CD = {J31.9, R42.1, U3.34}; R42.2 -> +3V3. ERC still 0; warnings 64->63
+  (GP22 is no longer a floating spare). Bonus: floating single-pin nets 7 -> 6.
+  ===> SCHEMATIC COMPLETE. ERC 0 errors / 63 warnings. 4/5 sch_health gates PASS (5th = the 6
+  remaining intentional GPIO spares, WAIVED). Every identified issue is fixed or consciously
+  resolved. Trajectory: S0 (6 ERC err, board DEAD, 0/5 gates) -> S5 (0 ERC err, board sound, 4/5).
+  Remaining work is the PCB PHASE only: net re-sync (sync_nets_pcbnew.py) + create/swap 3 footprints
+  (SK9822-5050 land pattern [create], TP4056 ESOP-8 [stock], microSD unchanged) + place R6/R42 + the
+  P3 cosmetic warning cleanup. metrics S5 appended.

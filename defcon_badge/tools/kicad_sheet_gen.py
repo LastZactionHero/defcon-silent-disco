@@ -291,6 +291,7 @@ class SheetGen:
     labels: list[tuple[str, float, float, float]] = field(default_factory=list)
     """(name, x, y, rot)"""
     hier_labels: list[tuple[str, float, float, float, str]] = field(default_factory=list)
+    global_labels: list[tuple[str, float, float, float, str]] = field(default_factory=list)
     """(name, x, y, rot, shape)"""
     text_notes: list[tuple[str, float, float, float]] = field(default_factory=list)
     """(text, x, y, font_size)"""
@@ -377,6 +378,29 @@ class SheetGen:
         if stub > 0:
             self.wires.append(((px, py), end))
         self.labels.append((label, end[0], end[1], label_rot))
+
+    def global_label_at_pin(self, ref: str, pin_num: str, name: str,
+                            shape: str = "bidirectional", stub: float = 2.54,
+                            dir_override: str | None = None):
+        """Emit a stub from a pin to a GLOBAL label. Global labels connect across
+        the whole hierarchy by name WITHOUT needing top-sheet sheet-pins/wires —
+        used for the microSD card-detect (SD_CD) signal between IO and MCU_Core."""
+        px, py = self._pin_abs(ref, pin_num)
+        px, py = snap(px), snap(py)
+        inst = next(i for i in self.instances if i.ref == ref)
+        dx, dy = px - inst.x, py - inst.y
+        if dir_override:
+            sx, sy = {"L": (-1, 0), "R": (1, 0), "U": (0, -1), "D": (0, 1)}[dir_override]
+        elif abs(dx) > abs(dy):
+            sx, sy = (1 if dx > 0 else -1), 0
+        elif abs(dy) > 0:
+            sx, sy = 0, (1 if dy > 0 else -1)
+        else:
+            sx, sy = 0, 1
+        end = (snap(px + sx * stub), snap(py + sy * stub))
+        if stub > 0:
+            self.wires.append(((px, py), end))
+        self.global_labels.append((name, end[0], end[1], 0, shape))
 
     def power_at_pin(self, ref: str, pin_num: str, power_name: str,
                      pwr_ref: str, stub: float = 2.54, dir_override: str | None = None):
@@ -469,6 +493,8 @@ class SheetGen:
             parts.append(self._render_label(*l))
         for h in self.hier_labels:
             parts.append(self._render_hier(*h))
+        for g in self.global_labels:
+            parts.append(self._render_global(*g))
         parts.append(self._render_trailer())
         return "\n".join(parts) + "\n"
 
@@ -576,6 +602,11 @@ class SheetGen:
     def _render_hier(self, name, x, y, rot, shape) -> str:
         return (f'\t(hierarchical_label "{name}" (shape {shape}) (at {x:.2f} {y:.2f} {rot:g})'
                 f' (effects (font (size 1.524 1.524)) (justify left))'
+                f' (uuid "{new_uuid()}"))')
+
+    def _render_global(self, name, x, y, rot, shape) -> str:
+        return (f'\t(global_label "{name}" (shape {shape}) (at {x:.2f} {y:.2f} {rot:g})'
+                f' (effects (font (size 1.27 1.27)) (justify left))'
                 f' (uuid "{new_uuid()}"))')
 
     def _render_text(self, text, x, y, size) -> str:
