@@ -33,17 +33,19 @@ def build() -> SheetGen:
     # SK9822 6-pin. Pin order chosen so chain connections (DIN↔DOUT, CIN↔COUT)
     # land on the same Y level between adjacent LEDs → straight horizontal wires.
     sg.add_custom(
-        "badge:SK9822", "SK9822-EC20",
-        "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
+        "badge:SK9822", "SK9822",
+        "badge:LED_SK9822_5050",   # 6-pad 5050 land pattern (create in PCB phase; no stock KiCad fp)
         [
-            CustomPin("2", "DIN",  "input",      "L"),   # slot 0 (top)
-            CustomPin("3", "CIN",  "input",      "L"),   # slot 1 (mid)
-            CustomPin("1", "VDD",  "power_in",   "L"),   # slot 2 (bottom)
-            CustomPin("4", "DOUT", "output",     "R"),   # slot 0 (top)  — aligns with next LED's DIN
+            # SK9822 5050 datasheet pinout: 1=DIN 2=CIN 3=GND 4=VDD 5=COUT 6=DOUT.
+            # Slots aligned so chain wires are straight: DIN(1)/DOUT(6) top, CIN(2)/COUT(5) mid.
+            CustomPin("1", "DIN",  "input",      "L"),   # slot 0 (top)
+            CustomPin("2", "CIN",  "input",      "L"),   # slot 1 (mid)
+            CustomPin("3", "GND",  "power_in",   "L"),   # slot 2 (bottom)
+            CustomPin("6", "DOUT", "output",     "R"),   # slot 0 (top)  — aligns with next LED's DIN
             CustomPin("5", "COUT", "output",     "R"),   # slot 1 (mid)  — aligns with next LED's CIN
-            CustomPin("6", "GND",  "power_in",   "R"),   # slot 2 (bottom)
+            CustomPin("4", "VDD",  "power_in",   "R"),   # slot 2 (bottom)
         ],
-        description="APA102/SK9822-style addressable RGB LED, SPI",
+        description="SK9822 (APA102 clone) 5050 addressable RGB LED, SPI clock+data",
     )
 
     # TSOP4838-class 38 kHz IR receiver (3-pin: VS, OUT, GND)
@@ -72,29 +74,29 @@ def build() -> SheetGen:
     led_x = [60, 95, 130, 165]
     for i, x in enumerate(led_x, start=1):
         ref = f"LED{19 + i}"  # LED20, LED21, LED22, LED23
-        sg.place("badge:SK9822", ref, f"SK9822-EC20",
-                 "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm", x, 80,
-                 mpn="SK9822-EC20", lcsc="C2890389",
-                 desc=f"SK9822 #{i} of 4 chained")
+        sg.place("badge:SK9822", ref, "SK9822",
+                 "badge:LED_SK9822_5050", x, 80,
+                 mpn="SK9822", lcsc="",
+                 desc=f"SK9822 #{i} of 4 chained (5050)")
         # Local 10nF decoupling
         cref = f"C{59 + i}"  # C60-C63
         sg.place("Device:C", cref, "10n", "Capacitor_SMD:C_0402_1005Metric",
                  x, 60, desc=f"SK9822 #{i} bypass")
         sg.label_at_pin(cref, "1", "+3V3")
         sg.power_at_pin(cref, "2", "GND", pwr_ref=f"#PWR_{cref}")
-        sg.label_at_pin(ref, "1", "+3V3")
-        sg.power_at_pin(ref, "6", "GND", pwr_ref=f"#PWR_{ref}")
+        sg.label_at_pin(ref, "4", "+3V3")          # VDD = pin 4
+        sg.power_at_pin(ref, "3", "GND", pwr_ref=f"#PWR_{ref}")  # GND = pin 3
 
     # LED20 inputs: labels carry the chain-start nets from MCU_Core.
-    sg.label_at_pin("LED20", "3", "LED_SCK")
-    sg.label_at_pin("LED20", "2", "LED_DAT")
+    sg.label_at_pin("LED20", "2", "LED_SCK")    # CIN = pin 2
+    sg.label_at_pin("LED20", "1", "LED_DAT")    # DIN = pin 1
     # Chain link wires — pin slots are aligned for straight horizontal wires.
     for src, dst in [("LED20", "LED21"), ("LED21", "LED22"), ("LED22", "LED23")]:
-        sg.wire_pins(src, "4", dst, "2")  # DOUT → next DIN
-        sg.wire_pins(src, "5", dst, "3")  # COUT → next CIN
+        sg.wire_pins(src, "6", dst, "1")  # DOUT(6) → next DIN(1)
+        sg.wire_pins(src, "5", dst, "2")  # COUT(5) → next CIN(2)
     # LED23 chain ends — outputs unconnected.
-    sg.nc_at_pin("LED23", "5")
-    sg.nc_at_pin("LED23", "4")
+    sg.nc_at_pin("LED23", "5")  # COUT
+    sg.nc_at_pin("LED23", "6")  # DOUT
 
     # ----- IR LED, direct GPIO drive (no S8050 driver, no base resistor) -----
     # GP9 sinks current: +3V3 → D20 anode → D20 cathode → R30 → GP9 (IR_TX).

@@ -40,14 +40,15 @@ SYMBOLS: list[tuple[str, str, str, list[CustomPin], str]] = [
     ("badge:TM8211", "TM8211",
      "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
      [
-         CustomPin("1", "VDD",  "power_in",  "L"),
-         CustomPin("2", "VLL",  "output",    "L"),
-         CustomPin("3", "VRR",  "output",    "L"),
-         CustomPin("4", "VSS",  "power_in",  "L"),
-         CustomPin("8", "NC",   "no_connect","R"),
-         CustomPin("7", "DIN",  "input",     "R"),
-         CustomPin("6", "BCK",  "input",     "R"),
-         CustomPin("5", "WS",   "input",     "R"),
+         # PT8211 datasheet pinout (TM8211 = pin-compatible clone), datasheet-verified.
+         CustomPin("1", "BCK",  "input",     "L"),
+         CustomPin("2", "WS",   "input",     "L"),
+         CustomPin("3", "DIN",  "input",     "L"),
+         CustomPin("4", "GND",  "power_in",  "L"),
+         CustomPin("5", "VDD",  "power_in",  "R"),
+         CustomPin("6", "LCH",  "output",    "R"),
+         CustomPin("7", "NC",   "no_connect","R"),
+         CustomPin("8", "RCH",  "output",    "R"),
      ],
      "Stereo 16-bit DAC, LSBJ I2S (PT8211 clone)"),
 
@@ -76,17 +77,23 @@ SYMBOLS: list[tuple[str, str, str, list[CustomPin], str]] = [
      ],
      "3.5mm TRRS jack, used as TRS stereo (sleeve = GND)"),
 
-    ("badge:SK9822", "SK9822-EC20",
-     "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm",
+    # NOTE: footprint must be a 6-pad 5050 SK9822/APA102 land pattern. KiCad has no stock
+    # addressable-5050 footprint (LED_RGB_5050-6 is a plain R/G/B part) — create
+    # badge:LED_SK9822_5050 from the SK9822 datasheet land pattern in the PCB phase.
+    ("badge:SK9822", "SK9822",
+     "badge:LED_SK9822_5050",
      [
-         CustomPin("2", "DIN",  "input",      "L"),
-         CustomPin("3", "CIN",  "input",      "L"),
-         CustomPin("1", "VDD",  "power_in",   "L"),
-         CustomPin("4", "DOUT", "output",     "R"),
+         # SK9822 5050 datasheet pinout (verified: Adafruit/Pololu/Normand SK9822 datasheets):
+         # 1=SDI(DIN) 2=CKI(CIN) 3=GND 4=VDD 5=CKO(COUT) 6=SDO(DOUT). Slot order keeps the
+         # chain wires straight: DIN/DOUT aligned (top), CIN/COUT aligned (mid).
+         CustomPin("1", "DIN",  "input",      "L"),
+         CustomPin("2", "CIN",  "input",      "L"),
+         CustomPin("3", "GND",  "power_in",   "L"),
+         CustomPin("6", "DOUT", "output",     "R"),
          CustomPin("5", "COUT", "output",     "R"),
-         CustomPin("6", "GND",  "power_in",   "R"),
+         CustomPin("4", "VDD",  "power_in",   "R"),
      ],
-     "APA102/SK9822-style addressable RGB LED, SPI; DIN/DOUT & CIN/COUT pin-aligned for chain wires"),
+     "SK9822 (APA102 clone) 5050 addressable RGB LED, 2-wire SPI clock+data"),
 
     ("badge:TSOP4838", "TSOP4838",
      "OptoDevice:Vishay_MINICAST-3Pin",

@@ -162,53 +162,53 @@
 			)
 		)
 		(symbol "TM8211_1_1"
-			(pin power_in line
+			(pin input line
 				(at -6.35 3.81 180)
 				(length 2.54)
-				(name "VDD" (effects (font (size 1.27 1.27))))
+				(name "BCK" (effects (font (size 1.27 1.27))))
 				(number "1" (effects (font (size 1.27 1.27))))
 			)
-			(pin output line
+			(pin input line
 				(at -6.35 1.27 180)
 				(length 2.54)
-				(name "VLL" (effects (font (size 1.27 1.27))))
+				(name "WS" (effects (font (size 1.27 1.27))))
 				(number "2" (effects (font (size 1.27 1.27))))
 			)
-			(pin output line
+			(pin input line
 				(at -6.35 -1.27 180)
 				(length 2.54)
-				(name "VRR" (effects (font (size 1.27 1.27))))
+				(name "DIN" (effects (font (size 1.27 1.27))))
 				(number "3" (effects (font (size 1.27 1.27))))
 			)
 			(pin power_in line
 				(at -6.35 -3.81 180)
 				(length 2.54)
-				(name "VSS" (effects (font (size 1.27 1.27))))
+				(name "GND" (effects (font (size 1.27 1.27))))
 				(number "4" (effects (font (size 1.27 1.27))))
 			)
-			(pin no_connect line
+			(pin power_in line
 				(at 6.35 3.81 0)
 				(length 2.54)
-				(name "NC" (effects (font (size 1.27 1.27))))
-				(number "8" (effects (font (size 1.27 1.27))))
+				(name "VDD" (effects (font (size 1.27 1.27))))
+				(number "5" (effects (font (size 1.27 1.27))))
 			)
-			(pin input line
+			(pin output line
 				(at 6.35 1.27 0)
 				(length 2.54)
-				(name "DIN" (effects (font (size 1.27 1.27))))
-				(number "7" (effects (font (size 1.27 1.27))))
-			)
-			(pin input line
-				(at 6.35 -1.27 0)
-				(length 2.54)
-				(name "BCK" (effects (font (size 1.27 1.27))))
+				(name "LCH" (effects (font (size 1.27 1.27))))
 				(number "6" (effects (font (size 1.27 1.27))))
 			)
-			(pin input line
+			(pin no_connect line
+				(at 6.35 -1.27 0)
+				(length 2.54)
+				(name "NC" (effects (font (size 1.27 1.27))))
+				(number "7" (effects (font (size 1.27 1.27))))
+			)
+			(pin output line
 				(at 6.35 -3.81 0)
 				(length 2.54)
-				(name "WS" (effects (font (size 1.27 1.27))))
-				(number "5" (effects (font (size 1.27 1.27))))
+				(name "RCH" (effects (font (size 1.27 1.27))))
+				(number "8" (effects (font (size 1.27 1.27))))
 			)
 		)
 		(embedded_fonts no)
@@ -356,13 +356,13 @@
 		(duplicate_pin_numbers_are_jumpers no)
 		(property "Reference" "U" (at 0 7.62 0)
 			(effects (font (size 1.27 1.27))))
-		(property "Value" "SK9822-EC20" (at 0 -7.62 0)
+		(property "Value" "SK9822" (at 0 -7.62 0)
 			(effects (font (size 1.27 1.27))))
-		(property "Footprint" "LED_SMD:LED_SK6812_PLCC4_5.0x5.0mm_P3.2mm" (at 0 0 0)
+		(property "Footprint" "badge:LED_SK9822_5050" (at 0 0 0)
 			(show_name no) (hide yes) (effects (font (size 1.27 1.27))))
 		(property "Datasheet" "" (at 0 0 0)
 			(show_name no) (hide yes) (effects (font (size 1.27 1.27))))
-		(property "Description" "APA102/SK9822-style addressable RGB LED, SPI; DIN/DOUT & CIN/COUT pin-aligned for chain wires" (at 0 0 0)
+		(property "Description" "SK9822 (APA102 clone) 5050 addressable RGB LED, 2-wire SPI clock+data" (at 0 0 0)
 			(show_name no) (hide yes) (effects (font (size 1.27 1.27))))
 		(symbol "SK9822_0_1"
 			(rectangle
@@ -376,25 +376,25 @@
 				(at -6.35 2.54 180)
 				(length 2.54)
 				(name "DIN" (effects (font (size 1.27 1.27))))
-				(number "2" (effects (font (size 1.27 1.27))))
+				(number "1" (effects (font (size 1.27 1.27))))
 			)
 			(pin input line
 				(at -6.35 0.00 180)
 				(length 2.54)
 				(name "CIN" (effects (font (size 1.27 1.27))))
-				(number "3" (effects (font (size 1.27 1.27))))
+				(number "2" (effects (font (size 1.27 1.27))))
 			)
 			(pin power_in line
 				(at -6.35 -2.54 180)
 				(length 2.54)
-				(name "VDD" (effects (font (size 1.27 1.27))))
-				(number "1" (effects (font (size 1.27 1.27))))
+				(name "GND" (effects (font (size 1.27 1.27))))
+				(number "3" (effects (font (size 1.27 1.27))))
 			)
 			(pin output line
 				(at 6.35 2.54 0)
 				(length 2.54)
 				(name "DOUT" (effects (font (size 1.27 1.27))))
-				(number "4" (effects (font (size 1.27 1.27))))
+				(number "6" (effects (font (size 1.27 1.27))))
 			)
 			(pin output line
 				(at 6.35 0.00 0)
@@ -405,8 +405,8 @@
 			(pin power_in line
 				(at 6.35 -2.54 0)
 				(length 2.54)
-				(name "GND" (effects (font (size 1.27 1.27))))
-				(number "6" (effects (font (size 1.27 1.27))))
+				(name "VDD" (effects (font (size 1.27 1.27))))
+				(number "4" (effects (font (size 1.27 1.27))))
 			)
 		)
 		(embedded_fonts no)

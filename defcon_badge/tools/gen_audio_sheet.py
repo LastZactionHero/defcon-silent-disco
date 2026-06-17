@@ -39,14 +39,16 @@ def build() -> SheetGen:
         "badge:TM8211", "TM8211",
         "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
         [
-            CustomPin("1", "VDD",  "power_in",  "L"),
-            CustomPin("2", "VLL",  "output",    "L"),
-            CustomPin("3", "VRR",  "output",    "L"),
-            CustomPin("4", "VSS",  "power_in",  "L"),
-            CustomPin("8", "NC",   "no_connect","R"),
-            CustomPin("7", "DIN",  "input",     "R"),
-            CustomPin("6", "BCK",  "input",     "R"),
-            CustomPin("5", "WS",   "input",     "R"),
+            # Pinout per Princeton PT8211 datasheet (TM8211 = pin-compatible clone),
+            # verified against 4 independent sources. The previous map was scrambled.
+            CustomPin("1", "BCK",  "input",     "L"),
+            CustomPin("2", "WS",   "input",     "L"),
+            CustomPin("3", "DIN",  "input",     "L"),
+            CustomPin("4", "GND",  "power_in",  "L"),
+            CustomPin("5", "VDD",  "power_in",  "R"),
+            CustomPin("6", "LCH",  "output",    "R"),
+            CustomPin("7", "NC",   "no_connect","R"),
+            CustomPin("8", "RCH",  "output",    "R"),
         ],
         description="Stereo 16-bit DAC, LSBJ-format I2S (PT8211 clone)",
     )
@@ -101,22 +103,22 @@ def build() -> SheetGen:
     sg.place("Device:C", "C41", "10u", "Capacitor_SMD:C_0402_1005Metric", 65, 60,
              desc="DAC VDD bulk")
 
-    sg.label_at_pin("U20", "1", "+3V3")
-    sg.power_at_pin("U20", "4", "GND", pwr_ref="#PWR_U20")
+    sg.label_at_pin("U20", "5", "+3V3")          # VDD = pin 5 (PT8211)
+    sg.power_at_pin("U20", "4", "GND", pwr_ref="#PWR_U20")  # GND = pin 4
     sg.label_at_pin("C40", "1", "+3V3")
     sg.power_at_pin("C40", "2", "GND", pwr_ref="#PWR_C40")
     sg.label_at_pin("C41", "1", "+3V3")
     sg.power_at_pin("C41", "2", "GND", pwr_ref="#PWR_C41")
 
     # I2S in from hier_labels (added below). Pin order: BCK, LRCK(WS), DIN
-    sg.label_at_pin("U20", "6", "I2S_BCK")
-    sg.label_at_pin("U20", "5", "I2S_LRCK")
-    sg.label_at_pin("U20", "7", "I2S_DIN")
-    sg.nc_at_pin("U20", "8")  # TM8211 pin 8 NC
+    sg.label_at_pin("U20", "1", "I2S_BCK")       # BCK = pin 1
+    sg.label_at_pin("U20", "2", "I2S_LRCK")      # WS  = pin 2
+    sg.label_at_pin("U20", "3", "I2S_DIN")       # DIN = pin 3
+    sg.nc_at_pin("U20", "7")  # TM8211 pin 7 NC
 
-    # DAC outputs → coupling caps → amp inputs
-    sg.label_at_pin("U20", "2", "DAC_OUTL")
-    sg.label_at_pin("U20", "3", "DAC_OUTR")
+    # DAC outputs → coupling caps → amp inputs (LCH=pin6, RCH=pin8 per PT8211)
+    sg.label_at_pin("U20", "6", "DAC_OUTL")      # LCH = pin 6
+    sg.label_at_pin("U20", "8", "DAC_OUTR")      # RCH = pin 8
 
     # 10 µF DAC→amp coupling (vertical caps, spaced apart so stub labels don't collide)
     sg.place("Device:C", "C42", "10u", "Capacitor_SMD:C_0603_1608Metric", 100, 65,

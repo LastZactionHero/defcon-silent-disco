@@ -99,3 +99,49 @@ d: add best-practice ADC_AVDD ferrite+cap).
   class is invisible to ERC); #6 RUN 10k pull-up; #7 microSD card-detect part (user: pick
   CD-capable); #d ADC_AVDD ferrite+cap; then PCB net re-sync (sync_nets_pcbnew.py) +
   P3 warning cleanup. metrics.jsonl S1 appended.
+
+[2026-06-16] VERIFY + FIX: S2 — datasheet-verified the 4 library defects (workflow, web access,
+each cited). RESULTS:
+  - TM8211 (#2): CONFIRMED wrong (high conf, 4 sources: Princeton PT8211 datasheet V1.5 +3 cross-
+    checks). NOTE the audit's own guessed pinout was ALSO wrong — real PT8211 SOP-8 is
+    1=BCK,2=WS,3=DIN,4=GND,5=VDD,6=LCH,7=NC,8=RCH (audit had guessed 1=WS,2=BCK,4=VDD,5=VOUTL...).
+    This is exactly why datasheet verify is mandatory for symbol correctness.
+    >>> FIXED: corrected the pinout in BOTH defs (gen_badge_lib.py + the duplicate inline def in
+    gen_audio_sheet.py) AND re-mapped the U20 wiring (gen_audio_sheet.py) to the real pins.
+    Regenerated lib+Audio; netlist verified: U20.1=I2S_BCK .2=I2S_LRCK .3=I2S_DIN .4=GND .5=+3V3
+    .6=DAC_OUTL .7=NC .8=DAC_OUTR — all correct. Footprint SOIC-8 unchanged (no PCB footprint swap;
+    only a net re-sync needed). ERC still 0. Audio subsystem now electrically correct.
+  - flash W25Q16JVUXIQ (#c): FALSE ALARM (high conf, Winbond W25Q16JV datasheet). The symbol pinout
+    AND the footprint (Package_SON:Winbond_USON-8-1EP_3x2mm) are ALREADY correct; only a cosmetic
+    symbol-name (W25Q128JVS). NO fix needed. (Another triage point: audit raised it as an open Q,
+    verify cleared it.)
+  - SK9822 (#3): CONFIRMED wrong (high conf, OPSCO SK9822-EC20 Rev05). BOTH the footprint (4-pad
+    SK6812 PLCC4 on a 6-pin part) AND the pin numbering are wrong. Real EC20 = 2.0x2.0mm "2020",
+    6 pads: 1=SDO,2=GND,3=SDI,4=CKI,5=VDD,6=CKO. >>> BLOCKED on a part decision: 2020 (EC20) vs a
+    5050 SK9822 — they have DIFFERENT pin maps + footprints + PCB placement. Needs user input.
+  - TP4056 (#8): CONFIRMED (high conf, Toppower TP4056 datasheet). ESOP-8; pins 1-8 correct, must
+    ADD pin9=EP->GND + an ESOP-8 thermal-pad footprint. >>> schematic side trivial; PCB footprint
+    swap (SOIC-8 -> SOIC-8-1EP ThermalVias) required.
+  TRIAGE so far (what worked/didn't): the off-the-shelf analyzer would have passed a dead board
+  (over-merge); the audit caught the real defects but GUESSED two specifics wrong (TM8211 pinout
+  detail; flash false alarm) — datasheet verification (cited, multi-source) was the decisive layer.
+  STILL TODO: SK9822 part decision -> symbol+footprint+PCB; TP4056 EP + ESOP-8 (PCB); microSD CD
+  part (#7, user: pick CD-capable); RUN 10k pull-up (#6) + ADC_AVDD ferrite+cap (#d) [both in
+  MCU_Core — check its generation path]; PCB net re-sync; P3 warning cleanup.
+
+[2026-06-16] FIX: S2b — SK9822 LED chain corrected (user chose 5050 "large/bright/decorative";
+confirmed SK9822 is addressable RGB so per-LED color is firmware, no HW change). VERIFIED the
+5050 pinout against the official SK9822 datasheet (Adafruit/Pololu/Normand, multi-source):
+1=SDI(DIN) 2=CKI(CIN) 3=GND 4=VCC(VDD) 5=CKO(COUT) 6=SDO(DOUT) — prior symbol (1=VDD,2=DIN,3=CIN,
+4=DOUT,5=COUT,6=GND) was fully scrambled like the DAC. FIXED the pinout in both defs
+(gen_badge_lib.py + inline in gen_leds_ir_sheet.py) AND re-mapped the chain wiring (VDD->pin4,
+GND->pin3, LED_DAT->pin1, LED_SCK->pin2, DOUT(6)->next DIN(1), COUT(5)->next CIN(2), LED23 NC 5/6).
+Netlist verified: chain DOUT->DIN + COUT->CIN linked, VDD/GND/data/clock on the right pads. Value ->
+"SK9822". FOOTPRINT -> badge:LED_SK9822_5050, but KiCad has NO stock addressable-5050 footprint
+(LED_RGB_5050-6 is plain R/G/B), so this .kicad_mod must be CREATED from the SK9822 datasheet land
+pattern in the PCB phase (= the +4 footprint-link warnings, now 64). ERC errors still 0.
+  SUBSYSTEM-FATAL LIBRARY BUGS NOW FIXED: TM8211 DAC (#2) + SK9822 LEDs (#3) — both ERC-invisible,
+  both caught only by datasheet cross-reference.
+  REMAINING: #8 TP4056 EP+ESOP-8; #6 RUN 10k + #d ADC ferrite+cap (both in MCU_Core, gen path TBD);
+  #7 microSD CD part; then PCB PHASE = net re-sync + create/swap footprints (SK9822-5050, TP4056
+  ESOP-8, microSD-CD) + re-place; then P3 cleanup.
