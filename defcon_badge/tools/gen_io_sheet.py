@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate IO.kicad_sch — 3× tactile + SAO 2×3 + microSD + debug UART."""
+"""Generate IO.kicad_sch — 4× tactile + SAO 2×3 + microSD."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -17,7 +17,7 @@ def build() -> SheetGen:
         comments=[
             "3× TS-1187A tactile (CH / VOL+ / VOL−) via internal RP2040 pullups",
             "Standard SAO v1.69 2×3 (3V3 / GND / SDA / SCL / GP1 / GP2), 4.7k SAO_SDA/SCL pullups",
-            "microSD push socket on SPI0; debug UART 1×3 header (DNP)",
+            "microSD push socket on SPI0",
         ],
     )
 
@@ -35,7 +35,7 @@ def build() -> SheetGen:
     sg.add_text(
         "IO — badge_hw_design.md §Buttons, §SAO, §Connectors.\\n"
         "Buttons → GND with RP2040 internal pullups. SAO 2×3 standard pinout.\\n"
-        "microSD on SPI0 (SCK=GP2, MOSI=GP3, MISO=GP4, CS=GP5). UART debug on GP0/GP1 (DNP).\\n"
+        "microSD on SPI0 (SCK=GP2, MOSI=GP3, MISO=GP4, CS=GP5).\\n"
         "4.7k I2C pullups for SAO bus (RP2040 internal pulls are too weak).",
         25, 25,
     )
@@ -124,14 +124,7 @@ def build() -> SheetGen:
     sg.global_label_at_pin("R42", "1", "SD_CD")
     sg.label_at_pin("R42", "2", "+3V3")
 
-    # ----- Debug UART header (3-pin: GND, TX, RX). DNP -----
-    sg.place("Connector_Generic:Conn_01x03", "J32", "UART debug",
-             "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical", 200, 130,
-             dnp=True,
-             desc="Debug UART header (DNP — pads laid out, header not stuffed)")
-    sg.power_at_pin("J32", "1", "GND", pwr_ref="#PWR_J32")
-    sg.label_at_pin("J32", "2", "UART_TX")
-    sg.label_at_pin("J32", "3", "UART_RX")
+    # (Debug UART header J32 removed — not used; programming is via BOOTSEL/USB.)
 
     # ----- Cross-sheet hier_labels -----
     sg.add_hier("SD_SCK",     35, 55, shape="input",         rot=0)
@@ -146,8 +139,6 @@ def build() -> SheetGen:
     sg.add_hier("SAO_SCL",    35, 145, shape="input",        rot=0)
     sg.add_hier("SAO_GPIO1",  35, 155, shape="bidirectional", rot=0)
     sg.add_hier("SAO_GPIO2",  35, 165, shape="bidirectional", rot=0)
-    sg.add_hier("UART_TX",    35, 180, shape="input",        rot=0)
-    sg.add_hier("UART_RX",    35, 190, shape="output",       rot=0)
 
     return sg
 

@@ -125,16 +125,6 @@
 	)
 	(wire
 		(pts
-			(xy 150.5 231.14) (xy 165.1 231.14)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6d2e2d8e-fe3f-480f-a75c-89cbba3e1100")
-	)
-	(wire
-		(pts
 			(xy 150.5 205.74) (xy 165.1 205.74)
 		)
 		(stroke
@@ -192,16 +182,6 @@
 			(type default)
 		)
 		(uuid "ace7b34a-71e7-4301-b690-a92c06722987")
-	)
-	(wire
-		(pts
-			(xy 150.5 226.06) (xy 165.1 226.06)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b96f6992-5f93-42bf-bfe9-e81b5350b3ee")
 	)
 	(wire
 		(pts
@@ -648,26 +628,6 @@
 				(justify right)
 			)
 		)
-		(pin "UART_TX" input
-			(at 150.5 226.06 0)
-			(uuid "272aff30-5611-4aff-826f-44e160b57a1e")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(pin "UART_RX" output
-			(at 150.5 231.14 0)
-			(uuid "aabf81af-36d2-43ec-ac81-05abefc43fb9")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
 		(pin "BTN_SYNC" output
 			(at 150.5 236.22 0)
 			(uuid "c3ae0121-281b-495e-9522-bbba35d92aa4")
@@ -930,26 +890,6 @@
 		(pin "SAO_GPIO2" bidirectional
 			(at 165.1 220.98 180)
 			(uuid "b2d251d9-53db-4f14-bfeb-90e1ae027f20")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(pin "UART_TX" output
-			(at 165.1 226.06 180)
-			(uuid "310d4730-b3f8-4a60-9153-52d32493307a")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(pin "UART_RX" input
-			(at 165.1 231.14 180)
-			(uuid "5ae5aa38-83da-452e-9d83-0181a5a2dfed")
 			(effects
 				(font
 					(size 1.27 1.27)
