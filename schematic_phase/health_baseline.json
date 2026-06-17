@@ -1,0 +1,150 @@
+{
+  "schematic": "defcon_badge/defcon_badge.kicad_sch",
+  "erc_errors": 6,
+  "erc_warnings": 60,
+  "erc_by_type": {
+    "pin_to_pin": 1,
+    "power_pin_not_driven": 5
+  },
+  "erc_warn_by_type": {
+    "endpoint_off_grid": 36,
+    "unconnected_wire_endpoint": 6,
+    "footprint_link_issues": 2,
+    "lib_symbol_mismatch": 9,
+    "isolated_pin_label": 7
+  },
+  "power_pins_not_driven": [
+    {
+      "ref": "J31",
+      "pin": "4",
+      "pin_name": "VDD"
+    },
+    {
+      "ref": "J31",
+      "pin": "6",
+      "pin_name": "VSS"
+    },
+    {
+      "ref": "U2",
+      "pin": "8",
+      "pin_name": "VCC"
+    },
+    {
+      "ref": "U20",
+      "pin": "1",
+      "pin_name": "VDD"
+    },
+    {
+      "ref": "LED20",
+      "pin": "1",
+      "pin_name": "VDD"
+    }
+  ],
+  "power_pins_not_driven_count": 5,
+  "pin_conflicts": [
+    [
+      "Symbol #FLG_BAT Pin 1 [Power output, Line]",
+      "Symbol U10 Pin 5 [BAT, Power output, Line]"
+    ]
+  ],
+  "rail_fragmentation": {
+    "+3V3": {
+      "fragments": 5,
+      "is_power": true,
+      "nets": [
+        "+3V3",
+        "/Audio/+3V3",
+        "/IO/+3V3",
+        "/LEDs_IR/+3V3",
+        "/Power/+3V3"
+      ],
+      "pin_counts": {
+        "+3V3": 22,
+        "/Audio/+3V3": 5,
+        "/IO/+3V3": 4,
+        "/LEDs_IR/+3V3": 12,
+        "/Power/+3V3": 3
+      }
+    }
+  },
+  "power_rails_fragmented": 1,
+  "power_rails_fragmented_detail": {
+    "+3V3": {
+      "fragments": 5,
+      "is_power": true,
+      "nets": [
+        "+3V3",
+        "/Audio/+3V3",
+        "/IO/+3V3",
+        "/LEDs_IR/+3V3",
+        "/Power/+3V3"
+      ],
+      "pin_counts": {
+        "+3V3": 22,
+        "/Audio/+3V3": 5,
+        "/IO/+3V3": 4,
+        "/LEDs_IR/+3V3": 12,
+        "/Power/+3V3": 3
+      }
+    }
+  },
+  "single_pin_nets": [
+    {
+      "net": "/MCU_Core/GPIO22",
+      "pin": [
+        "U3",
+        "34"
+      ]
+    },
+    {
+      "net": "/MCU_Core/GPIO23",
+      "pin": [
+        "U3",
+        "35"
+      ]
+    },
+    {
+      "net": "/MCU_Core/GPIO24",
+      "pin": [
+        "U3",
+        "36"
+      ]
+    },
+    {
+      "net": "/MCU_Core/GPIO25",
+      "pin": [
+        "U3",
+        "37"
+      ]
+    },
+    {
+      "net": "/MCU_Core/GPIO27_ADC1",
+      "pin": [
+        "U3",
+        "39"
+      ]
+    },
+    {
+      "net": "/MCU_Core/GPIO28_ADC2",
+      "pin": [
+        "U3",
+        "40"
+      ]
+    },
+    {
+      "net": "/MCU_Core/GPIO29_ADC3",
+      "pin": [
+        "U3",
+        "41"
+      ]
+    }
+  ],
+  "single_pin_nets_count": 7,
+  "net_count": 91,
+  "pin_count": 292,
+  "gate_power_rails_unified": false,
+  "gate_power_pins_driven": false,
+  "gate_no_pin_conflicts": false,
+  "gate_no_floating_nets": false,
+  "gate_erc_clean": false
+}

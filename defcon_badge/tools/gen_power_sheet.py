@@ -195,9 +195,13 @@ def build() -> SheetGen:
     sg.place("power:PWR_FLAG", "#FLG_VBUS", "PWR_FLAG", "", 75, 60,
              hide_value=True, desc="Declare VBUS externally driven")
     sg.label_at_pin("#FLG_VBUS", "1", "VBUS", stub=2.54)
-    sg.place("power:PWR_FLAG", "#FLG_BAT", "PWR_FLAG", "", 210, 55,
-             hide_value=True, desc="Declare BAT externally driven")
-    sg.label_at_pin("#FLG_BAT", "1", "BAT", stub=2.54)
+    # GND is a sinks-only net (every GND pin is a power_input); it needs ONE
+    # power-output declaration or ERC flags it power_pin_not_driven. PWR_FLAG on GND.
+    sg.place("power:PWR_FLAG", "#FLG_GND", "PWR_FLAG", "", 210, 55,
+             hide_value=True, desc="Declare GND as a power source (sinks-only net)")
+    sg.power_at_pin("#FLG_GND", "1", "GND", pwr_ref="#PWR_FLGGND", stub=2.54)
+    # (#FLG_BAT removed: BAT is already driven by the TP4056 BAT power-output pin;
+    #  a PWR_FLAG on it shorted two power outputs -> pin_to_pin ERC error.)
     # BAT_SW is the switched-battery LDO input; flag as sourced (via SW1 from BAT)
     sg.place("power:PWR_FLAG", "#FLG_BSW", "PWR_FLAG", "", 240, 55,
              hide_value=True, desc="Declare BAT_SW as sourced (BAT through slide switch)")

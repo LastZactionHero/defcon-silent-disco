@@ -20,6 +20,16 @@ from pathlib import Path
 TOP_FILE_UUID = "8c0b3d8b-46d3-4173-ab1e-a61765f77d61"
 SYM_ROOT = Path("/usr/share/kicad/symbols")
 
+# Global power rails MUST be emitted as global `power:<name>` symbols, never as a
+# sheet-local `(label "<name>")`. A local label is scoped to its sheet and does NOT
+# cross the hierarchy, which silently FRAGMENTS the rail. This was the board-dead
+# bug: MCU_Core declared +3V3 via power:+3V3 symbols while Power/Audio/IO/LEDs_IR
+# used local labels -> +3V3 split into 5 disconnected islands and the LDO output
+# reached zero loads. label_at_pin() reroutes any RAIL_NAMES to power_at_pin().
+# (Scoped to +3V3 — the rail that was broken; GND already uses power_at_pin and
+# VBUS/BAT/+1V1 are unified by their own paths. Add others here if ever fragmented.)
+RAIL_NAMES = {"+3V3"}
+
 
 def new_uuid() -> str:
     return str(uuid.uuid4())
@@ -338,6 +348,13 @@ class SheetGen:
                      stub: float = 2.54, dir_override: str | None = None,
                      label_rot: float = 0):
         """Emit a stub wire from a pin to a labeled endpoint."""
+        if label in RAIL_NAMES:
+            # Global power rail: emit a power:<name> symbol (crosses the hierarchy),
+            # NOT a sheet-local label (which would fragment the rail).
+            self._rail_seq = getattr(self, "_rail_seq", 0) + 1
+            return self.power_at_pin(ref, pin_num, label,
+                                     pwr_ref=f"#PWR_RAIL{self._rail_seq}",
+                                     stub=stub, dir_override=dir_override)
         px, py = self._pin_abs(ref, pin_num)
         px, py = snap(px), snap(py)
         inst = next(i for i in self.instances if i.ref == ref)

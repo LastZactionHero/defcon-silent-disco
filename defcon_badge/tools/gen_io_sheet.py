@@ -40,7 +40,7 @@ def build() -> SheetGen:
         25, 25,
     )
 
-    # ----- Three tactile buttons -----
+    # ----- Four tactile buttons (CH / VOL+ / VOL- / SYNC) -----
     sg.place("Switch:SW_Push", "SW20", "TS-1187A",
              "Button_Switch_SMD:SW_SPST_TL3342", 50, 60,
              mpn="TS-1187A-B-A-B", lcsc="C455257",
@@ -53,6 +53,10 @@ def build() -> SheetGen:
              "Button_Switch_SMD:SW_SPST_TL3342", 90, 60,
              mpn="TS-1187A-B-A-B", lcsc="C455257",
              desc="Volume down")
+    sg.place("Switch:SW_Push", "SW23", "TS-1187A",
+             "Button_Switch_SMD:SW_SPST_TL3342", 110, 60,
+             mpn="TS-1187A-B-A-B", lcsc="C455257",
+             desc="Sync (tap-to-sync) button")
 
     sg.label_at_pin("SW20", "1", "BTN_CH")
     sg.power_at_pin("SW20", "2", "GND", pwr_ref="#PWR_SW20")
@@ -60,6 +64,8 @@ def build() -> SheetGen:
     sg.power_at_pin("SW21", "2", "GND", pwr_ref="#PWR_SW21")
     sg.label_at_pin("SW22", "1", "BTN_VOL_DN")
     sg.power_at_pin("SW22", "2", "GND", pwr_ref="#PWR_SW22")
+    sg.label_at_pin("SW23", "1", "BTN_SYNC")
+    sg.power_at_pin("SW23", "2", "GND", pwr_ref="#PWR_SW23")
 
     # ----- SAO 2×3 header -----
     # Standard SAO pinout (looking at the connector pins 1-6):
@@ -129,6 +135,7 @@ def build() -> SheetGen:
     sg.add_hier("BTN_CH",     35, 100, shape="output",       rot=0)
     sg.add_hier("BTN_VOL_UP", 35, 110, shape="output",       rot=0)
     sg.add_hier("BTN_VOL_DN", 35, 120, shape="output",       rot=0)
+    sg.add_hier("BTN_SYNC",   35, 130, shape="output",       rot=0)
     sg.add_hier("SAO_SDA",    35, 135, shape="bidirectional", rot=0)
     sg.add_hier("SAO_SCL",    35, 145, shape="input",        rot=0)
     sg.add_hier("SAO_GPIO1",  35, 155, shape="bidirectional", rot=0)
