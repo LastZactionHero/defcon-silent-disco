@@ -158,3 +158,26 @@ SK9822); wired U10.9->GND. Verified U10.9=GND, U10.7=~CHRG, ERC 0.
   wire_mcu_hier_labels, patch_mcu_usb_bulk...). So #6 RUN 10k pull-up + #d ADC_AVDD ferrite+cap need
   a small patch script (model: inject_dev_header.py), not a regen — that's the next step.
   STATE: ERC 0 errors / 64 warnings (4 = SK9822 footprint TODO). metrics S3 appended.
+
+[2026-06-16] FIX/RESOLVE: S4 — schematic WRAP-UP pass.
+  #6 RUN 10k pull-up — DONE. MCU_Core has no generator; wrote tools/inject_mcu_passives.py (models
+  inject_dev_header.py) to splice R6 into MCU_Core (it has NO (sheet_instances) block — splice before
+  the root close, not before sheet_instances; R/+3V3 lib symbols already present so no lib injection).
+  Verified: R6.1->+3V3, R6.2->RUN (merges U3.26), ERC 0. (badge_hw_design specs this; internal RP2040
+  pull-up worked without it, R6 adds reset noise immunity.)
+  #d ADC_AVDD filter — RESOLVED, NO CHANGE. Best-practice for the badge's use (coarse VBAT sensing on
+  GP26/ADC0): the RP2040 datasheet accepts a direct ADC_AVDD<->+3V3 tie; the series ferrite + 100nF is
+  only for PRECISION analog. Current direct tie is correct for coarse sensing -> left as-is (documented).
+  #10 GPIO spares (GP22-25,27-29) — WAIVED (HARNESS-permitted): intentional unused RP2040 pins per
+  badge_hw_design; single-pin-net warnings are benign. (gate_no_floating_nets stays FAIL-but-waived.)
+  #7 microSD card-detect — SPEC'D, pending a scope call. It's a CROSS-SHEET feature: J31.9 (DET) ->
+  SD_CD + a 10k pull-up to +3V3 (gen_io_sheet) -> a spare RP2040 GPIO (GP22) in MCU_Core -> a top-sheet
+  sheet-pin tying IO.SD_CD <-> MCU_Core.SD_CD (3-file edit). The SD card itself works without it
+  (firmware can poll); deferred pending user OK on the GPIO/scope.
+  P3 cosmetic (60 warns): 36 grid-snap stubs, 9 lib_symbol_mismatch (embedded-cache drift), 7
+  isolated_pin_label (the waived spares), 6 ~0-length wire stubs, 2 TP1/TP2 footprint-link (footprint
+  "TestPoint_Pad_D1.5mm" lacks a lib prefix -> add "TestPoint:" before fab). None affect the netlist.
+  ===> SCHEMATIC STATUS: electrically CORRECT + ERC-error-CLEAN. All board-killers + subsystem-fatal
+  bugs fixed (power tree, DAC, LEDs, charger EP). 4/5 sch_health gates PASS; the 5th is the waived GPIO
+  spares. Ready for the PCB phase (net re-sync + the 3 footprints + re-place) once #7 scope is decided.
+  metrics S4 appended.
