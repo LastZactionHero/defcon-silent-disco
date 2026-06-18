@@ -30,3 +30,16 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   is a real goal. Δmetric: n/a (baseline pending).
   NOTE: a one-time host prerequisite remains optional — none blocking (KRT env already installed in
   the venv; no sudo/JRE needed). The loop owns the board file; placement is frozen.
+
+[2026-06-17] D0(1) — BUILD INSTRUMENT | the loop can't fly without its metric engine + a
+  copper-aware geometry layer | built routing_phase/tools/geom_route.py (authoritative track/via
+  read + add_track/add_via/delete_routing/refill_zones, single-writer via writer_lock — the copper
+  analog of geom.py) and measure_route.py (full routing schema per ROUTING_SPEC, reusing measure.py
+  DRC plumbing). KRT smoke-tested on the real board (list_nets: 84 nets/83 comps, GND 89 / +3V3 47 /
+  USB_DP 3 pads). | Δmetric: baseline row written — completion 0%, unconnected 218 (divergence 0),
+  0 tracks/vias, usb_diff_paired FALSE, zones_filled_ok FALSE, drc 0, erc 0.
+  FIX (frozen-file safety): a first measure mutated the approved .kicad_pro — pcbnew's settings
+  manager flushes BOM field-defs (MPN/LCSC/Description, from earlier BOM work) into the real project
+  on process exit after reading project state. Reverted; measure_route now runs ALL pcbnew loads +
+  kicad-cli on a /tmp project copy (byte-identical reads, real frozen files never opened — verified
+  git-clean after). The HARNESS already warns about this for the D2+ write path.
