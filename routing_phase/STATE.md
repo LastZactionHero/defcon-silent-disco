@@ -22,10 +22,24 @@ Earlier — **D0(1)** — instrument built. `routing_phase/tools/geom_route.py` 
   GOTCHA SOLVED: pcbnew's settings-manager flushes BOM field-defs into the real .kicad_pro on
   process exit after reading project state → measure now operates entirely on a /tmp copy.
 
+D1 progress: **D1(1) DONE** — rework_stackup.py applied: thickness 1.0→1.6mm, deleted the 3 crude
+  artifact rectangles, recreated 4 outline-following zones (In1 solid GND, In2 +3V3, F.Cu GND, B.Cu
+  GND, inset 0.3mm), In2→mixed, filled. measure: zones_filled_ok TRUE, unconnected 218→147, drc 0,
+  erc 0. baseline.json frozen at unconnected_baseline=147. Frozen-file discipline held (only
+  .kicad_pcb changed; .kicad_pro/.kicad_sch clean). Render d1_top.png reviewed — placement intact.
+  pcbnew swig GOTCHA: LoadBoard→mutate→Fill→Save→re-read in ONE process corrupts the swig wrapper
+  registry (Zones()/GetDesignSettings() return raw pointers) → one LoadBoard+SaveBoard per process,
+  verify via a fresh measure_route SUBPROCESS.
+
 Next intended action:
-  1. **D1 (NOW):** execute STACKUP_SPEC (rework_stackup.py): real 1.6mm JLC stack, In1 solid GND / In2
-     +3V3-mixed / F+B GND pours, delete+recreate zones, fix USB_DIFF_90 netclass (pattern + 0.8→
-     0.17mm), refill, re-baseline completion (freeze unconnected_baseline post-fill in baseline.json).
+  1. **D1(2) (NOW):** fix the USB_DIFF_90 netclass in defcon_badge.kicad_pro (TARGETED edits, keep the
+     diff minimal — this is the one intended .kicad_pro change): patterns /USB_D+ → /MCU_Core/USB_DP,
+     /USB_D- → /MCU_Core/USB_DM, and ADD connector-side Net-(U3-USB_DP), Net-(U3-USB_DM); diff_pair_width
+     0.8→0.17, diff_pair_gap →0.13. Verify measure_route usb_diff_paired→TRUE. Then D1 gate met → D2.
+     (Deferred to fab-prep: the explicit dielectric (stackup ...) s-expr block — thickness is 1.6mm; the
+     block is fab metadata, not routing-blocking. Note it; don't risk a malformed block now.)
+  2. **D2:** plane fanout (route_planes.py: via-stitch every GND/+3V3 pad to its plane + pour-to-pour
+     stitching) → unconnected drops further; then bus-route + LOCK critical nets (USB diff, crystal, QSPI, I2S).
   NOTE: when the loop WRITES routing to the real board (D2+), pcbnew SaveBoard may also flush BOM
   field-defs into .kicad_pro — after any board write, assert `git diff --quiet defcon_badge/
   defcon_badge.kicad_pro defcon_badge/*.kicad_sch` and revert stray BOM-only churn (keep only the

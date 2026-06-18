@@ -53,3 +53,18 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   XIN/QSPI (rank1), signatures reproducible across two reads, fingerprint empty on unrouted board,
   frozen files clean. Δmetric: board unchanged (completion 0%, unconnected 218). **D0 EXIT GATE MET**
   → advance to D1 (stackup rework per STACKUP_SPEC).
+
+[2026-06-17] D1(1) — STACKUP/ZONE REWORK | the ported zones were crude 4-pt rectangles missing the
+  right ~3.6mm of the board (D20/J20 had no ground reference) and didn't follow the sawtooth outline |
+  built routing_phase/tools/rework_stackup.py: thickness 1.0→1.6mm; deleted the 3 artifact zones;
+  recreated 4 zones from the real board outline inset 0.3mm (In1 solid GND plane, In2 +3V3-dominant
+  pour, F.Cu + B.Cu GND pours) via SHAPE_POLY_SET + ZONE_FILLER; In2.Cu→mixed. Applied to the real
+  board, verified by a fresh measure_route subprocess. | Δmetric: zones_filled_ok FALSE→TRUE,
+  unconnected 218→147 (planes now carry GND/+3V3; remaining 147 = signal nets + pads still needing
+  fanout vias, the D2 job), drc 0, erc 0. baseline.json frozen at 147 (completion_pct now measures
+  real progress from here). Frozen-file discipline HELD: only .kicad_pcb changed (.kicad_pro/.kicad_sch
+  git-clean). Render routing_phase/renders/d1_top.png reviewed: placement intact, pours present.
+  GOTCHA: pcbnew swig wrapper registry corrupts after LoadBoard→mutate→Fill→Save→re-read in one
+  process (raw pointers) → rework_stackup does one LoadBoard+SaveBoard, no post-save introspection;
+  verification is a separate measure_route subprocess. DEFERRED to fab-prep: explicit dielectric
+  (stackup ...) block (thickness set to 1.6mm; the block is fab metadata, not routing-blocking).
