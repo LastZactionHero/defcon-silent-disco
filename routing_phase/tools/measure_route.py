@@ -159,6 +159,26 @@ def _net_routed_len(tracks, netname) -> float:
     return sum(t["length_mm"] for t in tracks if t["net"] == netname)
 
 
+def _via_in_pad(b) -> int:
+    """Count vias whose body sits on a pad's copper (via-in-pad). USER DIRECTIVE: no via-in-pad
+    (it needs filled/plated vias = cost; pointless at this density). A proper fanout via is
+    OFFSET from the pad with a short stub track, so it does NOT hit-test inside the pad copper;
+    only a via actually landing on a pad is counted. HARD gate: via_in_pad == 0."""
+    pads = [p for f in b.GetFootprints() for p in f.Pads()]
+    n = 0
+    for t in b.GetTracks():
+        if t.GetClass() != "PCB_VIA":
+            continue
+        pos = t.GetPosition()
+        top, bot = t.TopLayer(), t.BottomLayer()
+        for p in pads:
+            # pad copper at the via's XY on a layer the via touches (top/bottom covers SMD + THT)
+            if p.HitTest(pos) and (p.IsOnLayer(top) or p.IsOnLayer(bot)):
+                n += 1
+                break
+    return n
+
+
 def _usb_nets(meta):
     """The two USB diff nets present on the board (connector + MCU sides share a base)."""
     dp = [n for n in {p["net"] for m in meta.values() for p in m["pads"] if p.get("net")}
@@ -203,6 +223,7 @@ def _measure_copy(pcb: Path, tsch: Path, do_drc: bool) -> dict:
     track_len = round(sum(t["length_mm"] for t in tracks), 2)
     fcu, bcu = by_layer.get("F.Cu", 0.0), by_layer.get("B.Cu", 0.0)
     layer_balance = round(min(fcu, bcu) / max(fcu, bcu), 3) if max(fcu, bcu) > 0 else None
+    via_in_pad = _via_in_pad(b)          # USER DIRECTIVE: must be 0
 
     # power width gate (only routed power-net segments are policed; planes carry the rest)
     pw_ok = all(t["width"] >= POWER_MIN_WIDTH_MM - 1e-6
@@ -255,6 +276,8 @@ def _measure_copy(pcb: Path, tsch: Path, do_drc: bool) -> dict:
         "drc_by_type": drc_by_type,
         "track_count": len(tracks),
         "via_count": len(vias),
+        "via_in_pad": via_in_pad,       # USER DIRECTIVE: no via-in-pad — HARD gate == 0
+
         "track_len_mm": track_len,
         "track_len_by_layer": {k: round(v, 2) for k, v in by_layer.items()},
         "layer_balance": layer_balance,
@@ -293,7 +316,7 @@ def main() -> int:
         print(json.dumps(row, indent=2))
     else:
         keys = ["completion_pct", "unconnected", "unconnected_divergence", "shorts",
-                "drc_errors", "track_count", "via_count", "track_len_mm",
+                "drc_errors", "track_count", "via_count", "via_in_pad", "track_len_mm",
                 "usb_diff_paired", "off_axis_segments", "acute_angles", "zones_filled_ok",
                 "erc_errors"]
         print(f"[{row['phase']}({row['iter']})] " + "  ".join(f"{k}={row[k]}" for k in keys))

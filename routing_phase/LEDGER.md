@@ -126,3 +126,14 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   move) → D2(4): adopt the route_db-as-source-of-truth model and RE-ORDER to SIGNALS-FIRST (route
   critical signals on empty copper, USB with a B.Cu/layer-swap escape for the crossover, THEN fanout in
   the remaining space). This is why we built route_db + the base/replay model — now it earns its keep.
+
+[2026-06-17] USER DIRECTIVE — NO via-in-pad (handled out-of-band; loop idle). User: "no via-in-pad
+  please". Added it as a HARD GATE via_in_pad==0: measure_route._via_in_pad counts vias whose body
+  hit-tests inside a pad's copper on a layer the via touches. FINDING: the current D2(2) fanout has
+  94 via-in-pad — KRT route_planes places stitching vias AT pad centers by default
+  (--same-net-pad-clearance −1). FIX (verified on /tmp, clean base + bridge): pass route_planes
+  --same-net-pad-clearance 0.2 → offset vias + stub traces, via_in_pad 95→0, GND 89/89 + +3V3 47/47
+  still connected, drc 0, shorts 0. Trade-off: offset stubs spike track_count (~219→1724) → a D4
+  cleanup/aesthetic target. Locked in HARNESS (metric + D3/D4 gate + a dedicated note), routing_rules
+  (via strategy), STATE D2(4) plan, and memory [[no-via-in-pad]]. Board UNCHANGED — the 94 via-in-pad
+  get eliminated when D2(4) re-runs the fanout with the offset flag. erc/drc unaffected this commit.

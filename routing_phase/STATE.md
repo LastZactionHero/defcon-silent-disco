@@ -76,7 +76,10 @@ Next intended action (ESCALATE — re-order, don't repeat the blocked move):
      rest). Concretely: (a) rip routing back to the D1 solid-zone base; (b) route the critical nets first
      on EMPTY copper — USB (allow B.Cu escape / layer swap for the crossover), crystal, QSPI, I2S — via
      the bridge; (c) THEN run plane fanout in the remaining space (KRT route_planes already avoids
-     existing tracks). Record everything in route_db. Verify USB now routes 4/4, drc 0, completion rises.
+     existing tracks). **NO via-in-pad (USER DIRECTIVE, hard gate via_in_pad==0): pass
+     `--same-net-pad-clearance 0.2` to route_planes → offset vias + stubs, via_in_pad 0 (verified;
+     default −1 gives 95). NOTE: offset stubs spike track_count (~1724) → a D4 cleanup target.**
+     Record everything in route_db. Verify USB now routes 4/4, drc 0, completion rises, via_in_pad 0.
      ALTERNATIVE if re-order is heavy: make the fanout escape-aware (skip/relocate fanout vias within
      ~1mm of a signal pin's escape on dense ICs). Prefer signal-first; it's cleaner and more general.
   2. **D3 — bus + bulk route** remaining signals to 100% (bus planner via --guide-corridor + KRT

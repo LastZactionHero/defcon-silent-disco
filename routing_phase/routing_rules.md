@@ -54,7 +54,9 @@ near U3 (B.Cu is mostly empty → expect few); (2) GND stitch at every decap gro
 3×3/4×4 GND-via array under the RP2040 EP (pad 57) for thermal+return; a GND-via ring around the
 crystal; (3) +3V3 stitch from ME6211 VOUT + each bulk/decap 3V3 pad into In2; (4) structured
 plane-stitch GND vias tying F.Cu/B.Cu GND pours to In1 near USB/crystal/IR loop/LED-clock + a board-
-edge ring. Keep vias STRUCTURED/gridded, not random (aesthetic goal). Via-in-pad OFF.
+edge ring. Keep vias STRUCTURED/gridded, not random (aesthetic goal). **NO via-in-pad (USER
+DIRECTIVE, hard gate `via_in_pad==0`): every via OFFSET from pad copper with a short stub — on the
+KRT plane fanout pass `--same-net-pad-clearance 0.2`.**
 
 ## Signal-group zones (already placed; route within these clusters)
 - **MCU core** (U3+U2+Y1+R1/R2/R5/R6+decaps): tightest, route FIRST, local on F.Cu over GND. EP via array.

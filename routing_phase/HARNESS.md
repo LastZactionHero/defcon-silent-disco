@@ -83,7 +83,7 @@ the board is `defcon_badge/defcon_badge.kicad_pcb` (project `.kicad_pro`, schema
 ## Durable memory (append-only — NEVER rotate/truncate; all under `routing_phase/`)
 - **`metrics.jsonl`** — one JSON row per iteration. Required keys: `ts, phase, iter, approach,
   commit` + every metric: `completion_pct, unconnected, unconnected_divergence, shorts,
-  drc_errors, drc_by_type, track_count, via_count, track_len_mm, track_len_by_layer,
+  drc_errors, drc_by_type, track_count, via_count, via_in_pad, track_len_mm, track_len_by_layer,
   usb_diff_paired, usb_diff_skew_mm, power_min_width_ok, acute_angles, off_axis_segments,
   bus_pitch_var, zones_filled_ok, determinism_ok, erc_errors`. Never skip or delete a row.
 - **`LEDGER.md`** — append-only decision log: `[ISO-date] D?(N) — action | rationale | result |
@@ -119,14 +119,22 @@ the board is `defcon_badge/defcon_badge.kicad_pcb` (project `.kicad_pro`, schema
 
 ### D3 — Bus + bulk route (exit when all true)
 - `completion_pct==100` (`unconnected==0`, `unconnected_divergence==0`) OR a documented `BLOCKER:`
-  listing the unrouted nets and every approach tried. `shorts==0`. Critical pre-routes from D2
-  preserved (route_db replayed them, not re-searched).
+  listing the unrouted nets and every approach tried. `shorts==0`. `via_in_pad==0`. Critical
+  pre-routes from D2 preserved (route_db replayed them, not re-searched).
 
 ### D4 — Cleanup & DRC (exit when all true)
 - `drc_errors==0` (routing types: clearance/track_dangling/via_dangling/copper_edge_clearance/
   track_width/annular_width/hole_clearance), `shorts==0`, `acute_angles==0`,
   `off_axis_segments==0`, `power_min_width_ok` (power nets ≥0.30mm), `completion_pct==100`,
-  `via_count` within the aesthetic budget, `bus_pitch_var` near 0. Track length not regressed.
+  `via_in_pad==0` (USER DIRECTIVE — see below), `via_count` within the aesthetic budget,
+  `bus_pitch_var` near 0. Track length not regressed.
+
+**`via_in_pad==0` — USER DIRECTIVE (locked, 2026-06-17): NO via-in-pad.** Vias may not land on
+pad copper (needs filled/plated vias = cost; pointless at this density). A proper fanout/stitch via
+is OFFSET from the pad with a short stub. Enforce on the KRT plane fanout with
+`--same-net-pad-clearance 0.2` (default −1 allows via-in-pad; ≥0.2 forces offset vias + stubs →
+`via_in_pad` 95→0, verified). Gated from D2 onward (any iteration that places vias). This is a hard
+gate; do not weaken it.
 
 ### D5 — Pour, stitch & verify (exit when all true)
 - All zones filled & connected (`zones_filled_ok`); structured GND stitching vias near each
