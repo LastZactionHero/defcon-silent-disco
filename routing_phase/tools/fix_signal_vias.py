@@ -68,23 +68,42 @@ def _seg_dist(px, py, ax, ay, bx, by):
     return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
 
 
-def _clear_spot(b, pos, net_code, ignore_via, pads, vias, tracks, min_gap_nm):
-    """True if a via at `pos` (net_code) keeps min_gap from other-net pads, vias AND tracks."""
-    vr = VIA_DIA_MM * NM / 2
+def _pt_clear(pos, net_code, ignore, pads, vias, tracks, extra_nm, layer):
+    """True if point `pos` keeps clearance from all OTHER-net copper on `layer` (layer=None: any)."""
     for p in pads:
-        if p.GetNetCode() == net_code:
+        if p.GetNetCode() == net_code or (layer is not None and not p.IsOnLayer(layer)):
             continue
-        if (pos - p.GetPosition()).EuclideanNorm() < vr + min_gap_nm + max(p.GetSize().x, p.GetSize().y) / 2:
+        if (pos - p.GetPosition()).EuclideanNorm() < extra_nm + MIN_VIA_GAP_MM * NM + max(p.GetSize().x, p.GetSize().y) / 2:
             return False
     for o in vias:
-        if o is ignore_via or o.GetNetCode() == net_code:
+        if o is ignore or o.GetNetCode() == net_code:
             continue
-        if (pos - o.GetPosition()).EuclideanNorm() < VIA_DIA_MM * NM + min_gap_nm:
+        if (pos - o.GetPosition()).EuclideanNorm() < extra_nm + VIA_DIA_MM * NM / 2 + MIN_VIA_GAP_MM * NM:
             return False
-    # NOTE: track clearance intentionally NOT checked here. Empirically, the TINY escape-channel
-    # move (GAP past the pad edge, along the via's own route) stays clear of other copper and gives
-    # 0 new DRC; adding a track-check + larger search pushed vias/stubs into other nets (85 DRC).
-    # The few vias with no clear pad/via spot at GAP are left for the straggler re-route (D3(5)).
+    for t in tracks:
+        if t.GetNetCode() == net_code or (layer is not None and t.GetLayer() != layer):
+            continue
+        s, e = t.GetStart(), t.GetEnd()
+        if _seg_dist(pos.x, pos.y, s.x, s.y, e.x, e.y) < extra_nm + t.GetWidth() / 2 + MIN_VIA_GAP_MM * NM:
+            return False
+    return True
+
+
+def _move_clear(b, PC, Pn, stub_layer, net_code, via, pads, vias, tracks):
+    """Full check: the moved VIA (through-hole → check both outer layers) AND the F.Cu stub
+    PC→Pn must clear all other-net copper. Samples the stub at several points."""
+    vr = VIA_DIA_MM * NM / 2
+    # via at Pn, against both outer layers
+    if not _pt_clear(Pn, net_code, via, pads, vias, tracks, vr, None):
+        return False
+    # stub PC->Pn on its layer: sample points along it
+    n = 6
+    for i in range(n + 1):
+        sx = PC.x + (Pn.x - PC.x) * i / n
+        sy = PC.y + (Pn.y - PC.y) * i / n
+        if not _pt_clear(pcbnew.VECTOR2I(int(sx), int(sy)), net_code, via, pads, vias, tracks,
+                         int(0.15 * NM / 2), stub_layer):
+            return False
     return True
 
 
@@ -117,20 +136,22 @@ def _move_via_off(b, v, pad, pads, vias, tracks):
     L = math.hypot(dx, dy) or 1
     ux, uy = dx / L, dy / L
     half = (max(pad.GetSize().x, pad.GetSize().y) / 2 if pad else VIA_DIA_MM * NM / 2)
-    # try the escape dir, then rotations, at increasing distances, for a clear spot
-    for dist in (GAP_MM,):                  # TINY move only — stay in the via's own escape channel
-      for ang in (0, 45, -45, 90, -90, 135, -135, 180):
+    stub_layer = (pcbnew.F_Cu if pad and pad.IsOnLayer(pcbnew.F_Cu) else pcbnew.B_Cu)
+    # prefer the route direction + small distance; only apply a candidate that FULLY clears (via on
+    # both layers + the pad->via stub). Sweep angles/distances; congested vias (no clear escape) are
+    # left as via-in-pad for the bus-planner re-route rather than forced into a short.
+    for dist in (GAP_MM, GAP_MM * 1.5, GAP_MM * 2.2, GAP_MM * 3.0):
+      for ang in (0, 20, -20, 45, -45, 70, -70, 90, -90, 120, -120, 150, -150, 180):
         a = math.radians(ang)
         rx = ux * math.cos(a) - uy * math.sin(a)
         ry = ux * math.sin(a) + uy * math.cos(a)
         Pn = _v(PC.x + rx * (half + dist * NM), PC.y + ry * (half + dist * NM))
-        if _clear_spot(b, Pn, net.GetNetCode(), v, pads, vias, tracks, MIN_VIA_GAP_MM * NM):
+        if _move_clear(b, PC, Pn, stub_layer, net.GetNetCode(), v, pads, vias, tracks):
             _relink(b, P, Pn, tracks)
-            if pad:  # explicit stub pad-center -> new via pos on the pad's layer
-                layer = pcbnew.F_Cu if pad.IsOnLayer(pcbnew.F_Cu) else pcbnew.B_Cu
+            if pad:
                 st = pcbnew.PCB_TRACK(b)
                 st.SetStart(PC); st.SetEnd(Pn); st.SetWidth(int(0.15 * NM))
-                st.SetLayer(layer); st.SetNet(net); b.Add(st)
+                st.SetLayer(stub_layer); st.SetNet(net); b.Add(st)
             v.SetPosition(Pn)
             return True
     return False

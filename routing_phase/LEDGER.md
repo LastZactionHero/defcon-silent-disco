@@ -210,3 +210,16 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   on /tmp; NOT applied (it makes things worse: shorts). fix_signal_vias.py kept as reference (tiny-move
   + relink mechanics reusable; missing piece = DRC-routing the stub). via_in_pad→0 folds into D3(5)
   guided-escape re-route of the via-in-pad + straggler nets together.
+
+[2026-06-18] D3(5) — CONFIRMED DEAD END: post-hoc via-moving cannot solve via_in_pad on this congested
+  board (real board unchanged, 75.5%/via_in_pad 11). Confirmed KRT route.py has NO via-in-pad-avoidance
+  flag (--no-stub-layer-swap, --via-proximity-cost: via_in_pad stays 11). Improved fix_signal_vias.py to
+  a FULL clearance check (moved via on both outer layers + the pad→via stub path sampled vs all
+  other-net pads/vias/tracks); still via_in_pad 11→3 with 96 DRC (clearance 61, hole_clearance 35,
+  0 shorts). ROOT CAUSE (definitive, tried 4 ways): moving a via also drags its ROUTE track's endpoint
+  to the new spot — that new segment can't be validated without RE-ROUTING it — and via holes violate
+  hole-to-hole spacing in the QFN congestion. Post-hoc nudging = mini-routing; not viable. via_in_pad
+  must be solved by RE-ROUTING the offending nets with controlled escapes (bus planner) — a major build
+  whose payoff on this congestion is uncertain. PAUSING the loop to get a user decision on how much
+  further to invest (bus-planner grind vs hand-finish vs relax the gate vs different strategy) rather
+  than burn more iterations on the confirmed dead end. fix_signal_vias.py kept as reference.
