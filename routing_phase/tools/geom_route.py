@@ -23,7 +23,10 @@ call save(path, board) to persist (asserts writable first):
 """
 from __future__ import annotations
 
+import contextlib
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import pcbnew
@@ -39,6 +42,24 @@ NM = 1e6
 # --------------------------------------------------------------------------- #
 def _load(path):
     return pcbnew.LoadBoard(str(path))
+
+
+@contextlib.contextmanager
+def safe_board(path):
+    """Yield a pcbnew board loaded from a /tmp COPY of the whole project (pcb+sch+pro), so a
+    read-only analysis can never flush pcbnew's settings-manager (BOM field-defs) into the real
+    FROZEN .kicad_pro on process exit. Reads are byte-identical. Cleans up the temp dir.
+    Use for any read-only tool that LoadBoards the real board; the loop's WRITE path writes the
+    real board directly (and guards the frozen .kicad_pro/.kicad_sch with a git-clean assert)."""
+    path = Path(path)
+    td = Path(tempfile.mkdtemp(prefix="route_safe_"))
+    try:
+        for f in path.parent.iterdir():
+            if f.suffix in (".kicad_pcb", ".kicad_sch", ".kicad_pro"):
+                shutil.copy2(f, td / f.name)
+        yield pcbnew.LoadBoard(str(td / path.name))
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
 
 
 def load_tracks(path) -> list[dict]:

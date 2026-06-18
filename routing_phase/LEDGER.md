@@ -43,3 +43,13 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   on process exit after reading project state. Reverted; measure_route now runs ALL pcbnew loads +
   kicad-cli on a /tmp project copy (byte-identical reads, real frozen files never opened — verified
   git-clean after). The HARNESS already warns about this for the D2+ write path.
+
+[2026-06-17] D0(2) — BUILD INCREMENTAL ENGINE | re-runnability must be structural (built before
+  any router exists) | built routing_phase/tools/route_db.py (net_sig = sha1 of sorted pin-set
+  "REFDES-PADNUM" — NOT the churning net name; live_nets/diff(NEW/CHANGED/DELETED/UNCHANGED)/
+  stable_order/record_routes/replay/fingerprint) + geom_route.safe_board (/tmp-copy read context
+  so any read-only tool is immune to the .kicad_pro BOM-flush). | Self-test: 64 routable nets (62
+  signal + 2 planes), all NEW vs empty db, stable order front-loads the 4 USB diff nets (rank0) then
+  XIN/QSPI (rank1), signatures reproducible across two reads, fingerprint empty on unrouted board,
+  frozen files clean. Δmetric: board unchanged (completion 0%, unconnected 218). **D0 EXIT GATE MET**
+  → advance to D1 (stackup rework per STACKUP_SPEC).
