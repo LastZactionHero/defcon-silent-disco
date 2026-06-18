@@ -241,6 +241,26 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   usb_diff_paired TRUE, zones_filled_ok TRUE. **R0 EXIT GATE MET; R1 carried-verified.** PAUSED at the
   R2 remap fork for a USER decision (schematic+firmware edit is approval-gated) before any escape copper.
 
+[2026-06-18] R2(1) — GPIO REMAP APPLIED (schematic + PCB, user-authorized, verified) | dissolve the
+  worst QFN escape crossings at the source | USER chose "full remap, autonomous, no approval pauses".
+  Built the toolchain: gpio_remap_solver.py (Hungarian over pad->dest distance + opposite-side penalty
+  + churn, RP2040 pinmux constraints: ADC-only VBAT, I2S 3-contiguous side-set, fixed USB/QSPI/SWD/RUN/
+  UART excluded), sch_pin_resolver.py (s-expr parse + union-find connectivity; cross-checked 40/43
+  signal pins == PCB pad nets, the 3 gaps = SD_CD global_label + USB auto-named), gpio_remap_apply.py
+  (permutes U3-pin LOCAL LABELS — the only semantically-correct remap on a function-named symbol; pure
+  permutation of the same 11 label strings = no net created/destroyed). DECISION: dropped SD_CD from
+  the remap (it's a global_label; mixing types adds risk for the lowest-value move) -> a clean 6-net
+  remap of 11 local labels. MOVES (all firmware-legal): LED_SCK GP10->GP24, LED_DAT GP11->GP25 (PIO,
+  was SPI1 - SK9822 is PIO-friendly), IR_RX GP15->GP27, SAO_SDA GP16->GP28 + SAO_SCL GP17->GP29 (GP28/29
+  = hardware I2C0, still a valid instance), ~CHRG GP18->GP10. I2S left on GP6/7/8 (side-set contiguity
+  honored). APPLIED to real MCU_Core.kicad_sch (11 labels) + real PCB (11 pad nets, isolated load-save).
+  VERIFIED: KiCad netlister (kicad-cli) confirms all 6 nets on intended pins; ERC 73->73 (ZERO new
+  violations, the 73 are pre-existing no-connect/annotation warnings); footprint hash dcb44305490d
+  UNCHANGED; measure_route clean (via_in_pad 0, drc 0, shorts 0, zones filled, divergence 0). | Δmetric:
+  opposite-side ("route around the chip") crossings 6->1 (only the dropped SD_CD remains); crude
+  side-mismatch metric 19->17 (undersells it - it can't see opposite->adjacent for the 3 right->left
+  SAO/IR_RX nets that became short top-left exits). **R2 DONE.** Next: R3 escape on the remapped board.
+
 [2026-06-18] PASS-2 BUILD — baked the retrospective + next-pass-plan into prompt/harness/tooling
   (board untouched; full ripup happens at the start of the pass-2 run). DOCS rewritten:
   MISSION/HARNESS/PROMPT/ROUTING_SPEC/STATE to the plan-first, escape-first, KRT-full-toolbox structure

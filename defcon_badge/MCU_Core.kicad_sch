@@ -6659,7 +6659,7 @@
 		)
 		(uuid "2920cb24-f7cd-4528-812c-aaa3f86018f2")
 	)
-	(label "GPIO29_ADC3"
+	(label "SAO_SCL"
 		(at 245.11 187.96 180)
 		(effects
 			(font
@@ -6789,7 +6789,7 @@
 		)
 		(uuid "50c5888b-6ebe-4e10-a0ba-0d595a6b8ca6")
 	)
-	(label "~{CHRG}"
+	(label "GPIO29_ADC3"
 		(at 245.11 157.48 180)
 		(effects
 			(font
@@ -6799,7 +6799,7 @@
 		)
 		(uuid "557d050d-49da-4e6c-b2d8-0d673f531f3a")
 	)
-	(label "GPIO25"
+	(label "LED_DAT"
 		(at 245.11 175.26 180)
 		(effects
 			(font
@@ -6839,7 +6839,7 @@
 		)
 		(uuid "6f2602da-bd2c-448f-8465-393fcb5a859f")
 	)
-	(label "LED_DAT"
+	(label "GPIO24"
 		(at 245.11 139.7 180)
 		(effects
 			(font
@@ -6859,7 +6859,7 @@
 		)
 		(uuid "703461cc-7a7c-4d40-928b-fc7e0497d1d1")
 	)
-	(label "GPIO27_ADC1"
+	(label "IR_RX"
 		(at 245.11 182.88 180)
 		(effects
 			(font
@@ -6909,7 +6909,7 @@
 		)
 		(uuid "86ac283d-a915-4137-bf09-0c1b299c3471")
 	)
-	(label "LED_SCK"
+	(label "~{CHRG}"
 		(at 245.11 137.16 180)
 		(effects
 			(font
@@ -6989,7 +6989,7 @@
 		)
 		(uuid "ac6422e5-d4c4-4d0d-b626-674bbf4d403c")
 	)
-	(label "SAO_SCL"
+	(label "GPIO28_ADC2"
 		(at 245.11 154.94 180)
 		(effects
 			(font
@@ -7019,7 +7019,7 @@
 		)
 		(uuid "b5fa829c-f3f1-4ce9-bb41-f487d1c1a00c")
 	)
-	(label "IR_RX"
+	(label "GPIO25"
 		(at 245.11 149.86 180)
 		(effects
 			(font
@@ -7049,7 +7049,7 @@
 		)
 		(uuid "bb5f0e30-d056-4bf6-a4ee-58249d0267ee")
 	)
-	(label "GPIO24"
+	(label "LED_SCK"
 		(at 245.11 172.72 180)
 		(effects
 			(font
@@ -7190,7 +7190,7 @@
 		)
 		(uuid "e5e0a3b5-11a6-47e5-baa7-516f4fef4061")
 	)
-	(label "GPIO28_ADC2"
+	(label "SAO_SDA"
 		(at 245.11 185.42 180)
 		(effects
 			(font
@@ -7210,7 +7210,7 @@
 		)
 		(uuid "e9c811cf-7f4b-4154-acaa-a7433695964a")
 	)
-	(label "SAO_SDA"
+	(label "GPIO27_ADC1"
 		(at 245.11 152.4 180)
 		(effects
 			(font

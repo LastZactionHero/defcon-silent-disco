@@ -6,7 +6,9 @@ and git. R0 (2026-06-18): board FULL-RIPPED back to placed+planes (0 tracks/arcs
 routed board as the archival reference — pass-2 clean base lives uncommitted in the working tree until
 this R0 commit.
 
-Phase: **R2 — GPIO re-assignment eval (approval-gated)** — R0 DONE + R1 carried-over-verified.
+Phase: **R3 — QFN escape** (next). R0 DONE, R1 carried-verified, **R2 remap DONE+APPLIED** (user
+authorized full autonomy, no approval pauses). The schematic is now intentionally changed from the
+design-doc GPIO map (the one allowed schematic edit); firmware must follow the remapped pin map.
 
 R0 RESULTS (2026-06-18, clean base):
   - Env verified: KRT venv (numpy 2.4.6/scipy 1.17.1/shapely 2.1.2), host pcbnew 10.0.2, qfn_fanout
