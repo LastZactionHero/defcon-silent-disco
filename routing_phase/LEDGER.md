@@ -137,3 +137,16 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   cleanup/aesthetic target. Locked in HARNESS (metric + D3/D4 gate + a dedicated note), routing_rules
   (via strategy), STATE D2(4) plan, and memory [[no-via-in-pad]]. Board UNCHANGED — the 94 via-in-pad
   get eliminated when D2(4) re-runs the fanout with the offset flag. erc/drc unaffected this commit.
+
+[2026-06-18] D2(4) — SIGNALS-FIRST RE-ORDER → 73% (the re-order works) | the fanout via-fence blocked
+  signal escape (D2(3)); fix = route signals on empty copper first | validated USB routes 4/4 on the
+  clean base (was 3/4 fenced). Full chain: clean base (delete_routing+refill) → KRT route.py all 62
+  signals (criticality order) → KRT route_planes fanout --same-net-pad-clearance 0.2 (no via-in-pad) →
+  krt_bridge extract → apply_routing(replace) to REAL → route_db recorded (v2). | Δmetric: completion
+  33→73.5%, unconnected 98→39, via_in_pad 94→8, USB 4/4 (usb_diff_paired TRUE), drc 0, shorts 0,
+  footprints byte-frozen, pro/sch clean. REMAINING (D3/D4): 13 signal nets FAILED (congestion →
+  rip-up/reroute + guide corridors + B.Cu); +3V3 fanout 37/47 (signals took space); via_in_pad 8 from
+  KRT route.py SIGNAL vias (route.py lacks --same-net-pad-clearance → must offset/nudge them, hard gate
+  needs 0); off_axis 147 / acute 635 / track 2214 → board looks AUTOROUTED, aesthetic goal UNMET (D4:
+  bus planner via --guide-corridor + beautification). Honest state: connected-but-spaghetti; the
+  hand-designed look is the D4 payoff still ahead.

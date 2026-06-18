@@ -1,6 +1,6 @@
 # STATE (pointer only — durable history lives in LEDGER.md + metrics.jsonl)
 
-Phase: **D2 — Plane fanout + critical pre-route** (D0 + D1 COMPLETE)
+Phase: **D3 — Bus + bulk route** (D0+D1 done; D2 plane fanout + signals-first re-order done → 73%)
 Current approach: build the routing system ON KiCadRoutingTools (KRT), Freerouting REJECTED.
 Engine: KRT at `~/.local/share/defcon-badge-krt/KiCadRoutingTools` (pinned commit in
   `KRT_PINNED_COMMIT.txt` = ce5cb2d, v0.15.13), run via `~/.local/share/defcon-badge-krt/venv/bin/python`.
@@ -69,7 +69,29 @@ D2(3) — KEY FINDING + tool fix (no board change). Added krt_bridge.apply_routi
   nets near dense ICs in D3. (On a /tmp verify the 3/4 partial reached completion 36.7%/unconn 93, DRC 0
   — but it's incomplete + masks the real issue, so NOT applied to the real board.)
 
-Next intended action (ESCALATE — re-order, don't repeat the blocked move):
+D2(4) DONE — SIGNALS-FIRST RE-ORDER applied to the real board. Validated USB routes 4/4 on empty
+  copper (was 3/4 fenced by fanout). Full chain (clean base → KRT route.py all 62 signals → KRT
+  route_planes fanout with --same-net-pad-clearance 0.2 → bridge replace → real). RESULT: completion
+  33→**73.5%**, unconnected 98→39, via_in_pad **94→8**, USB 4/4 (usb_diff_paired TRUE), drc_errors 0,
+  shorts 0, footprints byte-frozen, .kicad_pro/.kicad_sch clean. route_db recorded (router_version 2).
+  REMAINING GAPS (the D3/D4 work): (a) 13 signal nets FAILED (in the 39 unconnected) — congestion,
+  need rip-up/reroute + guide corridors + B.Cu; (b) +3V3 fanout only 37/47 (signals took the space) —
+  re-fanout or rip-blocker; (c) via_in_pad 8 (from KRT route.py SIGNAL layer-change vias — route.py
+  lacks --same-net-pad-clearance; must offset/nudge them) — HARD GATE needs 0 before D3 exit;
+  (d) off_axis_segments 147, acute_angles 635, track_count 2214 — board looks AUTOROUTED (the
+  aesthetic goal is unmet): D4 needs the bus planner (--guide-corridor) + beautification (pull-tight,
+  push-to-grid/45-quantize, via-min). Render shows spaghetti — not hand-designed yet.
+
+Next intended action:
+  1. **D3 — finish routing to 100% + drive via_in_pad to 0.** (a) Re-route the 13 failed signals:
+     KRT route.py with rip-up enabled (--rip-existing-nets) + allow more vias/B.Cu, or per-net guide
+     corridors; (b) complete +3V3 fanout (re-run route_planes after signals, or --rip-blocker-nets);
+     (c) eliminate the 8 via_in_pad — nudge signal layer-change vias off pads (post-process via
+     geom_route, or constrain KRT). Gate: completion 100, unconnected 0, via_in_pad 0, shorts 0, drc 0.
+  2. **D4 — aesthetic cleanup** (the "not-Freerouting" payoff): build the bus planner (route QSPI/
+     SPI/I2S/SD as constant-pitch bundles via --guide-corridor) + beautification (pull-tight, 45-quantize,
+     via-min, bus-pitch-normalize). Drive off_axis→0, acute→0, via_count down; render must look hand-designed.
+  OLD plan (reference):
   1. **D2(4) — fix fanout-vs-escape ordering.** Adopt the route_db-centric model: base board (D1 solid
      zones, no routing) + route_db = the source of truth; regenerate the board = base + replay. Re-order
      so SIGNALS route before dense-IC power fanout (signals naturally leave the board; fanout fills the
