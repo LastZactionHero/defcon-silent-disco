@@ -114,7 +114,26 @@ D3(3) DONE — MAJOR FIX: signals were ON THE PLANES. Found the current board ha
   SIGNAL-via placement defects (route.py has no --same-net-pad-clearance / via-spacing like route_planes).
   This planes-clean board is the CORRECT foundation; the via issues are fixable cleanup.
 
+D3(4) — VIA-FIXER built but post-hoc via-moving DOESN'T WORK on this congested board (real board
+  unchanged, 75.5%/via_in_pad 11). Built routing_phase/tools/fix_signal_vias.py (move via off pad along
+  its escape dir + relink tracks + add pad→via stub; fixed a state-staleness bug by re-querying the
+  board per via — now deterministic). It reduces via_in_pad 11→1 BUT creates 124 DRC + **8 SHORTS**:
+  the via-in-pad vias sit in genuinely congested spots (next to other pads/tracks), so the moved
+  vias + their stubs collide with other nets. CONCLUSION: via-in-pad CANNOT be cleanly post-fixed here
+  — it must be solved at ROUTING time (route the net so it doesn't change layers AT the pad). KRT
+  route.py has no via-in-pad-avoidance flag, so the fix lives in the bus planner / guided re-route
+  (control each net's pad escape: route a short stub on the pad's own layer, THEN via in open space).
+
 Next intended action:
+  1. **D3(5) — solve via-in-pad + the ~12 stragglers TOGETHER at routing time via guided escape /
+     bus planner.** For the via-in-pad nets AND the failed nets, route them with controlled escapes:
+     a short trace on the pad's layer out to open space, then the via / B.Cu run there (--guide-corridor
+     draws the channel; or hand-script the escape stub + via via geom_route, then KRT routes the rest).
+     This is the start of the bus planner. Goal: via_in_pad 0 (HARD GATE) + completion up, drc 0, shorts 0.
+     fix_signal_vias.py stays as a reference (the tiny-move + relink mechanics are reusable; the missing
+     piece is DRC-checking/routing the stub instead of drawing it blindly).
+  2. **D4 — bus planner (constant-pitch bundles) + beautification.**
+  OLD plan (reference):
   1. **D3(4) — build the VIA-FIXER (routing_phase/tools/fix_signal_vias.py).** Post-process: (a)
      via_in_pad 11→0 — for each via on a pad, move it off along its escape direction into clear space,
      extend the pad→via stub, and move the connected track endpoints to the new via position (geom_route);

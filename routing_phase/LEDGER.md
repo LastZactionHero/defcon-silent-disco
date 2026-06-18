@@ -194,3 +194,19 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   next — better than keeping a metrically-cleaner board that's structurally wrong (signals on planes).
   REVERTED an intermediate apply earlier this iter before realizing the planes issue made the balanced
   board the correct one. NOTE: route.py also routes on planes unless --layers F.Cu B.Cu — keep it in the pipeline.
+
+[2026-06-18] D3(4) — via-fixer built; post-hoc via-moving DOESN'T WORK on this congested board (real
+  board unchanged, 75.5%/via_in_pad 11) | drive via_in_pad→0 (user hard gate) | built
+  routing_phase/tools/fix_signal_vias.py: move each via off its pad along the escape dir, relink the
+  connected track endpoints, add a pad→via stub. Debugged a state-staleness bug (cached track/via lists
+  go stale as vias move + stubs add → corrupts other nets) by re-querying the board per via — now
+  DETERMINISTIC. But the result is via_in_pad 11→1 with 124 DRC + 8 SHORTS: the via-in-pad vias are in
+  genuinely congested spots (beside other pads/tracks), so the moved vias + blind stubs collide with
+  other nets. ESCALATION/CONCLUSION (don't repeat the broken move): via-in-pad CANNOT be cleanly
+  post-fixed here; it must be solved at ROUTING time — route each offending net with a CONTROLLED
+  ESCAPE (short trace on the pad's own layer to open space, then via there), via the bus planner /
+  --guide-corridor, NOT a blind post-hoc nudge. KRT route.py has no via-in-pad-avoidance flag, so this
+  is our layer to build. | Δmetric: real board UNCHANGED (75.5%, via_in_pad 11, drc 2) — fixer ran only
+  on /tmp; NOT applied (it makes things worse: shorts). fix_signal_vias.py kept as reference (tiny-move
+  + relink mechanics reusable; missing piece = DRC-routing the stub). via_in_pad→0 folds into D3(5)
+  guided-escape re-route of the via-in-pad + straggler nets together.
