@@ -224,6 +224,23 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   further to invest (bus-planner grind vs hand-finish vs relax the gate vs different strategy) rather
   than burn more iterations on the confirmed dead end. fix_signal_vias.py kept as reference.
 
+[2026-06-18] R0(0) — PASS-2 START: env+tooling verified, board FULL-RIPPED to a clean base, baseline
+  frozen | begin the pass-2 run on the plan-first/escape-first system | (1) ENV: KRT venv
+  (numpy 2.4.6/scipy 1.17.1/shapely 2.1.2) + host pcbnew 10.0.2 OK; qfn_fanout ran U3 end-to-end on
+  /tmp (86 tracks = 43 stubs×2, "No endpoint collisions", reproduced the 0.4mm-pitch residual warning);
+  route.py --guide-corridor ran end-to-end on /tmp (8 waypoints, layer-costs F.Cu=1.0/B.Cu=3.0). KRT
+  arg gotcha logged: route.py OUTPUT+net-patterns are POSITIONAL (not --output/--nets), default
+  clearance 0.25mm; net names hierarchical (/Audio/I2S_BCK). (2) CLEAN BASE: working tree already held
+  a ripped board (pass-1 copper deleted, zones unfilled, 2 stray keepout rule-areas); ran
+  route_pipeline rip+refill (pcb_runner-isolated) -> 0 tracks/arcs/vias, 5 zones refilled. Footprint
+  hash dcb44305490d UNCHANGED, frozen .kicad_sch/.kicad_pro git-clean. (3) R1 carried over from D1
+  through the rip (1.6mm 4-layer, In1 GND/In2 +3V3, F/B GND pours, USB_DIFF_90 fixed) — re-verified,
+  no new work. (4) R2 EVAL (read-only): U3 19/33 cross-side — 15 firmware-movable, 4 fixed-but-benign
+  (QSPI_SS/RUN/USB_DM/DP). gpio_reassigner's pinmux-legal solver is still TODO. | Δmetric: baseline
+  R0(0) — completion 2.72%, unconnected 143 (baseline 147, divergence 0), via_in_pad 0, drc 0, shorts 0,
+  usb_diff_paired TRUE, zones_filled_ok TRUE. **R0 EXIT GATE MET; R1 carried-verified.** PAUSED at the
+  R2 remap fork for a USER decision (schematic+firmware edit is approval-gated) before any escape copper.
+
 [2026-06-18] PASS-2 BUILD — baked the retrospective + next-pass-plan into prompt/harness/tooling
   (board untouched; full ripup happens at the start of the pass-2 run). DOCS rewritten:
   MISSION/HARNESS/PROMPT/ROUTING_SPEC/STATE to the plan-first, escape-first, KRT-full-toolbox structure

@@ -1,10 +1,37 @@
 # STATE (pointer only — durable history in LEDGER.md + metrics.jsonl + approaches.json)
 
 Pass: **2** (plan-first, escape-first). Pass-1 history preserved in RETROSPECTIVE.md / NEXT_PASS_PLAN.md
-and git. The board is to be FULL-RIPPED at the start of pass 2 (delete all tracks/vias, refill zones)
-back to the placed + planes state; pass-2 tooling is being built now, board not yet ripped/routed.
+and git. R0 (2026-06-18): board FULL-RIPPED back to placed+planes (0 tracks/arcs/vias; 5 zones refilled;
+2 `(vias not_allowed)` keepout areas are rule-areas, not copper). HEAD still holds the pass-1 75.5%
+routed board as the archival reference — pass-2 clean base lives uncommitted in the working tree until
+this R0 commit.
 
-Phase: **R0 — Setup & bake-in** (pass-2 tooling build in progress)
+Phase: **R2 — GPIO re-assignment eval (approval-gated)** — R0 DONE + R1 carried-over-verified.
+
+R0 RESULTS (2026-06-18, clean base):
+  - Env verified: KRT venv (numpy 2.4.6/scipy 1.17.1/shapely 2.1.2), host pcbnew 10.0.2, qfn_fanout
+    end-to-end on /tmp (86 tracks, 43 stubs×2, "No endpoint collisions", reproduced the 0.4mm-pitch
+    residual warning), route.py --guide-corridor end-to-end on /tmp (8 waypoints, layer-costs applied).
+  - Clean base: rip+refill via route_pipeline (pcb_runner-isolated); footprint hash dcb44305490d
+    UNCHANGED, frozen .kicad_sch/.kicad_pro git-clean.
+  - Baseline measure row (R0(0)): completion 2.72%, unconnected 143 (baseline 147, divergence 0),
+    via_in_pad 0, drc 0, shorts 0, usb_diff_paired TRUE, zones_filled_ok TRUE, n_footprints 83.
+  - R1 (stackup/netclass) carried over from D1 through the rip — 1.6mm 4-layer, In1 GND/In2 +3V3,
+    F/B GND pours filled, USB_DIFF_90 fixed. Re-verified clean; no new R1 work needed.
+  - KRT invocation note: route.py takes OUTPUT + net-patterns as POSITIONALS (not --output/--nets);
+    qfn_fanout DOES take --output. route.py default clearance 0.25mm. Net names are hierarchical
+    (e.g. /Audio/I2S_BCK) — R4 corridor calls must use the real net names, not bare bus labels.
+
+R2 EVAL RESULT (2026-06-18, read-only, frozen pin map): U3 = 33 signal nets, **19 cross-side**.
+  - 15 firmware-MOVABLE (PIO/any-GPIO or instance-flexible): I2S_BCK/DIN/LRCK (move as a 3-contiguous
+    block — PIO side-set), BTN_SYNC, SAO_GPIO1/2, SAO_SCL/SDA, IR_RX, IR_TX, LED_DAT, LED_SCK, ~CHRG,
+    SD_CD, VBAT_SENSE (within ADC bank GP26-29).
+  - 4 FIXED-but-benign (dedicated silicon pins): QSPI_SS (adjacent to flash), RUN (pullup stub),
+    USB_DM/DP (dedicated USB pins; pass 1 routed USB 4/4 fine).
+  - Remap could take 19 -> ~4, residual all non-problematic. AWAITING USER DECISION on the remap fork
+    (schematic+firmware edit, approval-gated). gpio_reassigner's pinmux-legal SOLVER is still TODO —
+    a trustworthy concrete proposal needs it built (RP2040 QFN pad->GPIO map + function table +
+    I2S-contiguity/ADC-bank constraints).
 
 Tooling status (this build — what's BUILT+TESTED vs SCAFFOLDED):
   KEEP (verified good): geom_route.py, route_db.py, measure_route.py, writer_lock.py.
@@ -38,12 +65,14 @@ Per-phase PRIMARY metric + escalation ladder (anti-thrash):
     per-net-guide-corridor → hand-off.
 
 Next intended action:
-  1. **R0:** finish the substrate — pcb_runner used by geom_route/krt_bridge; verify qfn_fanout +
-     --guide-corridor runnable on a /tmp copy; emit a baseline measure row on the (to-be) ripped board.
-  2. **R1:** rework_stackup (parameterized) — real 1.6mm 4-layer, In1 GND/In2 +3V3/F+B GND pours, USB
-     netclass fix (these worked in pass 1; keep).
-  3. **R2 (approval-gated):** run gpio_reassigner eval → report crossing reduction → USER decides remap.
+  1. ~~**R0:** substrate + baseline~~ DONE (see R0 RESULTS).
+  2. ~~**R1:** stackup/netclass~~ carried-over-verified from D1.
+  3. **R2 (approval-gated) — AWAITING USER DECISION:** crossing eval done (19 cross-side, 15 movable).
+     Fork presented to user: (a) build pinmux-legal solver -> concrete remap proposal -> apply (schematic
+     edit, needs final sign-off); (b) route the frozen map as-is, lean on the R3 multi-layer escape
+     ladder. The remap APPLY is the only schematic change allowed and is the one hard pause in the run.
   4. **R3:** escape_planner on U3 (+ J31 if needed) → escape_plan.json, via_in_pad==0, DRC-clean.
+     Run on whichever pin map R2 settles on.
   5. **R4→R6** per HARNESS.
 
 LOCKED gates: see HARNESS. via_in_pad==0 (route-time/by-construction); plane fanout LAST + keepout
