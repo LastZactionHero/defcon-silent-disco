@@ -56,6 +56,10 @@ def rework(path, guard_lock=True):
         z.SetIsFilled(False)
         z.SetLocalClearance(int(ZONE_CLEARANCE_MM * 1e6))
         z.SetMinThickness(int(ZONE_MIN_THICK_MM * 1e6))
+        # SOLID pad/via connection: these are GND/+3V3 PLANES — full copper is the textbook
+        # choice (lowest impedance, best return path) and eliminates starved_thermal (1-spoke)
+        # edge pads that thermal relief produced on the F.Cu pour.
+        z.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)
         z.AddPolygon(poly.Outline(0))
         b.Add(z)
 
@@ -73,3 +77,9 @@ if __name__ == "__main__":
     r = rework(p)
     print("thickness:", r["thickness_mm"], "mm")
     print("zones created (verify fill via measure_route in a fresh process):", r["zones_created"])
+    # pcbnew's swig teardown can segfault at interpreter exit AFTER a successful save (harmless to
+    # the written board, but it yields a nonzero exit code). The work is done + saved above; exit
+    # cleanly so callers see success. Flush first since os._exit skips normal buffer flushing.
+    import os
+    sys.stdout.flush()
+    os._exit(0)

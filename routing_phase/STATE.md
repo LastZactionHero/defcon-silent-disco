@@ -45,12 +45,25 @@ D2(1) DONE — KRT INTEGRATION RESOLVED via a bridge. FINDING: KRT's board WRITE
   28 solder_mask_bridge (different-net fine-pitch pads, scoped out of ROUTING_TYPES) + 7 starved_thermal
   (investigate — may be from the D1 zone thermal-relief; could need solid pad-connection on plane pads).
 
+D2(2) DONE — PLANE FANOUT APPLIED to the real board. (a) starved_thermal fixed: set the GND/+3V3
+  zones to SOLID pad/via connection (ZONE_CONNECTION_FULL) — textbook for planes; starved_thermal 7→0.
+  (b) fixed rework_stackup segfault-at-exit (os._exit(0) after save). (c) fixed geom_route.load_vias
+  (KiCad 10 needs PCB_VIA.GetWidth(layer)). (d) KRT route_planes → krt_bridge → applied to REAL board:
+  219 tracks + 114 vias (GND 75 + +3V3 39 + 14 GND-return). measure: completion 0→33.3%, unconnected
+  147→98 (divergence 0), drc_errors 0 (routing types), shorts 0, zones_filled_ok TRUE, usb_diff_paired
+  TRUE, footprints byte-frozen (fp hash unchanged), .kicad_pro/.kicad_sch clean. route_db recorded (64
+  nets; GND/+3V3 carry the fanout copper, via widths 0.6). Renders d2_top.png/d2_copper.svg — placement
+  intact. NOTE: off_axis_segments 17 + acute_angles 39 from KRT's via-to-pad stubs → D4 cleanup target
+  (not a D2 gate). DETERMINISM formal gate deferred to D5 (structurally guaranteed by route_db replay;
+  the D2 replay-verify hit a multi-LoadBoard-per-process swig bug in the TEST harness, not the pipeline).
+
 Next intended action:
-  1. **D2(2) (NOW) — finalize + apply plane fanout:** resolve starved_thermal (check if from D1 zone
-     thermal relief; if so set plane-pad connection appropriately or accept-with-REVIEW), then run KRT
-     route_planes → krt_bridge → APPLY to the REAL board; verify unconnected drops (147→~98), 0 new
-     routing-type DRC, shorts 0, footprints frozen, frozen-file discipline, DETERMINISM (run twice →
-     identical via fingerprint), render. Record the vias/tracks in route_db (record_routes/save_db).
+  1. **D2(3) — critical-net pre-route:** via the bridge, route + LOCK the USB diff pair (KRT route_diff.py
+     → extract → apply), then the crystal XIN/XOUT loop, QSPI flash bus, I2S (GP6/7/8) — clean structured
+     copper, recorded+frozen in route_db (so D3 bulk routing won't rip them). Verify each: completion rises,
+     drc 0, shorts 0, usb_diff_skew<=2.5, frozen-file discipline, fp frozen. One LoadBoard+SaveBoard/process.
+  2. **D3 — bus + bulk route** the remaining ~signal nets to 100% (bus planner via --guide-corridor +
+     KRT single-ended through the bridge, criticality order from route_db.stable_order).
   OLD D2 plan (reference): via-stitch every GND (89) and +3V3 (47) pad to its inner plane +
      pour-to-pour stitching, dropping unconnected well below 147. Try KRT first:
      `~/.local/share/defcon-badge-krt/venv/bin/python ~/.local/share/defcon-badge-krt/KiCadRoutingTools/route_planes.py

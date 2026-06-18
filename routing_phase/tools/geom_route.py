@@ -93,7 +93,9 @@ def load_vias(path) -> list[dict]:
             "net": t.GetNetname() or None,
             "x": p.x / NM, "y": p.y / NM,
             "drill": t.GetDrill() / NM,
-            "width": t.GetWidth() / NM,
+            # KiCad 10: PCB_VIA.GetWidth() needs a layer (width can vary per layer); our vias are
+            # uniform, take the top-layer width.
+            "width": t.GetWidth(t.TopLayer()) / NM,
             "top": b.GetLayerName(t.TopLayer()),
             "bottom": b.GetLayerName(t.BottomLayer()),
         })

@@ -96,3 +96,18 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   microSD; scoped out of ROUTING_TYPES like placement scoped intra-fp dfm) + 7 starved_thermal (may be
   from the D1 zone thermal relief — investigate in D2(2)). FLAG for the user: the approved placement has
   28 pre-existing solder-mask-bridge DFM warnings worth a placement revisit (out of routing scope).
+
+[2026-06-17] D2(2) — PLANE FANOUT APPLIED (first copper on the real board) | connect GND/+3V3 pads to
+  their planes so only signal nets remain to route | (a) FIX starved_thermal: D1 zones gave 7 GND pads a
+  1-spoke thermal relief (min 2) on the F.Cu pour → set GND/+3V3 zones to SOLID connection
+  (ZONE_CONNECTION_FULL, the textbook choice for planes) → starved_thermal 7→0. (b) FIX
+  rework_stackup segfault-at-exit (pcbnew swig teardown) with os._exit(0) after a successful save.
+  (c) FIX geom_route.load_vias — KiCad 10 PCB_VIA.GetWidth() needs a layer arg. (d) KRT route_planes
+  (solver) → krt_bridge (extract → re-apply via pcbnew) onto the REAL board: 219 tracks + 114 vias
+  (GND 75 + +3V3 39 + 14 GND-return). | Δmetric: completion 0→33.3%, unconnected 147→98 (divergence 0),
+  drc_errors 0 (routing types), shorts 0, zones_filled_ok TRUE, usb_diff_paired TRUE. Footprints
+  byte-frozen (fp hash unchanged); .kicad_pro/.kicad_sch git-clean. route_db recorded (64 nets; GND/+3V3
+  carry the fanout). Renders d2_top.png/d2_copper.svg: placement intact. WATCH: off_axis_segments 17 +
+  acute_angles 39 from KRT via-to-pad stubs → D4 cleanup (not a D2 gate). Determinism formal gate
+  deferred to D5 (route_db replay is deterministic by construction; the inline replay-verify hit a
+  multi-LoadBoard-per-process swig None bug in the TEST harness, fixed approach = subprocess per load).
