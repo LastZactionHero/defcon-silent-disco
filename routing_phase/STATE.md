@@ -35,8 +35,23 @@ D1(2) DONE: USB_DIFF_90 netclass fixed (patterns → real nets /MCU_Core/USB_DP|
   Net-(U3-USB_DP|DM); diff_pair_width 0.8→0.17, gap 0.15→0.13). measure usb_diff_paired→TRUE. Minimal
   .kicad_pro diff (12+/4−), .kicad_sch/.kicad_pcb untouched, DRC 0. **D1 EXIT GATE MET.**
 
+D2(1) DONE — KRT INTEGRATION RESOLVED via a bridge. FINDING: KRT's board WRITER emits `(net "GND")`
+  (net NAME) in segments/vias but KiCad 10 needs `(net <int>)` → KRT output does NOT load in pcbnew/
+  kicad-cli ("Failed to load board"). KRT is a SOLVER ONLY. Built routing_phase/tools/krt_bridge.py:
+  extract_routing (parse KRT output tracks/vias by net name) + apply_routing (re-apply via pcbnew/
+  geom_route — the authoritative single writer). VALIDATED on /tmp: KRT route_planes → bridge → pcbnew
+  board LOADS in kicad-cli ✓, footprints byte-frozen (fp hash matches) ✓, +3V3 47/47 + GND 89/89 to
+  planes, unconnected 147→98, ZERO new routing-type DRC errors. Pre-existing placement DRC (NOT routing):
+  28 solder_mask_bridge (different-net fine-pitch pads, scoped out of ROUTING_TYPES) + 7 starved_thermal
+  (investigate — may be from the D1 zone thermal-relief; could need solid pad-connection on plane pads).
+
 Next intended action:
-  1. **D2 (NOW) — plane fanout:** via-stitch every GND (89) and +3V3 (47) pad to its inner plane +
+  1. **D2(2) (NOW) — finalize + apply plane fanout:** resolve starved_thermal (check if from D1 zone
+     thermal relief; if so set plane-pad connection appropriately or accept-with-REVIEW), then run KRT
+     route_planes → krt_bridge → APPLY to the REAL board; verify unconnected drops (147→~98), 0 new
+     routing-type DRC, shorts 0, footprints frozen, frozen-file discipline, DETERMINISM (run twice →
+     identical via fingerprint), render. Record the vias/tracks in route_db (record_routes/save_db).
+  OLD D2 plan (reference): via-stitch every GND (89) and +3V3 (47) pad to its inner plane +
      pour-to-pour stitching, dropping unconnected well below 147. Try KRT first:
      `~/.local/share/defcon-badge-krt/venv/bin/python ~/.local/share/defcon-badge-krt/KiCadRoutingTools/route_planes.py
      defcon_badge/defcon_badge.kicad_pcb` (read its --help; single-threaded/deterministic). If KRT's

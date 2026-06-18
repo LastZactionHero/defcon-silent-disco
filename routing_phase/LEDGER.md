@@ -78,3 +78,21 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   the netclass change (12+/4−); .kicad_sch + .kicad_pcb untouched; valid JSON; drc 0, erc 0,
   unconnected 147, zones_filled_ok TRUE. **D1 EXIT GATE MET** (zones reworked+filled, USB netclass
   fixed, unrouted DRC clean, baseline frozen) → advance to D2 (plane fanout + critical pre-route).
+
+[2026-06-17] D2(1) — KRT INTEGRATION via a BRIDGE (escalation: KRT writer is unusable) | evaluated
+  KRT route_planes for plane fanout; it computes a good fanout (GND 89/89, +3V3 47/47) BUT its board
+  WRITER emits `(net "GND")` (net NAME) inside (segment)/(via) where KiCad 10 requires `(net <int>)`,
+  so KRT's output board does NOT load in pcbnew OR kicad-cli ("Failed to load board"; pcbnew segfaults
+  on zone-fill of it). => KRT can be a SOLVER but NOT our board writer. | ESCALATED (per HARNESS, don't
+  repeat a failing move) to a BRIDGE: routing_phase/tools/krt_bridge.py — extract_routing() parses KRT's
+  output tracks/vias (net names are right there) + apply_routing() re-emits them via pcbnew/geom_route
+  (the authoritative single writer, HARNESS Resolution 1). This is the integration seam for ALL KRT use
+  (D2 planes + D3 signals): KRT never touches the real board; pcbnew is the only writer.
+  | VALIDATED on /tmp: KRT route_planes → bridge → pcbnew board LOADS in kicad-cli ✓; footprints
+  byte-frozen (fp_pos_hash identical) ✓; unconnected 147→98; ZERO new routing-type DRC errors (clearance/
+  dangling/width all clean). Δmetric: real board UNCHANGED this iter (147) — bridge built+validated only;
+  fanout applied to the REAL board in D2(2). FINDINGS (pre-existing placement DRC, NOT routing-caused,
+  present on the unrouted D1 board): 28 solder_mask_bridge (different-net fine-pitch pads — RP2040/USB-C/
+  microSD; scoped out of ROUTING_TYPES like placement scoped intra-fp dfm) + 7 starved_thermal (may be
+  from the D1 zone thermal relief — investigate in D2(2)). FLAG for the user: the approved placement has
+  28 pre-existing solder-mask-bridge DFM warnings worth a placement revisit (out of routing scope).
