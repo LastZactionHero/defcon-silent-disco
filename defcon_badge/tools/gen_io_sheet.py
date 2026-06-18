@@ -24,7 +24,7 @@ def build() -> SheetGen:
     for lib, sym in [
         ("Device.kicad_sym", "R"),
         ("Switch.kicad_sym", "SW_Push"),
-        ("Connector.kicad_sym", "Micro_SD_Card_Det1"),
+        ("Connector.kicad_sym", "Micro_SD_Card_Det2"),
         ("Connector_Generic.kicad_sym", "Conn_02x03_Odd_Even"),
         ("Connector_Generic.kicad_sym", "Conn_01x03"),
         ("power.kicad_sym", "+3V3"),
@@ -68,14 +68,16 @@ def build() -> SheetGen:
     sg.power_at_pin("SW23", "2", "GND", pwr_ref="#PWR_SW23")
 
     # ----- SAO 2×3 header -----
-    # Standard SAO pinout (looking at the connector pins 1-6):
-    #   1: GND, 2: 3V3, 3: SDA, 4: SCL, 5: GPIO1, 6: GPIO2
+    # Standard SAO v1.69bis pinout (official badge.team / Hackaday spec):
+    #   1: +3V3, 2: GND, 3: SDA, 4: SCL, 5: GPIO1, 6: GPIO2
+    # (pin1=VCC, pin2=GND — NOT the reverse; a swapped pair reverse-powers any
+    #  standards-compliant SAO add-on.)
     sg.place("Connector_Generic:Conn_02x03_Odd_Even", "J30", "SAO 2x3",
              "Connector_PinHeader_2.54mm:PinHeader_2x03_P2.54mm_Vertical", 130, 70,
              mpn="PRPC003DAAN-RC", lcsc="C124378",
              desc="SAO v1.69 2x3 header — DEFCON shitty add-on")
-    sg.power_at_pin("J30", "1", "GND", pwr_ref="#PWR_J30_1")
-    sg.label_at_pin("J30", "2", "+3V3")
+    sg.label_at_pin("J30", "1", "+3V3")
+    sg.power_at_pin("J30", "2", "GND", pwr_ref="#PWR_J30_1")
     sg.label_at_pin("J30", "3", "SAO_SDA")
     sg.label_at_pin("J30", "4", "SAO_SCL")
     sg.label_at_pin("J30", "5", "SAO_GPIO1")
@@ -92,7 +94,11 @@ def build() -> SheetGen:
     sg.label_at_pin("R41", "2", "SAO_SCL")
 
     # ----- microSD card socket -----
-    sg.place("Connector:Micro_SD_Card_Det1", "J31", "microSD",
+    # Det2 symbol exposes BOTH card-detect switch terminals (pin 9 DET_B, pin 10
+    # DET_A). The DM3D-SF detect switch sits between 9 and 10 — pin 10 MUST go to
+    # GND so a card closing the switch pulls the pulled-up SD_CD (pin 9) low.
+    # (Det1 has no pin 10, which left the switch's far side floating = dead CD.)
+    sg.place("Connector:Micro_SD_Card_Det2", "J31", "microSD",
              "Connector_Card:microSD_HC_Hirose_DM3D-SF", 80, 130,
              mpn="TF-PUSH-A", lcsc="C146885",
              desc="microSD push socket, hinged tray")
@@ -115,7 +121,8 @@ def build() -> SheetGen:
     sg.power_at_pin("J31", "6", "GND", pwr_ref="#PWR_J31_6")
     sg.label_at_pin("J31", "7", "SD_MISO")
     sg.nc_at_pin("J31", "8")     # DAT1 / RSV
-    sg.global_label_at_pin("J31", "9", "SD_CD")  # CD switch -> spare GPIO (GP22) via global net
+    sg.global_label_at_pin("J31", "9", "SD_CD")  # DET_B: CD switch -> spare GPIO via global net
+    sg.power_at_pin("J31", "10", "GND", pwr_ref="#PWR_J31_10")  # DET_A: switch other terminal -> GND
     sg.power_at_pin("J31", "SH", "GND", pwr_ref="#PWR_J31_SH")
     # Card-detect pull-up: the DET switch shorts pin 9 to the grounded shield when a
     # card is inserted, so SD_CD reads LOW = card present; R42 holds it high when empty.

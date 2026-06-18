@@ -6025,7 +6025,7 @@
 			(drill 1)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net "GND")
+			(net "+3V3")
 			(pinfunction "Pin_1_1")
 			(pintype "passive")
 			(uuid "0433bbfd-0484-4033-8259-f897471b9d18")
@@ -6036,7 +6036,7 @@
 			(drill 1)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
-			(net "+3V3")
+			(net "GND")
 			(pinfunction "Pin_2_2")
 			(pintype "passive")
 			(uuid "4a5f96c6-97a4-4c2d-9281-748bb79860a8")
@@ -7704,6 +7704,7 @@
 			(at 5.575 5.45 180)
 			(size 1 1.55)
 			(layers "F.Cu" "F.Mask" "F.Paste")
+			(net "GND")
 			(uuid "1c23a1c4-aa74-4d88-93a8-e553b38c2f31")
 		)
 		(pad "SH" smd rect
@@ -9275,6 +9276,211 @@
 		)
 		(embedded_fonts no)
 		(model "${KICAD10_3DMODEL_DIR}/Connector_Audio.3dshapes/Jack_3.5mm_CUI_SJ1-3523N_Horizontal.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
+	)
+	(footprint "LED_IR_1206_3216Metric"
+		(layer "F.Cu")
+		(uuid "3ea4287f-6376-487f-a070-341e4d484f70")
+		(at 183.4 110 180)
+		(descr "1206 (3216 metric) IR LED, polarity per Everlight IR15-21C/TR8 datasheet: PAD 1 = ANODE, PAD 2 = CATHODE (cathode mark on pad-2 side). This is the OPPOSITE of the stock KiCad LED_SMD convention (pad1=cathode); made explicit so JLC pin1->pad1 placement and hand assembly both land the anode on pad 1.")
+		(tags "LED IR 1206 anode-pad1")
+		(property "Reference" "D20"
+			(at 0 -1.83 180)
+			(layer "F.SilkS")
+			(uuid "af99995d-f725-4170-9857-3c320a4ce741")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Value" "LED_IR_1206_3216Metric"
+			(at 0 1.83 180)
+			(layer "F.Fab")
+			(uuid "46a50b02-d212-4a10-a5a4-9474e58138a6")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 180)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "aecc1861-1500-4f3e-9997-5b4ddca80907")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "1206 IR LED, pad1=anode pad2=cathode"
+			(at 0 0 180)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "34522436-f86c-41ee-97c9-94b7968ed003")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(attr smd)
+		(duplicate_pad_numbers_are_jumpers no)
+		(fp_line
+			(start 2.285 1.135)
+			(end -1.6 1.135)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "a6354c28-2b95-46dd-a55d-3195bc6f8807")
+		)
+		(fp_line
+			(start 2.285 -1.135)
+			(end 2.285 1.135)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "3c00bac9-2853-4115-a1f7-dd87ca5e415d")
+		)
+		(fp_line
+			(start -1.6 -1.135)
+			(end 2.285 -1.135)
+			(stroke
+				(width 0.12)
+				(type solid)
+			)
+			(layer "F.SilkS")
+			(uuid "1049aebf-520b-499f-996f-691380884616")
+		)
+		(fp_rect
+			(start -2.28 -1.13)
+			(end 2.28 1.13)
+			(stroke
+				(width 0.05)
+				(type solid)
+			)
+			(fill no)
+			(layer "F.CrtYd")
+			(uuid "b0977ac3-fa95-4393-bc19-ccf9aff0335a")
+		)
+		(fp_line
+			(start 1.6 0.8)
+			(end -1.6 0.8)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "b0e6e991-08de-4739-b1af-dc887830aa44")
+		)
+		(fp_line
+			(start 1.6 -0.4)
+			(end 1.6 0.8)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "be3f6230-c6b3-4e32-9cf8-d4349f38fa22")
+		)
+		(fp_line
+			(start 1.2 -0.8)
+			(end 1.6 -0.4)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "a5cf3826-c7a7-4d0e-a6ce-bb6a371a91e8")
+		)
+		(fp_line
+			(start -1.6 0.8)
+			(end -1.6 -0.8)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "7957fc79-68fc-49d3-81bd-1fffb2e43d4f")
+		)
+		(fp_line
+			(start -1.6 -0.8)
+			(end 1.2 -0.8)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "c52b5a64-4c28-481e-bb42-e63525bb39c4")
+		)
+		(fp_text user "K"
+			(at 2 -1.5 180)
+			(layer "F.SilkS")
+			(uuid "7f9f6615-0d86-461e-a9c4-292acdaac7f9")
+			(effects
+				(font
+					(size 0.6 0.6)
+					(thickness 0.1)
+				)
+			)
+		)
+		(fp_text user "${REFERENCE}"
+			(at 0 0 180)
+			(layer "F.Fab")
+			(uuid "8191e1d3-401d-41a2-9377-5e1ab1531c9e")
+			(effects
+				(font
+					(size 0.8 0.8)
+					(thickness 0.12)
+				)
+			)
+		)
+		(fp_text user "A"
+			(at -2 -1.5 180)
+			(layer "F.Fab")
+			(uuid "2936664b-2e2f-487e-b74a-584196dd2916")
+			(effects
+				(font
+					(size 0.6 0.6)
+					(thickness 0.1)
+				)
+			)
+		)
+		(pad "1" smd roundrect
+			(at -1.4 0 180)
+			(size 1.25 1.75)
+			(layers "F.Cu" "F.Mask" "F.Paste")
+			(roundrect_rratio 0.2)
+			(net "+3V3")
+			(uuid "b7453c21-1a6d-47b5-a68d-67b79ca7d8eb")
+		)
+		(pad "2" smd roundrect
+			(at 1.4 0 180)
+			(size 1.25 1.75)
+			(layers "F.Cu" "F.Mask" "F.Paste")
+			(roundrect_rratio 0.2)
+			(net "/LEDs_IR/IR_DRIVE")
+			(uuid "5f2d007f-c082-48cc-bdce-49c7f8974c73")
+		)
+		(embedded_fonts no)
+		(model "${KICAD10_3DMODEL_DIR}/LED_SMD.3dshapes/LED_1206_3216Metric.step"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -15840,229 +16046,6 @@
 			(uuid "838d3bc4-d9bf-48ee-b87b-718d944afdf0")
 		)
 		(embedded_fonts no)
-	)
-	(footprint "LED_SMD:LED_0805_2012Metric"
-		(layer "F.Cu")
-		(uuid "aa8578fa-a480-43f1-86e1-3d774c9f256f")
-		(at 184.1 110 180)
-		(descr "LED SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: https://docs.google.com/spreadsheets/d/1BsfQQcO9C6DZCsRaXUlFlo91Tg2WpOkGARC1WS5S8t0/edit?usp=sharing)")
-		(tags "LED")
-		(property "Reference" "D20"
-			(at 0 -1.65 0)
-			(layer "F.SilkS")
-			(uuid "a1346a25-1c98-4969-a2b3-c8c989f071e6")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Value" "IR LED 940 nm"
-			(at 0 1.65 0)
-			(layer "F.Fab")
-			(uuid "1d5e5b25-9ea4-406e-96ad-e308ba382a8f")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 0 0 0)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "4cc7d89d-34d6-4694-ab9d-012db25bfaec")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "940 nm IR transmit LED, 0805 side-fire"
-			(at 0 0 0)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "220d2386-ba0b-483e-917f-5eb153a22566")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MPN" "IR15-21C/TR8"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "cfbe36ec-ffdc-48e5-9a84-9041c2bf1989")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "LCSC" "C72037"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "07ac1742-e656-46cd-8f0e-8631af149394")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property ki_fp_filters "LED* LED_SMD:* LED_THT:*")
-		(path "/5c3b6a90-ee33-4533-a6d3-29c1d6467142/347b1f91-24f1-4c7c-b13d-8ca90c089b6b")
-		(sheetname "/LEDs_IR/")
-		(sheetfile "LEDs_IR.kicad_sch")
-		(units
-			(unit
-				(name "A")
-				(pins "1" "2")
-			)
-		)
-		(attr smd)
-		(duplicate_pad_numbers_are_jumpers no)
-		(fp_line
-			(start 1 -0.96)
-			(end -1.685 -0.96)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "F.SilkS")
-			(uuid "ac1c33bb-7ab4-4199-befa-dc7ac7bb39c2")
-		)
-		(fp_line
-			(start -1.685 0.96)
-			(end 1 0.96)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "F.SilkS")
-			(uuid "ecbeed55-e409-4deb-81db-2c2d5dfa3c0c")
-		)
-		(fp_line
-			(start -1.685 -0.96)
-			(end -1.685 0.96)
-			(stroke
-				(width 0.12)
-				(type solid)
-			)
-			(layer "F.SilkS")
-			(uuid "456095a1-4776-4838-a2b8-11cf14f42ef5")
-		)
-		(fp_rect
-			(start -1.68 -0.95)
-			(end 1.68 0.95)
-			(stroke
-				(width 0.05)
-				(type solid)
-			)
-			(fill no)
-			(layer "F.CrtYd")
-			(uuid "05561947-c4c8-49bc-bda0-811e6881b1fd")
-		)
-		(fp_line
-			(start 1 0.6)
-			(end 1 -0.6)
-			(stroke
-				(width 0.1)
-				(type solid)
-			)
-			(layer "F.Fab")
-			(uuid "a055d9f9-ee8f-4166-a0a6-d305b55ccb49")
-		)
-		(fp_line
-			(start 1 -0.6)
-			(end -0.7 -0.6)
-			(stroke
-				(width 0.1)
-				(type solid)
-			)
-			(layer "F.Fab")
-			(uuid "26734e34-0097-4804-9a7a-61d0ec0f2754")
-		)
-		(fp_line
-			(start -0.7 -0.6)
-			(end -1 -0.3)
-			(stroke
-				(width 0.1)
-				(type solid)
-			)
-			(layer "F.Fab")
-			(uuid "769c0462-22c5-49d5-9180-ffbec4994e39")
-		)
-		(fp_line
-			(start -1 0.6)
-			(end 1 0.6)
-			(stroke
-				(width 0.1)
-				(type solid)
-			)
-			(layer "F.Fab")
-			(uuid "16af2657-269b-4d9c-97a7-e309373cbf06")
-		)
-		(fp_line
-			(start -1 -0.3)
-			(end -1 0.6)
-			(stroke
-				(width 0.1)
-				(type solid)
-			)
-			(layer "F.Fab")
-			(uuid "0438bdfa-0860-45f8-86d2-759f6e0a38f7")
-		)
-		(fp_text user "${REFERENCE}"
-			(at 0 0 0)
-			(layer "F.Fab")
-			(uuid "6942d6f1-0254-4432-99f7-39056ccffaa8")
-			(effects
-				(font
-					(size 0.5 0.5)
-					(thickness 0.08)
-				)
-			)
-		)
-		(pad "1" smd roundrect
-			(at -0.9375 0)
-			(size 0.975 1.4)
-			(layers "F.Cu" "F.Mask" "F.Paste")
-			(roundrect_rratio 0.25)
-			(net "/LEDs_IR/IR_DRIVE")
-			(pinfunction "K_1")
-			(pintype "passive")
-			(uuid "b3049f40-eb3b-4169-a3ee-4104ae0153ab")
-		)
-		(pad "2" smd roundrect
-			(at 0.9375 0)
-			(size 0.975 1.4)
-			(layers "F.Cu" "F.Mask" "F.Paste")
-			(roundrect_rratio 0.25)
-			(net "+3V3")
-			(pinfunction "A_2")
-			(pintype "passive")
-			(uuid "748ce777-4caf-448e-b54f-b534e2b280ab")
-		)
-		(embedded_fonts no)
-		(model "${KICAD10_3DMODEL_DIR}/LED_SMD.3dshapes/LED_0805_2012Metric.step"
-			(offset
-				(xyz 0 0 0)
-			)
-			(scale
-				(xyz 1 1 1)
-			)
-			(rotate
-				(xyz 0 0 0)
-			)
-		)
 	)
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "F.Cu")

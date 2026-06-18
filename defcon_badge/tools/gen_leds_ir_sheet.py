@@ -15,7 +15,7 @@ def build() -> SheetGen:
         page="5",
         paper="A3",
         comments=[
-            "4× SK9822-EC20 chained, SPI1 clock+data, 25% global brightness cap (firmware)",
+            "4× SK9822 (5050) chained, SPI1 clock+data, 25% global brightness cap (firmware)",
             "Optical tap link: 940 nm IR LED via S8050 + 68Ω; TSOP4838-class 38 kHz RX",
             "LED + RX placed mirror-symmetric about vertical centerline (face-to-face mate)",
         ],
@@ -102,15 +102,25 @@ def build() -> SheetGen:
     # GP9 sinks current: +3V3 → D20 anode → D20 cathode → R30 → GP9 (IR_TX).
     # When GP9 is asserted LOW, ~12 mA flows. R30 sized for that current at
     # Vf ≈ 1.2 V and GPIO Vol ≈ 0.3 V: (3.3 − 1.2 − 0.3) / 150 ≈ 12 mA.
+    #
+    # POLARITY (subtle, ERC-invisible): the Everlight IR15-21C/TR8 datasheet
+    # numbers pad 1 = ANODE, pad 2 = CATHODE — the OPPOSITE of KiCad's stock
+    # Device:LED / LED_SMD convention (pin1/pad1 = cathode). Under standard
+    # part-pin1 → footprint-pad1 placement (JLC etc.), the previous wiring put
+    # the real anode on IR_DRIVE and the cathode on +3V3 → reverse-biased, IR TX
+    # dead. Fixed by (a) the badge:LED_IR_1206 footprint whose pad1=anode with
+    # the cathode mark on pad 2, and (b) wiring symbol pin1 → +3V3 (anode pad)
+    # and pin2 → IR_DRIVE (cathode pad). Caught by the datasheet pin-out audit.
     sg.place("Device:LED", "D20", "IR LED 940 nm",
-             "LED_SMD:LED_0805_2012Metric", 60, 130,
-             mpn="IR15-21C/TR8", lcsc="C72037",
-             desc="940 nm IR transmit LED, 0805")
+             "badge:LED_IR_1206_3216Metric", 60, 130,
+             mpn="IR15-21C/TR8", lcsc="C409499",
+             desc="940 nm IR transmit LED, 1206 (anode=pad1 per datasheet)")
     sg.place("Device:R", "R30", "150", "Resistor_SMD:R_0402_1005Metric",
              60, 145, desc="IR LED current limit for direct GPIO drive (~12 mA pulsed)")
 
-    sg.label_at_pin("D20", "2", "+3V3")     # anode (pin 2 in KiCad LED symbol)
-    sg.label_at_pin("D20", "1", "IR_DRIVE") # cathode
+    # pin1 maps to footprint pad1 = real ANODE → +3V3; pin2 = real CATHODE → R30/IR_DRIVE
+    sg.label_at_pin("D20", "1", "+3V3")     # pad 1 = ANODE (Everlight numbering)
+    sg.label_at_pin("D20", "2", "IR_DRIVE") # pad 2 = CATHODE
     sg.label_at_pin("R30", "1", "IR_DRIVE")
     sg.label_at_pin("R30", "2", "IR_TX")    # straight to RP2040 GP9
 

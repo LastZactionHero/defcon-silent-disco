@@ -86,7 +86,7 @@ Badges sync by touching face-to-face. No radio — at DEFCON specifically, any u
 
 ## LEDs
 
-- **4× SK9822-EC20** (on hand), chained, SPI1 clock+data. 5 V part driven at 3.3 V logic and 3.3 V supply — SK9822 runs visibly fine at 3.3 V supply with slightly shifted color balance; data threshold is met since VDD = logic rail. ~10 nF per LED.
+- **4× SK9822 (5050)**, chained, SPI1 clock+data. (Switched from the on-hand EC20 2020 to the larger 5050 for a brighter, more decorative disco look — see PCB footprint badge:LED_SK9822_5050, datasheet-verified pinout 1=DIN 2=CIN 3=GND 4=VDD 5=COUT 6=DOUT.) 5 V part driven at 3.3 V logic and 3.3 V supply — SK9822 runs visibly fine at 3.3 V supply with slightly shifted color balance; data threshold is met since VDD = logic rail. ~10 nF per LED.
 - Brightness budget: global brightness register capped at ~25% in firmware. 4 LEDs full white at 3.3 V would eat the battery and blind people at eye level on a lanyard.
 
 ## Buttons / switch
@@ -120,7 +120,7 @@ USB-C 16P · PJ-320A · microSD push socket (e.g. TF-PUSH, ~$0.10) · JST-PH 2-p
 | U7 | 1 | IRM-H638T / TSOP4838-class 38 kHz IR RX | side-view | $0.15 |
 | Q1 | 1 | S8050 NPN (IR LED driver) | SOT-23 | $0.01 |
 | D1 | 1 | 940 nm IR LED | 0805 side-fire | $0.02 |
-| LED1–4 | 4 | SK9822-EC20 | 2020 | on hand |
+| LED20–23 | 4 | SK9822 | 5050 | switched from EC20 2020 for brightness |
 | Y1 | 1 | 12 MHz crystal, stock tol. | 3225 | $0.08 |
 | J1 | 1 | USB-C 16P mid-mount | — | $0.10 |
 | J2 | 1 | PJ-320A 3.5 mm jack | SMD | $0.08 |
