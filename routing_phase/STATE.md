@@ -57,13 +57,30 @@ D2(2) DONE — PLANE FANOUT APPLIED to the real board. (a) starved_thermal fixed
   (not a D2 gate). DETERMINISM formal gate deferred to D5 (structurally guaranteed by route_db replay;
   the D2 replay-verify hit a multi-LoadBoard-per-process swig bug in the TEST harness, not the pipeline).
 
-Next intended action:
-  1. **D2(3) — critical-net pre-route:** via the bridge, route + LOCK the USB diff pair (KRT route_diff.py
-     → extract → apply), then the crystal XIN/XOUT loop, QSPI flash bus, I2S (GP6/7/8) — clean structured
-     copper, recorded+frozen in route_db (so D3 bulk routing won't rip them). Verify each: completion rises,
-     drc 0, shorts 0, usb_diff_skew<=2.5, frozen-file discipline, fp frozen. One LoadBoard+SaveBoard/process.
-  2. **D3 — bus + bulk route** the remaining ~signal nets to 100% (bus planner via --guide-corridor +
-     KRT single-ended through the bridge, criticality order from route_db.stable_order).
+D2(3) — KEY FINDING + tool fix (no board change). Added krt_bridge.apply_routing(replace=True): KRT
+  routes on a board holding ALL prior routing and emits prior+new, so the bridge extracts the FULL
+  output and applies with REPLACE (rip-then-lay) → board == latest full KRT solution, no fanout
+  duplication. FINDING (the routing problem to solve): the USB pair is a MULTI-POINT pair (U3 ↔ 27R
+  R3/R4 ↔ J10) with a FORCED CROSSOVER (U3.46/DM is above U3.47/DP at the source but R4/DM ends below
+  R3/DP → can't route planar on one layer). KRT route_diff couples the long J10→R leg but defers the
+  short MCU legs to single-ended; KRT route.py single-ended then routes 3/4 USB nets but Net-(U3-USB_DP)
+  (U3.47→R3.2) FAILS — "no rippable blockers": the **plane fanout vias around the U3 QFN form a via
+  fence that blocks signal escape**. This is SYSTEMIC: power fanout-before-signal-escape will block more
+  nets near dense ICs in D3. (On a /tmp verify the 3/4 partial reached completion 36.7%/unconn 93, DRC 0
+  — but it's incomplete + masks the real issue, so NOT applied to the real board.)
+
+Next intended action (ESCALATE — re-order, don't repeat the blocked move):
+  1. **D2(4) — fix fanout-vs-escape ordering.** Adopt the route_db-centric model: base board (D1 solid
+     zones, no routing) + route_db = the source of truth; regenerate the board = base + replay. Re-order
+     so SIGNALS route before dense-IC power fanout (signals naturally leave the board; fanout fills the
+     rest). Concretely: (a) rip routing back to the D1 solid-zone base; (b) route the critical nets first
+     on EMPTY copper — USB (allow B.Cu escape / layer swap for the crossover), crystal, QSPI, I2S — via
+     the bridge; (c) THEN run plane fanout in the remaining space (KRT route_planes already avoids
+     existing tracks). Record everything in route_db. Verify USB now routes 4/4, drc 0, completion rises.
+     ALTERNATIVE if re-order is heavy: make the fanout escape-aware (skip/relocate fanout vias within
+     ~1mm of a signal pin's escape on dense ICs). Prefer signal-first; it's cleaner and more general.
+  2. **D3 — bus + bulk route** remaining signals to 100% (bus planner via --guide-corridor + KRT
+     single-ended through the bridge, criticality order from route_db.stable_order), fanout last.
   OLD D2 plan (reference): via-stitch every GND (89) and +3V3 (47) pad to its inner plane +
      pour-to-pour stitching, dropping unconnected well below 147. Try KRT first:
      `~/.local/share/defcon-badge-krt/venv/bin/python ~/.local/share/defcon-badge-krt/KiCadRoutingTools/route_planes.py

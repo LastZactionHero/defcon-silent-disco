@@ -83,13 +83,20 @@ def extract_routing(krt_pcb) -> tuple[list, list]:
     return tracks, vias
 
 
-def apply_routing(real_pcb, tracks, vias, refill=True) -> dict:
+def apply_routing(real_pcb, tracks, vias, refill=True, replace=False) -> dict:
     """Apply extracted tracks/vias onto the real board via pcbnew (the ONLY writer). One
-    LoadBoard + one SaveBoard (the swig registry corrupts on re-read in-process)."""
-    geom_route.assert_writable_path = real_pcb  # documentary
+    LoadBoard + one SaveBoard (the swig registry corrupts on re-read in-process).
+
+    replace=True rips ALL existing routing first, then lays the supplied set. Use this when the
+    supplied (tracks, vias) is the COMPLETE current solution (KRT routes on a board that already
+    holds all prior routing and emits prior+new, so extracting its full output and applying with
+    replace keeps the real board == the latest full KRT solution with no duplication). replace=False
+    appends (only for a known-disjoint delta)."""
     from writer_lock import assert_writable
     assert_writable(str(real_pcb))
     b = pcbnew.LoadBoard(str(real_pcb))
+    if replace:
+        geom_route.delete_routing(b)
     nt = nv = 0
     for t in tracks:
         geom_route.add_track(b, t["x0"], t["y0"], t["x1"], t["y1"], t["layer"], t["net"], t["width"])

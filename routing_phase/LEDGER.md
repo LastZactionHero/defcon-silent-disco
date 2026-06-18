@@ -111,3 +111,18 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   acute_angles 39 from KRT via-to-pad stubs → D4 cleanup (not a D2 gate). Determinism formal gate
   deferred to D5 (route_db replay is deterministic by construction; the inline replay-verify hit a
   multi-LoadBoard-per-process swig None bug in the TEST harness, fixed approach = subprocess per load).
+
+[2026-06-17] D2(3) — CRITICAL FINDING: fanout blocks signal escape (re-order needed) + bridge fix |
+  attempted USB pre-route via KRT | (1) TOOL: krt_bridge.apply_routing now supports replace=True
+  (rip-then-lay) — KRT emits prior+new routing, so extracting its full output + applying with replace
+  keeps the board == latest full solution with NO fanout duplication. (2) The USB pair is MULTI-POINT
+  (U3 ↔ 27R R3/R4 ↔ J10) with a FORCED CROSSOVER (U3.46/DM above U3.47/DP at source, R4/DM below R3/DP
+  at target → not planar on one layer). KRT route_diff couples the long J10→R leg, defers short MCU legs
+  to single-ended (textbook). KRT route.py single-ended routes 3/4 USB nets but Net-(U3-USB_DP)
+  (U3.47→R3.2) FAILS "no rippable blockers": the plane FANOUT VIAS around the U3 QFN form a via fence
+  blocking signal escape. SYSTEMIC — power-fanout-before-signal-escape will block more nets near dense
+  ICs in D3. | Δmetric: real board UNCHANGED (33.3%) — the 3/4 partial (probe: 36.7%/unconn93/DRC0) was
+  NOT applied; it's incomplete and masks the real issue. ESCALATION (HARNESS: don't repeat a blocked
+  move) → D2(4): adopt the route_db-as-source-of-truth model and RE-ORDER to SIGNALS-FIRST (route
+  critical signals on empty copper, USB with a B.Cu/layer-swap escape for the crossover, THEN fanout in
+  the remaining space). This is why we built route_db + the base/replay model — now it earns its keep.
