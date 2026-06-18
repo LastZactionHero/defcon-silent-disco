@@ -150,3 +150,17 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   needs 0); off_axis 147 / acute 635 / track 2214 → board looks AUTOROUTED, aesthetic goal UNMET (D4:
   bus planner via --guide-corridor + beautification). Honest state: connected-but-spaghetti; the
   hand-designed look is the D4 payoff still ahead.
+
+[2026-06-18] D3(1) — DIAGNOSIS: B.Cu blocked by the outer GND pours (no board change) | tried to
+  push completion past 73% | the 39 unconnected = 21 plane edges (GND 11 + +3V3 10, fanout blocked by
+  signals) + 18 signal edges (whole SD bus SD_SCK/MOSI/MISO/CS/CD, I2S trio, QSPI_SCLK, IR_TX, LED_SCK,
+  BTN_VOL_UP/SYNC, SAO_SDA/GPIO1/GPIO2, VBAT_SENSE, 1 USB MCU-side). KEY FINDING: B.Cu is severely
+  underused — F.Cu 796mm vs B.Cu 22mm (layer_balance 0.028); the cross-board buses fail for lack of
+  room while the bottom layer sits empty. KRT reports "blocked by pads/stubs/ZONES" → the FILLED outer
+  F.Cu/B.Cu GND pours are a solid obstacle to KRT's router → it can't route signals on B.Cu. FIX
+  (D3(2)): route with the OUTER pours UNFILLED (keep inner planes), refill ALL zones at the very end so
+  the pours recede around the traces. Also: KRT mps + rip-up (--rip-existing-nets all) is pathologically
+  slow on this board (300k iters → minutes/timeout, several runs killed); use --ordering original (fast,
+  ~instant). | Δmetric: real board UNCHANGED (73.5%, 39 unconnected, via_in_pad 8) — all experiments
+  were on /tmp; real board verified clean + intact (83 fps, 2214 tracks, 169 vias). The B.Cu insight is
+  the unlock for the failed cross-board buses.

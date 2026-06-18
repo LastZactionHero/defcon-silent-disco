@@ -82,7 +82,27 @@ D2(4) DONE — SIGNALS-FIRST RE-ORDER applied to the real board. Validated USB r
   aesthetic goal is unmet): D4 needs the bus planner (--guide-corridor) + beautification (pull-tight,
   push-to-grid/45-quantize, via-min). Render shows spaghetti — not hand-designed yet.
 
+D3(1) DIAGNOSIS (no board change; real board stays at 73%, clean). The 39 unconnected =
+  **21 plane edges** (GND 11 + +3V3 10 — fanout blocked by signals) + **18 signal edges**: the whole
+  SD bus (SD_SCK/MOSI/MISO/CS + SD_CD), the I2S trio (DIN/BCK/LRCK), QSPI_SCLK, IR_TX, LED_SCK,
+  BTN_VOL_UP, BTN_SYNC, SAO_SDA/GPIO1/GPIO2, VBAT_SENSE, Net-(U3-USB_DM). KEY FINDING: **B.Cu is
+  severely underused — F.Cu 796mm vs B.Cu 22mm (layer_balance 0.028).** The cross-board buses (SD→J31,
+  I2S→U20) fail for lack of room while B.Cu sits empty. KRT reports the failures as "blocked by
+  pads/stubs/ZONES" → the **outer F.Cu/B.Cu GND pours block B.Cu signal routing** (filled pours = solid
+  obstacle to KRT). Also: KRT mps + rip-up (--rip-existing-nets all) is PATHOLOGICALLY SLOW on this
+  board (300k iters = minutes, times out) and not clearly better → use **--ordering original (fast)**.
+
 Next intended action:
+  1. **D3(2) — route with OUTER POURS UNFILLED (the B.Cu fix).** Implement cleanly + fast: base =
+     delete_routing + fill ONLY inner planes (In1.Cu/In2.Cu), leave F.Cu/B.Cu GND pours UNFILLED →
+     KRT route.py all 62 signals --ordering original (FAST, no rip-up/mps) → KRT route_planes fanout
+     --same-net-pad-clearance 0.2 → krt_bridge extract → apply_routing(replace, refill=True) refills
+     ALL zones (outer pours recede around the signals). Verify B.Cu usage jumps + completion rises +
+     via_in_pad 0 + drc 0. If still failing nets, THEN add targeted rip-up on just those nets.
+     (Tip: KRT runs slow under high --max-iterations; do NOT raise it. Suppress swig "memory leak"
+     stderr noise — it floods logs. Verify each step with a fresh measure_route subprocess.)
+  2. Then drive via_in_pad 8→0 (offset signal vias) and finish remaining nets → D3 gate (100%, 0 via-in-pad).
+  OLD plan (reference):
   1. **D3 — finish routing to 100% + drive via_in_pad to 0.** (a) Re-route the 13 failed signals:
      KRT route.py with rip-up enabled (--rip-existing-nets) + allow more vias/B.Cu, or per-net guide
      corridors; (b) complete +3V3 fanout (re-run route_planes after signals, or --rip-blocker-nets);
