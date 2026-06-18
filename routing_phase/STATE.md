@@ -1,6 +1,6 @@
 # STATE (pointer only — durable history lives in LEDGER.md + metrics.jsonl)
 
-Phase: **D1 — Stackup & rules rework** (D0 COMPLETE — instrument + geom_route + route_db + KRT all verified)
+Phase: **D2 — Plane fanout + critical pre-route** (D0 + D1 COMPLETE)
 Current approach: build the routing system ON KiCadRoutingTools (KRT), Freerouting REJECTED.
 Engine: KRT at `~/.local/share/defcon-badge-krt/KiCadRoutingTools` (pinned commit in
   `KRT_PINNED_COMMIT.txt` = ce5cb2d, v0.15.13), run via `~/.local/share/defcon-badge-krt/venv/bin/python`.
@@ -31,15 +31,23 @@ D1 progress: **D1(1) DONE** — rework_stackup.py applied: thickness 1.0→1.6mm
   registry (Zones()/GetDesignSettings() return raw pointers) → one LoadBoard+SaveBoard per process,
   verify via a fresh measure_route SUBPROCESS.
 
+D1(2) DONE: USB_DIFF_90 netclass fixed (patterns → real nets /MCU_Core/USB_DP|DM + connector-side
+  Net-(U3-USB_DP|DM); diff_pair_width 0.8→0.17, gap 0.15→0.13). measure usb_diff_paired→TRUE. Minimal
+  .kicad_pro diff (12+/4−), .kicad_sch/.kicad_pcb untouched, DRC 0. **D1 EXIT GATE MET.**
+
 Next intended action:
-  1. **D1(2) (NOW):** fix the USB_DIFF_90 netclass in defcon_badge.kicad_pro (TARGETED edits, keep the
-     diff minimal — this is the one intended .kicad_pro change): patterns /USB_D+ → /MCU_Core/USB_DP,
-     /USB_D- → /MCU_Core/USB_DM, and ADD connector-side Net-(U3-USB_DP), Net-(U3-USB_DM); diff_pair_width
-     0.8→0.17, diff_pair_gap →0.13. Verify measure_route usb_diff_paired→TRUE. Then D1 gate met → D2.
-     (Deferred to fab-prep: the explicit dielectric (stackup ...) s-expr block — thickness is 1.6mm; the
-     block is fab metadata, not routing-blocking. Note it; don't risk a malformed block now.)
-  2. **D2:** plane fanout (route_planes.py: via-stitch every GND/+3V3 pad to its plane + pour-to-pour
-     stitching) → unconnected drops further; then bus-route + LOCK critical nets (USB diff, crystal, QSPI, I2S).
+  1. **D2 (NOW) — plane fanout:** via-stitch every GND (89) and +3V3 (47) pad to its inner plane +
+     pour-to-pour stitching, dropping unconnected well below 147. Try KRT first:
+     `~/.local/share/defcon-badge-krt/venv/bin/python ~/.local/share/defcon-badge-krt/KiCadRoutingTools/route_planes.py
+     defcon_badge/defcon_badge.kicad_pcb` (read its --help; single-threaded/deterministic). If KRT's
+     plane tool doesn't fit our zone setup cleanly, build routing_phase/tools/plane_fanout.py
+     (deterministic: for each GND/+3V3 pad not already on its plane, drop a via at/near the pad via
+     geom_route.add_via; add a structured GND stitching-via grid tying F.Cu/B.Cu pours to In1). Record
+     vias in route_db (record_routes). Verify: unconnected drops, drc 0, shorts 0, frozen-file clean,
+     determinism (run twice → identical via set). One LoadBoard+SaveBoard per process.
+  2. **D2 critical pre-route:** bus-route + LOCK the USB diff pair (route_diff.py), crystal XIN/XOUT,
+     QSPI, I2S — clean structured copper, recorded+frozen in route_db. Then D3 bus/bulk route to 100%.
+  DEFERRED to fab-prep: explicit dielectric (stackup ...) block (thickness 1.6mm is set; fab metadata).
   NOTE: when the loop WRITES routing to the real board (D2+), pcbnew SaveBoard may also flush BOM
   field-defs into .kicad_pro — after any board write, assert `git diff --quiet defcon_badge/
   defcon_badge.kicad_pro defcon_badge/*.kicad_sch` and revert stray BOM-only churn (keep only the

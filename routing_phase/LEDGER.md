@@ -68,3 +68,13 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   process (raw pointers) → rework_stackup does one LoadBoard+SaveBoard, no post-save introspection;
   verification is a separate measure_route subprocess. DEFERRED to fab-prep: explicit dielectric
   (stackup ...) block (thickness set to 1.6mm; the block is fab metadata, not routing-blocking).
+
+[2026-06-17] D1(2) — FIX USB DIFF-PAIR NETCLASS | the USB_DIFF_90 class targeted non-existent nets
+  (/USB_D+ /USB_D-) so the pair silently fell back to Default, and its 0.8mm width was a 2-layer value
+  | targeted minimal edits to defcon_badge.kicad_pro: patterns → the REAL nets /MCU_Core/USB_DP,
+  /MCU_Core/USB_DM + the connector-side Net-(U3-USB_DP), Net-(U3-USB_DM) (whole pair through the 27R
+  series Rs now controlled); diff_pair_width 0.8→0.17, diff_pair_gap 0.15→0.13 (≈90Ω over the In1 GND
+  plane on the 1.6mm 4-layer stack). | Δmetric: usb_diff_paired FALSE→TRUE (gate flips). Diff is ONLY
+  the netclass change (12+/4−); .kicad_sch + .kicad_pcb untouched; valid JSON; drc 0, erc 0,
+  unconnected 147, zones_filled_ok TRUE. **D1 EXIT GATE MET** (zones reworked+filled, USB netclass
+  fixed, unrouted DRC clean, baseline frozen) → advance to D2 (plane fanout + critical pre-route).
