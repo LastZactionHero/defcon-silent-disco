@@ -92,7 +92,30 @@ D3(1) DIAGNOSIS (no board change; real board stays at 73%, clean). The 39 unconn
   obstacle to KRT). Also: KRT mps + rip-up (--rip-existing-nets all) is PATHOLOGICALLY SLOW on this
   board (300k iters = minutes, times out) and not clearly better → use **--ordering original (fast)**.
 
+D3(2) — CORRECTED DIAGNOSIS + route_pipeline tool (real board unchanged, 73%). Built
+  routing_phase/tools/route_pipeline.py (reproducible: base → KRT route → fanout → bridge apply,
+  each pcbnew step subprocess-isolated; FIXED a build_base segfault — delete_routing + fill in ONE
+  process crashes before SaveBoard, so split into delete+save then unfill/fill+save). FINDINGS:
+  (a) the D3(1) "outer pours block B.Cu" hypothesis is **DISPROVEN** — unfilling them left B.Cu at
+  22mm (KRT reproduced the exact same 49/62 deterministically). (b) The real lever is **--layer-costs**:
+  `--layers F.Cu B.Cu --layer-costs 2.0/3.0 1.0` (penalize F.Cu) FORCES B.Cu usage (22→588mm) — KRT is
+  F.Cu-dominant and won't use B.Cu unprompted. Added to route_pipeline (2.0/1.0). (c) BUT layer-balancing
+  does NOT fix the ~13 failing nets — they still fail with B.Cu available, so they fail on **intrinsic
+  escape/crossing congestion near the U3 QFN** (SD bus→J31, I2S→U20, QSPI_SCLK, IR_TX, LED_SCK, buttons,
+  SAO), not layer capacity. via_in_pad 8 (signal vias) still to drive to 0.
+
 Next intended action:
+  1. **D3(3) — apply layer-balanced route + attack the 13 stragglers.** (a) Run route_pipeline
+     --target on the REAL board (layer-balanced, both layers used) and DRC-verify (full measure_route,
+     not --no-drc): completion ~same but B.Cu now used, drc 0, shorts 0, frozen. (b) For the ~13
+     intrinsic failures: targeted KRT rip-up on JUST those nets (--rip-existing-nets the blockers,
+     small set = fast, unlike all-nets rip-up), and/or per-net --guide-corridor to route each failed
+     bus on B.Cu in its own channel. Identify blockers from KRT JSON_SUMMARY. (c) drive via_in_pad 8→0
+     (offset/nudge signal vias). Gate: completion 100, via_in_pad 0, drc 0, shorts 0.
+  2. **D4 — bus planner + beautification** (the aesthetic payoff): the --guide-corridor work from (b)
+     IS the start of the bus planner; extend it to route QSPI/SPI/I2S/SD as constant-pitch bundles,
+     then pull-tight/45-quantize/via-min. off_axis→0, acute→0; render must look hand-designed.
+  OLD plan (reference):
   1. **D3(2) — route with OUTER POURS UNFILLED (the B.Cu fix).** Implement cleanly + fast: base =
      delete_routing + fill ONLY inner planes (In1.Cu/In2.Cu), leave F.Cu/B.Cu GND pours UNFILLED →
      KRT route.py all 62 signals --ordering original (FAST, no rip-up/mps) → KRT route_planes fanout

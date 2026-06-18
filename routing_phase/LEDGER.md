@@ -164,3 +164,17 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   ~instant). | Δmetric: real board UNCHANGED (73.5%, 39 unconnected, via_in_pad 8) — all experiments
   were on /tmp; real board verified clean + intact (83 fps, 2214 tracks, 169 vias). The B.Cu insight is
   the unlock for the failed cross-board buses.
+
+[2026-06-18] D3(2) — route_pipeline tool + CORRECTED diagnosis (real board unchanged, 73%) | implement
+  the D3(1) B.Cu fix | built routing_phase/tools/route_pipeline.py — the reproducible signals-first
+  pipeline (base → KRT route → fanout → bridge apply), each pcbnew step subprocess-isolated; clean arg
+  lists (no shell quoting — fixed the bogus "0/18"). FIXED build_base segfault: delete_routing + zone
+  fill in ONE process crashes BEFORE SaveBoard (board unchanged, no output) → split into delete+save
+  then unfill/fill+save (each save lands before the teardown crash). FINDINGS: (a) the D3(1) "outer GND
+  pours block B.Cu" hypothesis is DISPROVEN — with them unfilled B.Cu stayed 22mm; KRT reproduced 49/62
+  exactly (deterministic). (b) the real lever is --layer-costs: `--layers F.Cu B.Cu --layer-costs 3.0 1.0`
+  (penalize F.Cu) forces B.Cu 22→588mm — KRT is F.Cu-dominant + won't use B.Cu unprompted; added 2.0/1.0
+  to route_pipeline. (c) BUT layer-balancing does NOT fix the ~13 failing nets (still fail with B.Cu free)
+  → they fail on INTRINSIC escape/crossing congestion near the U3 QFN, not layer capacity. | Δmetric:
+  real board UNCHANGED (73.5%, 39 unconnected, via_in_pad 8) — pipeline reproduces it deterministically;
+  not re-applied (layer-balanced apply + the 13 stragglers + via_in_pad→0 is D3(3), with DRC verify).
