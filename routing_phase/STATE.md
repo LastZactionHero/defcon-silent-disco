@@ -104,7 +104,27 @@ D3(2) — CORRECTED DIAGNOSIS + route_pipeline tool (real board unchanged, 73%).
   escape/crossing congestion near the U3 QFN** (SD bus→J31, I2S→U20, QSPI_SCLK, IR_TX, LED_SCK, buttons,
   SAO), not layer capacity. via_in_pad 8 (signal vias) still to drive to 0.
 
+D3(3) DONE — MAJOR FIX: signals were ON THE PLANES. Found the current board had ~60 signal-track
+  segments routed on the In1 GND / In2 +3V3 PLANES (carving up the reference planes — a serious SI
+  flaw) because earlier routes didn't restrict layers. route_pipeline now passes --layers F.Cu B.Cu
+  (added D3(2)), so re-applying it gives: **0 signal tracks on inner planes** (planes intact), both
+  outer layers used (F.Cu 736 / B.Cu 372, balance 0.028→0.505), completion 73.5→75.5%, footprints
+  frozen, pro/sch clean, route_db v3. COST (the next cleanup): drc_errors 0→2 (via-to-via clearance:
+  USB DP/DM vias 0.128mm; BTN_VOL_UP/BTN_CH vias 0.128mm) + via_in_pad 8→11 — BOTH are KRT route.py
+  SIGNAL-via placement defects (route.py has no --same-net-pad-clearance / via-spacing like route_planes).
+  This planes-clean board is the CORRECT foundation; the via issues are fixable cleanup.
+
 Next intended action:
+  1. **D3(4) — build the VIA-FIXER (routing_phase/tools/fix_signal_vias.py).** Post-process: (a)
+     via_in_pad 11→0 — for each via on a pad, move it off along its escape direction into clear space,
+     extend the pad→via stub, and move the connected track endpoints to the new via position (geom_route);
+     (b) the 2 via-to-via clearance — nudge one via of each too-close pair apart (≥0.75mm center-to-center
+     for 0.6mm vias @ 0.15mm clearance) + fix its track endpoints. Verify via_in_pad 0, drc 0, shorts 0,
+     connectivity preserved (unconnected unchanged), frozen. HARD GATE via_in_pad==0.
+  2. **D3(5) — the ~12 stragglers**: targeted small-set rip-up / per-net --guide-corridor on B.Cu (SD
+     bus→J31, I2S→U20, etc.) → completion toward 100.
+  3. **D4 — bus planner + beautification** (aesthetic payoff).
+  OLD plan (reference):
   1. **D3(3) — apply layer-balanced route + attack the 13 stragglers.** (a) Run route_pipeline
      --target on the REAL board (layer-balanced, both layers used) and DRC-verify (full measure_route,
      not --no-drc): completion ~same but B.Cu now used, drc 0, shorts 0, frozen. (b) For the ~13

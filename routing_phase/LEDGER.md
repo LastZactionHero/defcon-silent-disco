@@ -178,3 +178,19 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   → they fail on INTRINSIC escape/crossing congestion near the U3 QFN, not layer capacity. | Δmetric:
   real board UNCHANGED (73.5%, 39 unconnected, via_in_pad 8) — pipeline reproduces it deterministically;
   not re-applied (layer-balanced apply + the 13 stragglers + via_in_pad→0 is D3(3), with DRC verify).
+
+[2026-06-18] D3(3) — MAJOR FIX: signals were routed ON THE REFERENCE PLANES | applying the
+  layer-balanced route surfaced it | the committed board (D2(4)+) had ~60 signal-track segments on the
+  In1 GND / In2 +3V3 planes (IR_RX, USB, VBUS, +1V1, RUN, audio JACK_R, buttons, QSPI_SS, LED_DAT...) —
+  KRT defaulted to routing on ALL 4 copper layers because earlier routes lacked --layers. This carves up
+  the reference planes (serious SI flaw). route_pipeline now restricts to --layers F.Cu B.Cu (added D3(2));
+  re-applied it to the real board. | Δmetric: signal-tracks-on-inner-planes ~60→0 (planes intact); both
+  outer layers now used (F.Cu 736 / B.Cu 372, layer_balance 0.028→0.505); completion 73.5→75.5%; footprints
+  byte-frozen; pro/sch clean; route_db v3. COST (the next cleanup, D3(4)): drc_errors 0→2 (via-to-via
+  clearance — USB DP/DM vias 0.128mm apart; BTN_VOL_UP/BTN_CH vias 0.128mm) + via_in_pad 8→11 — BOTH are
+  KRT route.py SIGNAL-via placement defects (unlike route_planes, route.py has no via-offset/spacing flag).
+  Judgment: planes-clean + both-layer is the CORRECT design foundation (signals off the planes is
+  fundamental), worth accepting 2 transient via-clearance + via_in_pad to fix with a dedicated via-fixer
+  next — better than keeping a metrically-cleaner board that's structurally wrong (signals on planes).
+  REVERTED an intermediate apply earlier this iter before realizing the planes issue made the balanced
+  board the correct one. NOTE: route.py also routes on planes unless --layers F.Cu B.Cu — keep it in the pipeline.
