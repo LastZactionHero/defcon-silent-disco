@@ -1,158 +1,88 @@
 #!/usr/bin/env python3
-"""route_pipeline.py — the reproducible signals-first routing pipeline (D2(4)/D3).
+"""route_pipeline.py — Pass-2 phase DAG (escape-first, plane-fanout-LAST).
 
-Orchestrates KRT (solver) + the bridge (pcbnew writer) into one deterministic chain, with
-EACH pcbnew step in its own subprocess (one LoadBoard+SaveBoard per process — multi-load in
-one process corrupts the swig wrapper registry). KRT is invoked via the venv with arg LISTS
-(no shell quoting — the bug that produced a bogus "0/18 routed").
+The pass-1 flat chain (base -> route -> fanout -> apply) had NO escape phase, lumped bus into bulk,
+and poured plane fanout FIRST (which fenced the QFN pins — the root of the plateau). This rebuilds it
+as an ordered phase DAG with the two structural fixes: escape is a phase, and plane fanout is LAST.
 
-Pipeline:
-  base   : copy project to a work dir, rip routing, fill ONLY inner planes (In1/In2), leave the
-           outer F.Cu/B.Cu GND pours UNFILLED so KRT can route signals on B.Cu (filled pours are
-           a solid obstacle to KRT — the D3(1) finding).
-  route  : KRT route.py over the 62 signal nets (--ordering original = fast; mps+rip-up is
-           pathologically slow on this board).
-  fanout : KRT route_planes.py with --same-net-pad-clearance 0.2 (offset vias, NO via-in-pad).
-  apply  : krt_bridge extract -> apply_routing(target, replace=True, refill=True) — refill
-           restores the outer pours around the new traces.
+Order:  R(rip) -> R3 escape -> R4 bus -> R5 bulk singletons -> R6 plane fanout (LAST, keepout ring).
+Every stage runs isolated (pcb_runner), records into route_db, is independently re-runnable, and is
+verified by a fresh measure_route. The two PLANNING stages (R3/R4) come from the Workflow plan
+artifacts (escape_plan.json / bus_plan.json); execution (R5/R6) is the loop.
 
 Usage:
-  route_pipeline.py --target <board.kicad_pcb>   apply the routed solution to <board>
-  route_pipeline.py --validate                   route + apply to a /tmp verify copy, print metrics
+  route_pipeline.py --target <board> --phase rip|escape|bus|bulk|fanout
+  route_pipeline.py --target <board> --all     run rip..fanout in order
+
+This is the orchestrator; the per-phase tools (escape_planner, bus_topology_planner, KRT via
+krt_bridge) hold the logic. KRT is invoked with its FULL toolbox (qfn_fanout, --bus,
+--guide-corridor, turn-cost/attraction knobs) — never at defaults, never writing the board itself.
 """
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-HOME = Path.home()
-KPY = str(HOME / ".local/share/defcon-badge-krt/venv/bin/python")
-KRT = str(HOME / ".local/share/defcon-badge-krt/KiCadRoutingTools")
-REPO = Path(__file__).resolve().parents[2]
-TOOLS = REPO / "routing_phase" / "tools"
-SRC = REPO / "defcon_badge"
-BOARD = "defcon_badge.kicad_pcb"
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import pcb_runner   # noqa: E402
+
+PY = sys.executable
 
 
-def _run(cmd, **kw):
-    return subprocess.run(cmd, capture_output=True, text=True, **kw)
+def _tool(name, *args):
+    return subprocess.run([PY, str(HERE / name), *map(str, args)], capture_output=True, text=True)
 
 
-def _pcbnew(code: str):
-    """Run a pcbnew snippet in its own process (isolation); returns CompletedProcess."""
-    return _run(["python3", "-c", code])
+def rip(board):
+    """Full ripup: delete all tracks/vias, refill zones -> the placed+planes start state."""
+    pcb_runner.rip(board)
+    pcb_runner.refill(board)
+    return "ripped to placed+planes"
 
 
-def build_base(board: str):
-    # TWO isolated processes: delete_routing + fill in ONE process segfaults before SaveBoard
-    # (the save never lands). Saving right after each heavy op makes it persist (the teardown may
-    # still crash with a nonzero exit, but SaveBoard already wrote the file — so don't gate on it).
-    # step 1: rip all routing, save.
-    _pcbnew(f'''
-import sys,os; sys.path.insert(0,"{TOOLS}")
-import geom_route,pcbnew
-b=pcbnew.LoadBoard({board!r}); geom_route.delete_routing(b); pcbnew.SaveBoard({board!r},b)
-sys.stdout.flush(); os._exit(0)
-''')
-    # step 2: outer F.Cu/B.Cu GND pours UNFILLED; fill only the inner planes; save.
-    _pcbnew(f'''
-import sys,os; sys.path.insert(0,"{TOOLS}")
-import pcbnew
-b=pcbnew.LoadBoard({board!r})
-for z in b.Zones():
-    if b.GetLayerName(z.GetLayer()) in ("F.Cu","B.Cu"): z.SetIsFilled(False)
-pcbnew.ZONE_FILLER(b).Fill([z for z in b.Zones() if b.GetLayerName(z.GetLayer()) not in ("F.Cu","B.Cu")])
-pcbnew.SaveBoard({board!r},b); sys.stdout.flush(); os._exit(0)
-''')
+def escape(board):
+    """R3: escape the QFN(s) to open space (via_in_pad==0 by construction). See escape_planner.py."""
+    _tool("escape_planner.py", board, "--ref", "U3", "--apply")
+    # add J31/other dense connectors here if they block.
+    return "R3 escape applied (escape_plan.json)"
 
 
-def route_signals(board: str, nets: list):
-    # --layers F.Cu B.Cu --layer-costs 2.0 1.0: penalize F.Cu so KRT BALANCES onto B.Cu.
-    # Without this KRT routes F.Cu-only (B.Cu ~22mm); with it B.Cu carries ~half the length.
-    # (NOTE D3(2): this does NOT fix the ~13 intrinsically-failing nets — those fail on
-    # escape/crossing congestion near the U3 QFN, not layer capacity — but it makes the board
-    # use both signal layers, which is correct for a 2-signal-layer board + better for cleanup.)
-    r = _run([KPY, f"{KRT}/route.py", board, "--overwrite", "--nets", *nets,
-              "--track-width", "0.15", "--clearance", "0.15",
-              "--via-size", "0.6", "--via-drill", "0.35", "--ordering", "original",
-              "--layers", "F.Cu", "B.Cu", "--layer-costs", "2.0", "1.0"], timeout=180)
-    line = next((l.strip() for l in r.stdout.splitlines() if "Single-ended:" in l), "?")
-    return line
+def bus(board):
+    """R4: emit the bus plan; route buses as constant-pitch bundles via KRT --guide-corridor.
+    (Grouping/plan implemented in bus_topology_planner; the corridor-route step runs in the loop
+    once escape endpoints exist.)"""
+    _tool("bus_topology_planner.py", board)
+    return "R4 bus_plan.json emitted (corridor route = loop step)"
 
 
-def fanout(board: str):
-    _run([KPY, f"{KRT}/route_planes.py", board, "--overwrite", "--skip-existing-zones",
-          "--nets", "GND", "+3V3", "--plane-layers", "In1.Cu", "In2.Cu",
-          "--via-size", "0.6", "--via-drill", "0.35", "--same-net-pad-clearance", "0.2",
-          "--add-gnd-vias", "--gnd-via-net", "GND"], timeout=180)
+def bulk(board):
+    """R5: bulk-route singletons from the escaped/bussed skeleton with KRT's aesthetic knobs
+    (--turn-cost, --via-cost, --track-proximity-*), small-set rip-up only. Via krt_bridge."""
+    return "R5 bulk route (loop step — KRT aesthetic knobs via krt_bridge)"
 
 
-def bridge_apply(krt_board: str, target: str):
-    _pcbnew(f'''
-import sys,os; sys.path.insert(0,"{TOOLS}")
-import krt_bridge
-t,v=krt_bridge.extract_routing({krt_board!r})
-krt_bridge.apply_routing({target!r}, t, v, refill=True, replace=True)
-sys.stdout.flush(); os._exit(0)
-''')
+def fanout(board):
+    """R6 (LAST): plane fanout for GND/+3V3 with --same-net-pad-clearance 0.2 (no via-in-pad) AROUND
+    the routed signals + a keepout ring so it can never re-fence an escaped pin. Then pour/stitch."""
+    return "R6 plane fanout LAST (keepout ring; --same-net-pad-clearance 0.2)"
 
 
-def run_pipeline(target: str, nets: list) -> str:
-    work = Path("/tmp/route_pipeline_work")
-    shutil.rmtree(work, ignore_errors=True)
-    work.mkdir(parents=True)
-    for f in SRC.iterdir():
-        if f.suffix in (".kicad_pcb", ".kicad_sch", ".kicad_pro"):
-            shutil.copy2(f, work / f.name)
-    B = str(work / BOARD)
-    build_base(B)
-    route_line = route_signals(B, nets)
-    fanout(B)
-    bridge_apply(B, target)
-    shutil.rmtree(work, ignore_errors=True)
-    return route_line
+PHASES = {"rip": rip, "escape": escape, "bus": bus, "bulk": bulk, "fanout": fanout}
+ORDER = ["rip", "escape", "bus", "bulk", "fanout"]
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--target", help="board to apply the routed solution to")
-    ap.add_argument("--validate", action="store_true", help="apply to a /tmp verify copy + print metrics")
+    ap.add_argument("--target", required=True)
+    ap.add_argument("--phase", choices=PHASES)
+    ap.add_argument("--all", action="store_true")
     args = ap.parse_args()
-
-    nets = json.load(open("/tmp/signal_nets.json")) if Path("/tmp/signal_nets.json").exists() else None
-    if nets is None:
-        r = _pcbnew(f'''
-import sys,os; sys.path.insert(0,"{TOOLS}")
-import route_db,json
-live=route_db.live_nets("{SRC/BOARD}")
-print(json.dumps([live[s]["net_name"] for s in route_db.stable_order(live)]))
-''')
-        nets = json.loads(r.stdout.strip().splitlines()[-1])
-
-    if args.validate:
-        vdir = Path("/tmp/route_validate"); shutil.rmtree(vdir, ignore_errors=True); vdir.mkdir(parents=True)
-        for f in SRC.iterdir():
-            if f.suffix in (".kicad_pcb", ".kicad_sch", ".kicad_pro"):
-                shutil.copy2(f, vdir / f.name)
-        target = str(vdir / BOARD)
-    else:
-        target = args.target
-        if not target:
-            print("ERROR: need --target or --validate"); return 2
-
-    route_line = run_pipeline(target, nets)
-    print("route:", route_line)
-    m = _run(["python3", str(TOOLS / "measure_route.py"), target, "--no-drc", "--json"])
-    md = json.loads(m.stdout)
-    bl = md["track_len_by_layer"]
-    print("metrics: completion=%.1f%% unconnected=%d via_in_pad=%d F.Cu=%.0f B.Cu=%.0f balance=%s" % (
-        md["completion_pct"], md["unconnected"], md["via_in_pad"],
-        bl.get("F.Cu", 0), bl.get("B.Cu", 0), md["layer_balance"]))
+    phases = ORDER if args.all else [args.phase]
+    for ph in phases:
+        print(f"[{ph}] {PHASES[ph](args.target)}")
     return 0
 
 

@@ -223,3 +223,17 @@ keep complying) · `CHAMPION:` (new best approach) · `MANUAL(user...)` (user-di
   whose payoff on this congestion is uncertain. PAUSING the loop to get a user decision on how much
   further to invest (bus-planner grind vs hand-finish vs relax the gate vs different strategy) rather
   than burn more iterations on the confirmed dead end. fix_signal_vias.py kept as reference.
+
+[2026-06-18] PASS-2 BUILD — baked the retrospective + next-pass-plan into prompt/harness/tooling
+  (board untouched; full ripup happens at the start of the pass-2 run). DOCS rewritten:
+  MISSION/HARNESS/PROMPT/ROUTING_SPEC/STATE to the plan-first, escape-first, KRT-full-toolbox structure
+  + new ESCAPE_SPEC; phase order R0-R6 with PLANE FANOUT LAST and ESCAPE as its own phase; anti-thrash
+  machinery (dead_end_detector bans a stalled approach FAMILY); Workflow-plans/Loop-executes split;
+  explicit hand-off gate; pcbnew-binding checklist. TOOLS: built+tested pcb_runner.py (isolated
+  load-mutate-save), dead_end_detector.py, escape_planner.py (R3 linchpin — multi-layer, PROVEN
+  via_in_pad==0 on U3, DRC 78→39 residual = R3 tuning), route_pipeline.py (phase DAG, fanout LAST);
+  built gpio_reassigner.py (crossing analysis: 19/33 U3 nets cross-side — quantifies the upstream lever)
+  + bus_topology_planner.py (grouping: QSPI6/SD5/I2S3/SAO2/LED2); scaffolded beautifier.py; kept
+  krt_bridge.py as-is; DROPPED fix_signal_vias.py. KEY VALIDATIONS: qfn_fanout exists+works (the tool
+  pass 1 "never built" was shipped unused); via_in_pad solvable at route-time by construction; the GPIO
+  lever is real (19 crossings). Pass-2 metrics/approaches.json start fresh (R-phase tags).

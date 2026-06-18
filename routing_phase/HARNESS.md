@@ -1,182 +1,117 @@
-# HARNESS — autonomous routing loop (operational core)
+# HARNESS — Badge Routing Pass 2 (operational core)
 
-You are the iteration engine. Every wake-up you run ONE iteration of the procedure below,
-commit, log, and schedule the next wake-up. Read `MISSION.md` for the why; this is the how.
-The rules are tuned to prevent the prior runs' failures (see placement_phase_2 — same lessons).
+You are the iteration engine. cwd is the repo root. Mission-control lives in `routing_phase/`;
+the board is `defcon_badge/defcon_badge.kicad_pcb`. Read `MISSION.md` for the why.
 
-cwd is the repo root `/home/zach/dev/defcon_badge`. Mission-control lives in `routing_phase/`;
-the board is `defcon_badge/defcon_badge.kicad_pcb` (project `.kicad_pro`, schematic `.kicad_sch`).
+## Structure: a Workflow plans, a Loop executes
+- **PLANNING (R2 GPIO eval, R3 escape, R4 bus/topology) is a deterministic WORKFLOW**, run once,
+  order-dependent, producing a frozen plan artifact (`escape_plan.json`, `bus_plan.json`,
+  `gpio_remap.json`). It MUST complete before execution. These never belonged in a wake-up loop —
+  that is why pass 1 never did escape/bus planning (always "next iteration").
+- **EXECUTION (R5 bulk singleton route + beautify, R6 fanout/pour/verify) is the self-scheduling
+  LOOP** with the anti-thrash brakes below. R0/R1 setup may be either.
 
-## LOCKED resolutions (do not route around these)
-1. **Authoritative geometry + single writer, now for COPPER.** All board reads/writes go through
-   pcbnew via `placement_phase_2/tools/geom.py` (extended in D0 with `load_tracks/load_vias/
-   add_track/add_via/delete_routing`), never by regex/text-editing s-expressions. Every write
-   calls `writer_lock.assert_writable()` FIRST (refuses while KiCad holds the board open). A
-   router that adds tracks/vias obeys this exactly: create `pcbnew.PCB_TRACK`/`PCB_VIA`, set
-   layer/net(by `FindNet(name)`)/width/start/end via the API, `b.Add()`, refill zones, `SaveBoard`.
-   KRT writes `.kicad_pcb` natively — when KRT writes, the loop still owns the file: assert
-   writable before invoking KRT, and treat KRT's output as a proposed write to be measured/gated.
-2. **Completion truth = DRC, with a divergence guard.** The primary metric `unconnected` comes
-   from pcbnew `GetConnectivity().GetUnconnectedCount(False)` AND is cross-checked against
-   kicad-cli DRC `unconnected_items`. `measure_route.py` emits `unconnected_divergence`; if it is
-   non-zero the cheap metric is lying — STOP and trust DRC (the routing analog of Resolution 1).
-3. **DETERMINISM is an un-loosenable invariant.** A route step is only trusted if re-running it
-   from the same input reproduces byte-identical copper. The determinism gate (route twice into
-   two temp boards, compare sorted (net,layer,x0,y0,x1,y1,width)+via tuples) is a hard Phase-D
-   gate. A non-zero diff is a router bug — fix the router, never the gate. Force KRT single-thread
-   / fixed order; never introduce time/PID/RNG-seeded behavior.
-4. **AESTHETIC gate, every phase exit.** "Render and LOOK" is enforced, not advice — autorouted
-   spaghetti can be DRC-clean. At every phase exit run the aesthetic metrics (via_count,
-   off_axis_segments==0, bus_pitch_variance, corner_count) AND render F.Cu+B.Cu+3D (pcb-views) and
-   actually look. A phase does not exit while it looks machine-generated.
-5. **Incremental from the start (route_db).** Every routed net is recorded in `route_db.json`
-   keyed by its STABLE signature = hash(sorted pin-set of "REFDES-PADNUM"), NOT the (churning)
-   net name. Unchanged nets are REPLAYED, never re-searched. This is built in D0 and used every
-   time copper is laid, so re-runnability is structural, not bolted on later.
-6. **Lock definitions, not just thresholds.** You may TIGHTEN a gate. You may not redefine what a
-   metric means, nor delete a capability that broke, to pass. Either is a `REVIEW:` entry + human
-   adjudication; keep complying meanwhile.
+## LOCKED resolutions (do not route around)
+1. **Authoritative geometry + single writer.** All board reads/writes via `geom_route.py` (pcbnew),
+   guarded by `writer_lock`. Every mutating tool calls the shared `pcb_runner.py` isolated
+   load-mutate-save (see pcbnew checklist). KRT solves; pcbnew writes (the `krt_bridge` seam — KRT
+   writes net NAMES, KiCad 10 wants CODES). Never text-edit s-exprs for geometry.
+2. **via_in_pad == 0 is solved at ROUTE TIME, by construction.** Escape every pad on its own layer;
+   place any via in OPEN space, never on a pad. Post-hoc via-moving is a CONFIRMED DEAD END (pass 1,
+   4 variants — moving a via drags its route → needs re-routing → clearance/shorts). `fix_signal_vias.py`
+   is DELETED; do not resurrect the approach.
+3. **Plane fanout is LAST (R6), with a keepout ring** around escaped QFN pins. Signals escape +
+   route first. This encodes pass 1's signals-first lesson as structure.
+4. **Completion truth = DRC + a divergence guard** (`measure_route`: pcbnew unconnected vs
+   kicad-cli `unconnected_items`; if they disagree, trust DRC).
+5. **Determinism is un-loosenable** (route-twice → identical, gated where copper exists).
+6. **Aesthetic render-gate every phase exit** — metrics (bus_pitch_var≈0, off_axis==0, acute low,
+   via_count budget) AND render F.Cu/B.Cu/3D and LOOK. A phase cannot exit reading machine-generated.
+7. **Locked gates/definitions — tighten only.** A definition change or capability deletion to pass
+   is a `REVIEW:` + human sign-off.
 
-## Per-wake-up procedure (do these in order, every time)
-0. **Single-writer preflight:** run `python3 placement_phase_2/tools/writer_lock.py
-   defcon_badge/defcon_badge.kicad_pcb`. If LOCKED, KiCad is open — do read-only work
-   (measure/render/plan) or reschedule; do not write this iteration.
-1. **Read (every iteration):** `routing_phase/MISSION.md`, this file, `routing_phase/
-   routing_rules.md`, `badge_hw_design.md`. Consult `routing_phase/ROUTING_SPEC.md` +
-   `STACKUP_SPEC.md` and `placement_phase_2/placement_research.md` (Autorouters section) on demand.
-2. **Load durable memory:** tail of `routing_phase/LEDGER.md` + the ENTIRE
-   `routing_phase/metrics.jsonl` (small — read all of it; it is your anti-thrash trend signal).
-   Read `routing_phase/STATE.md` for the phase pointer + last intended action.
-3. **Identify current phase** and its exit gate (below).
-4. **Measure:** run `python3 routing_phase/tools/measure_route.py defcon_badge/defcon_badge.kicad_pcb
-   --phase D? --iter N --append routing_phase/metrics.jsonl`; confirm exactly one row landed.
-   Check `unconnected_divergence` (Resolution 2) — if non-zero, trust DRC and fix the metric.
-   *(In D0, building `measure_route.py` IS the work and the baseline row is its output.)*
-   **CAUTION (learned 2026-06-17):** some `kicad-cli sch erc` / BOM-export invocations REWRITE the
-   approved `.kicad_sch`/`.kicad_pro` (lib-symbol re-serialization, BOM-field injection). The
-   schematic is FROZEN. Run ERC on a `/tmp` copy of the project (sch+pro+pcb together), or assert
-   `git diff --quiet defcon_badge/*.kicad_sch defcon_badge/defcon_badge.kicad_pro` after measuring
-   and revert any stray rewrite. Never let a measure mutate the frozen schematic. (DRC on the .pcb
-   needs the sibling .kicad_pro present — copy it alongside any /tmp board copy.)
-5. **Convergence check** over the last K=5 rows of the phase's primary metric:
-   - **Improving** (>2% relative gain on completion, or the active sub-metric): continue with the
-     single highest-leverage action.
-   - **Plateaued/oscillating AND gate met:** advance phase (update STATE pointer; commit a
-     phase-transition entry).
-   - **Plateaued/oscillating AND gate NOT met:** **ESCALATE.** You may not repeat the stalled
-     move. Switch approach (different KRT flags / net order / bus strategy / build the missing
-     piece of our own router), or write a `BLOCKER:` and implement the most *different* method.
-6. **Choose the single highest-leverage action.** Planning/tool-building is FIRST-CLASS — an
-   iteration need not lay copper (writing a spec or a tool counts).
-7. **Execute via tools.** Prefer building/improving a tool over editing files. All board writes
-   via geom/pcbnew or KRT, guarded by the writer lock. After any copper write, update `route_db`.
-7b. **Phase-exit gate (MANDATORY at every phase exit and any iteration that changed copper):**
-   run the aesthetic metrics + the determinism gate (where copper exists) AND render+LOOK
-   (pcb-views F.Cu/B.Cu/3D). A phase does not exit while a gate is red or the render shows junk.
-8. **Commit + log:** message `D?(N): <one-line summary>`. Append one `LEDGER.md` line
-   (action | rationale | result | Δmetric). Confirm this iteration's `metrics.jsonl` row exists.
-9. **Schedule next wake-up:** `ScheduleWakeup` with `routing_phase/PROMPT.md` contents verbatim.
-   `delaySeconds`: 90–270 in active build/route mode (cache warm); 1200–1800 when launching a
-   long route/experiment so you wake to results. Stop only when MISSION "satisfied" holds, or
-   after a ~150-iteration sanity cap (write a wrap-up entry and stop).
+## Per-iteration procedure (execution loop)
+0. **Preflight:** `pcb_runner` writer-lock check; if KiCad holds the board open, read-only iteration.
+1. **Read:** MISSION, this file, `routing_rules.md`, `badge_hw_design.md`, the relevant SPEC.
+2. **Load memory:** tail of `LEDGER.md` + ALL of `metrics.jsonl` + `approaches.json` (the
+   tried-approaches ledger) + `STATE.md` (phase pointer, this phase's PRIMARY metric + escalation ladder).
+3. **Dead-end preflight (ANTI-THRASH, HARD):** run `dead_end_detector.py`. It reads `metrics.jsonl`
+   + `approaches.json`. If the action you intend uses an approach FAMILY that is `status:banned`, the
+   iteration is REFUSED — take the next rung of the phase's pre-declared escalation ladder instead.
+   (See "Anti-thrash" — this is code, not advice.)
+4. **Measure:** `measure_route.py … --append metrics.jsonl`; check `unconnected_divergence==0`.
+5. **Convergence check** over the last K=3 rows tagged with the SAME approach family, judged ONLY
+   against the phase's declared PRIMARY metric: <2% gain for 3 rows of one family → that family is
+   auto-BANNED in `approaches.json`; you MUST switch to the next ladder rung. A "finding-only" or
+   "refactor" iteration is allowed but does NOT reset the dead-end counter and does NOT count as
+   progress.
+6. **One highest-leverage action**, declaring its approach `family` tag up front.
+7. **Execute via tools** (pcb_runner-isolated writes; update `route_db`).
+7b. **Phase-exit gate:** aesthetic metrics + determinism (where copper exists) + render-and-look.
+8. **Commit + log:** `R?(N): summary`; one `LEDGER.md` line; update `approaches.json`; confirm the
+   `metrics.jsonl` row.
+9. **Schedule next** (`ScheduleWakeup` with `PROMPT.md`), OR if the HAND-OFF gate fired, STOP +
+   produce the hand-off package.
 
-## Durable memory (append-only — NEVER rotate/truncate; all under `routing_phase/`)
-- **`metrics.jsonl`** — one JSON row per iteration. Required keys: `ts, phase, iter, approach,
-  commit` + every metric: `completion_pct, unconnected, unconnected_divergence, shorts,
-  drc_errors, drc_by_type, track_count, via_count, via_in_pad, track_len_mm, track_len_by_layer,
-  usb_diff_paired, usb_diff_skew_mm, power_min_width_ok, acute_angles, off_axis_segments,
-  bus_pitch_var, zones_filled_ok, determinism_ok, erc_errors`. Never skip or delete a row.
-- **`LEDGER.md`** — append-only decision log: `[ISO-date] D?(N) — action | rationale | result |
-  Δmetric`. Prefixes: `BLOCKER:` `REVIEW:` `CHAMPION:`.
-- **`STATE.md`** — a small pointer only (phase, approach, next action, this phase's exit gate).
-- **`route_db.json`** — per-net routed geometry keyed by stable signature (Resolution 5).
+## Anti-thrash (machine-enforced — this is the #1 process fix)
+- **`approaches.json`** — one record per (phase, family): {first_iter, last_iter, best_primary,
+  status: active|banned|champion, reason}. Keyed on a COARSE family tag the agent declares (e.g.
+  `posthoc-via-move`, `krt-default-route`, `escape-multilayer`), so cosmetic re-skins of a dead
+  approach are caught (the 4 via-fixer variants were ONE family).
+- **Ban rule:** 3 same-family iterations with <2% primary-metric gain → banned; preflight refuses it.
+- **Budget:** ≤3 iterations per family before it must show >2% gain or auto-ban.
+- **Escalation ladder, pre-declared per phase in STATE.md** — when a family is banned, take the NEXT
+  rung automatically (don't invent a new variant of the banned rung). E.g. R3 ladder: KRT qfn_fanout
+  multi-layer → manual escape-corridor seeding → GPIO remap (R2) → hand-off.
+- **Root-cause gate:** retrying a family already in the ledger requires writing a one-line
+  falsifiable hypothesis ("differs by X, predicted to move M by N"); two misses → ban.
+
+## pcbnew binding checklist (BAKE IN from R0 — pass 1 rediscovered these the hard way)
+- ONE LoadBoard + ONE SaveBoard per process; a 2nd in-process load corrupts the swig registry. Every
+  mutation goes through `pcb_runner.py` (run-snippet-isolated).
+- `os._exit(0)` immediately after SaveBoard (heavy mutate-then-save segfaults during teardown AFTER
+  the file is written). Do NOT gate success on the exit code — check the file/metrics.
+- `safe_board` (read from a /tmp project copy) for ALL read-only analysis — pcbnew flushes BOM field
+  defs into the frozen .kicad_pro on exit otherwise.
+- Frozen-file git guard after every iteration: assert `.kicad_sch`/`.kicad_pro` git-clean + footprint
+  hash unchanged; auto-revert stray rewrites. Run ERC/DRC only on /tmp project copies (with the .kicad_pro).
+- Suppress swig assert noise (grep -vE 'PROPERTY_ENUM|memory leak') so real output isn't buried.
+- Refill zones in the SAME isolated save process as the copper edit.
+- KRT rip-up is pathologically slow on this board — prefer escape+bus planning; if rip-up is needed,
+  scope it to a SMALL net set (`--rip-existing-nets PATTERN`), never all-nets.
 
 ## Phase exit gates
+- **R0 Setup:** `measure_route` emits full schema + baseline row; `pcb_runner` used by geom/bridge;
+  KRT `qfn_fanout.py` + a `--guide-corridor` invocation verified runnable on /tmp; divergence==0.
+- **R1 Stackup/netclass:** real 4-layer (In1 GND/In2 +3V3, F/B GND pours), USB_DIFF_90 pattern+width
+  fixed; zones fill; unrouted DRC clean of NEW stackup errors; baseline frozen.
+- **R2 GPIO eval:** `gpio_reassigner` reports current-vs-best QFN-escape crossing count + a ranked
+  remap proposal with the reduction quantified; USER adjudication recorded (apply+re-sync OR proceed)
+  BEFORE any escape copper. If applied: schematic re-synced, footprints byte-frozen.
+- **R3 QFN escape:** every QFN signal pin escaped to open space; **via_in_pad==0** on the escaped set
+  (vias in open space, not on pads); escapes DRC-clean (multi-layer so 0.4mm-pitch stubs clear the
+  0.15mm rule); no signal on an inner plane; determinism passes; render = clean radial pattern.
+- **R4 Bus planning:** named buses (SD/I2S/QSPI/SAO) routed as constant-pitch bundles in corridors;
+  `bus_pitch_var`≈0; acute/off-axis low on bused copper; determinism; render = hand-drawn bundles.
+- **R5 Bulk + beautify:** completion==100 OR a documented BLOCKER + hand-off package; via_in_pad==0;
+  shorts==0; routing drc_errors==0; off_axis==0; acute→0; via_count in budget; determinism_ok.
+- **R6 Fanout/pour/verify:** plane fanout placed (keepout ring honored, NO via-in-pad, no fenced
+  escape); zones filled + GND-stitched; ALL hard gates pass after fill; incremental 1-net re-route
+  demonstrated; human render confirms hand-designed — OR the hand-off package is delivered.
 
-### D0 — Setup & instrument (exit when all true)
-- `routing_phase/tools/measure_route.py` exists, runs, emits the full metric schema, appends a
-  baseline row (completion_pct≈0 on the unrouted board, unconnected=baseline, determinism_ok n/a).
-- geom extended with track/via read + `add_track/add_via/delete_routing` (writer-lock-guarded);
-  `route_db.json` skeleton exists (load/save, net-signature, diff NEW/CHANGED/DELETED/UNCHANGED).
-- KRT verified runnable (`setup.sh` reproduces the env; a trivial KRT invocation works).
+## Hand-off gate (define the stop — pass 1 had none short of 100%)
+Trigger: completion <2% gain over the last 6 iterations AND every R5-ladder family is `banned` AND
+the unrouted nets are flagged intrinsic-QFN-congestion (not capacity/ordering). On trigger: STOP
+scheduling; produce the HAND-OFF PACKAGE — (a) the board at its best clean state (escapes+buses done,
+planes intact, DRC-clean on the routed subset, determinism verified); (b) ranked unrouted nets with
+escape endpoints + destination zones; (c) per-net corridor hints; (d) the note that KiCad interactive
+push-and-shove is the right tool for the last few. The loop does the decomposable 75–90%; the
+congested handful is a human's.
 
-### D1 — Stackup & rules rework (exit when all true)
-- Stackup reworked per `STACKUP_SPEC.md`: thickness 1.6mm; real dielectric block; In1 solid GND
-  plane; In2 +3V3-dominant pour (+ optional GND); F.Cu & B.Cu GND pours; the 3 ported artifact
-  zones deleted and recreated. Zones fill clean.
-- USB_DIFF_90 netclass fixed: pattern matches the real nets (`/MCU_Core/USB_DP`, `USB_DM`, and the
-  connector-side `Net-(U3-USB_DP/DM)`); `diff_pair_width` 0.8→0.17mm, gap 0.13–0.15mm.
-- `kicad-cli pcb drc` (project file present) on the unrouted board is clean of NEW stackup/zone
-  errors (pre-existing silk/courtyard/lib types are out of scope, like placement's dfm scoping).
-- Baseline measure row written; `unconnected_divergence==0`.
-
-### D2 — Plane fanout + critical pre-route (exit when all true)
-- Every GND and +3V3 pad stitched to its plane with a via (deterministic fanout); planes connected.
-- Critical nets routed AND locked: USB diff pair (coupled, length-matched, over solid In1 GND, no
-  plane split under it), crystal XIN/XOUT loop (tight, guard), QSPI flash bus, I2S GP6/7/8 bus —
-  each as clean structured copper, recorded in `route_db`. `completion_pct` rising; `shorts==0`;
-  no NEW drc_errors on the routed subset; `usb_diff_paired==true`, `usb_diff_skew_mm<=2.5`.
-
-### D3 — Bus + bulk route (exit when all true)
-- `completion_pct==100` (`unconnected==0`, `unconnected_divergence==0`) OR a documented `BLOCKER:`
-  listing the unrouted nets and every approach tried. `shorts==0`. `via_in_pad==0`. Critical
-  pre-routes from D2 preserved (route_db replayed them, not re-searched).
-
-### D4 — Cleanup & DRC (exit when all true)
-- `drc_errors==0` (routing types: clearance/track_dangling/via_dangling/copper_edge_clearance/
-  track_width/annular_width/hole_clearance), `shorts==0`, `acute_angles==0`,
-  `off_axis_segments==0`, `power_min_width_ok` (power nets ≥0.30mm), `completion_pct==100`,
-  `via_in_pad==0` (USER DIRECTIVE — see below), `via_count` within the aesthetic budget,
-  `bus_pitch_var` near 0. Track length not regressed.
-
-**`via_in_pad==0` — USER DIRECTIVE (locked, 2026-06-17): NO via-in-pad.** Vias may not land on
-pad copper (needs filled/plated vias = cost; pointless at this density). A proper fanout/stitch via
-is OFFSET from the pad with a short stub. Enforce on the KRT plane fanout with
-`--same-net-pad-clearance 0.2` (default −1 allows via-in-pad; ≥0.2 forces offset vias + stubs →
-`via_in_pad` 95→0, verified). Gated from D2 onward (any iteration that places vias). This is a hard
-gate; do not weaken it.
-
-### D5 — Pour, stitch & verify (exit when all true)
-- All zones filled & connected (`zones_filled_ok`); structured GND stitching vias near each
-  fast-edge cluster (USB, crystal, I2S, LED clock). A FULL re-run of all hard gates still passes
-  AFTER fill. **`determinism_ok==true`** (route-twice identical). A synthetic 1-net incremental
-  re-route touches only that net (re-runnability demonstrated). `erc_errors` not worse than the
-  routing-start baseline. **Human-eyes render** (F.Cu, B.Cu, 3D) confirms hand-designed look.
-
-## LOCKED — you may not weaken these
-- The Phase-D quality gates (tighten only). Metric DEFINITIONS (Resolution 6). Authoritative
-  geometry + single writer (Resolution 1). Completion=DRC truth + divergence guard (Resolution 2).
-  The determinism gate (Resolution 3). The aesthetic render gate every phase exit (Resolution 4).
-  The route_db/incremental discipline (Resolution 5). Measure-every-iteration. Plan-before-build.
-  Convergence-escalation (no repeating a stalled move). Tools-over-edits. Placement is frozen
-  (footprints never move).
-If you believe a locked rule is genuinely wrong, write a `REVIEW:` entry and keep complying.
-
-## Anti-patterns (do the opposite)
-- Hand-editing the board to fix a symptom → build/improve a tool.
-- Repeating a non-improving move → escalate / switch approach.
-- Declaring done by lowering/redefining a gate → forbidden.
-- Accepting DRC-clean spaghetti → it must also pass the aesthetic + render gate.
-- Letting KRT run multi-threaded / nondeterministic → force single-thread, fixed order; gate on
-  determinism.
-- Re-routing the whole board for a 1-net change → replay unchanged nets from route_db.
-- Trusting `completion_pct` when `unconnected_divergence>0` → trust DRC, fix the metric.
-- Writing the board while KiCad has it open → read-only that iteration.
-
-## Existing assets (reuse, don't reinvent)
-- **REUSE AS-IS:** `placement_phase_2/tools/writer_lock.py` (single-writer); `placement_phase_2/
-  tools/measure.py` DRC plumbing (`run_kicad_cli`/`collect_violations`/`sev`/`_item_ref`, the
-  `--append`/metrics-row harness, `POWER_RE`/`GROUND`); `placement_phase_2/tools/geom.py`
-  `load_pcb`/`board_outline`; the `pcb-views` skill (render F.Cu/B.Cu/3D) for the render gate;
-  the `Makefile`. `defcon_badge/tools/sync_nets_pcbnew.py` to re-sync nets after any board edit.
-- **ENGINE:** KRT at `~/.local/share/defcon-badge-krt/KiCadRoutingTools` (pinned commit in
-  `KRT_PINNED_COMMIT.txt`), run via `~/.local/share/defcon-badge-krt/venv/bin/python`. Key flags:
-  `--nets`/`--rip-existing-nets` (incremental), `--guide-corridor[-layer/-spacing]` (bus seam),
-  `--bus`/`--bus-attraction-*`, `--turn-cost`/`--via-cost`/`--track-proximity-cost` (aesthetics),
-  `--power-nets[-widths]`, `--impedance`/`--track-width`/`--clearance`, `--ordering mps`.
-- **BUILD (per their specs):** `measure_route.py`, geom track/via extension, `route_db.py`,
-  `bus_plan.py` (emit guide corridors), `krt_route.py` (wrapper), `beautify.py`, `route_pipeline.sh`.
-
-## Skills authored
-(Append one line per new skill: name — purpose.)
-- (pending) badge-routing — reusable aesthetic/deterministic/incremental routing system on KRT.
+## Tools (keep / rebuild / drop)
+- KEEP: `geom_route.py`, `route_db.py`, `measure_route.py`, `writer_lock.py`.
+- REBUILD: `route_pipeline.py` (phase DAG), `krt_bridge.py` (extractor via KRT `kicad_parser`),
+  `rework_stackup.py` (parameterized, once at R1).
+- DROP: `fix_signal_vias.py` (dead end — deleted).
+- ADD: `pcb_runner.py`, `dead_end_detector.py`, `escape_planner.py` (the linchpin), `bus_topology_planner.py`,
+  `gpio_reassigner.py`, `beautifier.py`.

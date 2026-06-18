@@ -43,3 +43,5 @@ __pycache__/
 Thumbs.db
 .vscode/
 .idea/
+routing_phase/escape_plan.json
+routing_phase/bus_plan.json
