@@ -24,7 +24,7 @@ Date: 2026-06-20
 | U5 | TM8211 DAC | ✅ **now matches** | ✅ | clean |
 | U6 | TDA1308 | ✅ | ✅ | clean |
 | U7 | TSOP4838 | ✅ | ✅ | minor note |
-| LED1–4 | SK9822(-EC20) | ⚠️ verify variant | ✅ (chain consistent) | verify |
+| LED1–4 | SK9822(-EC20) | ✅ (datasheet-confirmed) | ✅ | clean |
 | Y1 | ABM8 12 MHz | ✅ | ✅ | clean |
 | J1 | USB-C 16P (UFP) | ✅ | ✅ | clean |
 | D1/R22 | IR LED driver | n/a | ⚠️ direct GPIO drive | MEDIUM |
@@ -53,18 +53,17 @@ schematic comment so they stop referencing a non-existent S8050/68 Ω.
 
 ---
 
-## ⚠️ Verify — SK9822-EC20 pin order
+## SK9822 — confirmed correct (datasheet provided)
 
-The `badge:SK9822` symbol uses `1=DIN, 2=CIN, 3=GND, 4=VDD, 5=COUT, 6=DOUT`,
-which matches the **common SK9822 (5050)** datasheet pinout, and the daisy
-chain is internally consistent (DOUT→DIN, COUT→CIN down the string; VDD/GND/
-inputs correct). However, the BOM part is the **2020 "EC20"** variant, and I
-could not pull the OPSCO/Normand SK9822-EC20 datasheet through the sandbox
-(PDF host blocked); web summaries conflicted on whether the EC20 reuses the
-same pad order. Action: confirm the symbol + footprint pad numbering against
-the specific **SK9822-EC20** datasheet before fab. (The maintainer's
-`49a05f8` commit message claims this was datasheet-verified — if so this is
-just a paper-trail confirmation.)
+Resolved against the SK9822 datasheet pinout (`1 SDI, 2 CKI, 3 GND, 4 VDD,
+5 CKO, 6 SDO`). The `badge:SK9822` symbol (`1 DIN, 2 CIN, 3 GND, 4 VDD,
+5 COUT, 6 DOUT`) matches, and the footprint's **local** pad geometry lines up
+exactly with the datasheet top view (pad 1 = bottom-right = SDI … pad 6 =
+bottom-left = SDO), same handedness (CCW) — **no mirror**. The part is placed
+with `rot=180`, which only rotates the package on the board (pad 1 appears at
+top-left in the layout) without changing the pad↔pin correspondence. Net
+connections give the correct chain direction (LEDn DOUT/COUT → LEDn+1 SDI/CKI).
+✅
 
 ---
 
