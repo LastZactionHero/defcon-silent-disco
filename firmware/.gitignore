@@ -1,0 +1,13 @@
+# Build tree: cloned MicroPython + pico-sdk, ~350 MB.
+# Recreated from scratch by tools/build_firmware.sh.
+.build/
+
+# Third-party Helix/picomp3lib decoder source.
+# tools/build_firmware.sh clones it AND applies the 4-byte-alignment patch to
+# src/buffers.c that the Cortex-M0+ requires, so it is fully reproducible and
+# does not belong in this repo. Do not hand-edit it in place -- put any new
+# patch into build_firmware.sh or it will be silently lost on the next clone.
+cmodules/mp3/picomp3lib/
+
+# sed -i backups left by the patch step
+*.bak
