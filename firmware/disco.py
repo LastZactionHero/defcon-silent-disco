@@ -133,27 +133,33 @@ K = BLACK   # an off LED is a design element: electrically perfect, and it buys
 #     and reads as glare that washes out everything beside it -- the original
 #     glacier (two whites of four) looked dull in practice.  Rule: at most ONE
 #     white per theme, used as a glint; contrast comes from black instead.
+# Fourth lesson, also from eyeballing hardware: NAKED PRIMARIES READ CHEAP.
+# Pure R/G/B pairings look like a toy; the looks that pop are secondaries
+# (Cy, M, Y) and adjacency blends (B|M purple, G|Cy teal, R|M crimson).  So
+# themes lean on blends, the set skews cool (blues/greens/purples, per taste),
+# and no theme pairs two naked primaries for its identity -- sirens excepted,
+# because sirens is a bit, not an aesthetic.
 THEMES = (
-    (B, Cy, B, W),      # glacier    deep ice, one white glint
+    (Cy, B, Cy, M),     # glacier    ice blues with a violet depth
+    (G, Cy, M, B),      # aurora     green -> cyan -> magenta -> blue sweep
     (M, B, Cy, M),      # synthwave  neon sunset; M|B edge reads purple
+    (B, M, B, K),       # twilight   deep purple night over a dark gap
+    (Cy, G, Cy, B),     # lagoon     tropical teal via the G|Cy blend
     (M, R, Y, R),       # sunset     magenta -> red -> gold gradient
     (R, Y, R, K),       # fire       flames over a dark coal
-    (G, K, G, G),       # matrix     terminal green with a void
-    (G, Cy, M, B),      # aurora     northern lights sweep
-    (G, Y, G, K),       # toxic      radioactive glow
-    (Cy, M, Cy, M),     # miami      hard neon alternation
+    (G, K, G, G),       # matrix     terminal green with a void (iconic; keep)
+    (G, Y, G, K),       # toxic      radioactive lime
+    (Cy, M, Cy, M),     # miami      hard neon alternation, all secondaries
     (M, B, M, B),       # defcon     reads purple at distance
     (R, B, R, B),       # sirens     you know exactly what this is
-    (Cy, B, K, B),      # ocean      deep water over a dark trench
+    (B, Cy, K, B),      # ocean      deep water over a dark trench
     (M, Cy, M, W),      # candy      bubblegum + mint, one sparkle
-    (Y, G, Y, G),       # citrus     lime + lemon, undiluted
     (M, R, M, R),       # neon rose  hot pink via the M|R blend
-    (B, Y, B, Y),       # voltage    warning-tape contrast
-    (R, K, R, R),       # vampire    moody red with a bite missing
+    (R, K, R, M),       # vampire    crimson with a violet undertone
 )
-THEME_NAMES = ("glacier", "synthwave", "sunset", "fire", "matrix", "aurora",
-               "toxic", "miami", "defcon", "sirens", "ocean", "candy",
-               "citrus", "neon rose", "voltage", "vampire")
+THEME_NAMES = ("glacier", "aurora", "synthwave", "twilight", "lagoon",
+               "sunset", "fire", "matrix", "toxic", "miami", "defcon",
+               "sirens", "ocean", "candy", "neon rose", "vampire")
 
 # SK9822 global current, 0..31, ANALOG so quiet at any value.  Shifted well
 # DOWN from the first pass (5/10/16/24): at high current the LEDs bloom and
