@@ -201,11 +201,16 @@ VOL_STEP_DB = 6        # dB per step (6 dB == one bit == a factor of 2)
 # made every level sound equally blown out.  With I2S_BITS = 32 the chain is
 # linear again and normal volumes work.)
 #
-# Set to 12 dB from listening tests on headphones (2026-07-24): 0 dBFS and
-# -6 dBFS were "too loud, uncomfortable, clipping", while -12 dBFS was "about as
-# loud as comfortable".  Holding the top step there also moves the whole ladder
-# down, which fixes the other complaint -- that even the quietest step was too
-# loud.  The range is now -54 dBFS (step 1) .. -12 dBFS (step 8), plus a true
-# digital mute at step 0.
-VOL_TOP_ATTEN_DB = 12
+# History, both from listening tests:
+#   2026-07-24: with hot-mastered content, 0 and -6 dBFS were "too loud,
+#     uncomfortable, clipping" (analog gain is ~2.1x, so full-scale digital
+#     really does clip the amp) -> set 12.
+#   2026-08-03: on bad earbuds -12 max was too QUIET -> bumped to 6.  What
+#     changed in between: card content is now loudness-normalised (-16 LUFS,
+#     true peak -1.5 dBFS), so the same digital step drives the analog stage
+#     several dB softer than July's hot masters did.
+# Range is now -42 dBFS (step 1) .. -6 dBFS (step 8) plus digital mute at 0.
+# If the top step is crunchy on un-normalised files, VOL- once; if the fleet
+# still reads quiet on weak earbuds, 0 is the next stop -- retest for clip.
+VOL_TOP_ATTEN_DB = 6
 VOL_DEFAULT_STEP = 3   # -42 dBFS
