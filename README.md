@@ -72,6 +72,34 @@ Just MP3 files in the root of the card — nothing else needed:
   encode the channel and timecode, so a phone can watch any badge and
   start playing along. Groundwork is shipped; app is TODO.
 
+## Flashing / updating the firmware
+
+Everything a badge runs is in this repo — [`firmware/`](firmware/) —
+including the prebuilt firmware image
+[`firmware-mp3-universal.uf2`](firmware/firmware-mp3-universal.uf2)
+(one image works on every badge in the run).
+
+**The easy way** (macOS/Linux, needs Python 3 and
+[`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html)):
+
+```sh
+git clone https://github.com/LastZactionHero/defcon-silent-disco.git
+cd defcon-silent-disco/firmware
+tools/flash_badge.sh        # follow the prompts: plug in, wait for DONE
+```
+
+The script does the whole thing — flashes the UF2, installs the badge
+software, verifies it, reboots into the disco.
+
+**By hand:** hold **BOOTSEL** while plugging in USB → a drive called
+`RPI-RP2` appears → copy the `.uf2` onto it → the badge reboots → then copy
+the `.py` files from `firmware/` onto it with `mpremote`. (macOS quirk: use
+the script or `dd` — a plain Finder/`cp` copy of a UF2 can silently fail.
+The drive *disappearing* is how you know the flash worked.)
+
+Full details, including rebuilding the firmware from source:
+[`firmware/README.md`](firmware/README.md).
+
 ## Under the hood
 
 RP2040 · MicroPython + native MP3 decoder · 4× addressable RGB LEDs ·
