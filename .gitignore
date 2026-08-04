@@ -6,3 +6,6 @@ defcon_badge/fab_rev2/
 .history/
 *-backups/
 *.kicad_prl
+*.lck
+# gerbers/ is regenerable via `make fab`; the shipped set is fab_rev2.zip
+defcon_badge/gerbers/
