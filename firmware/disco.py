@@ -123,14 +123,18 @@ K = BLACK   # an off LED is a design element: electrically perfect, and it buys
             # coals, voids and asymmetry the 7 pure colours cannot.
 
 # Themes: four colours across LED1..LED4, curated as VIBES rather than swept
-# hue windows.  Two tricks stretch the tiny legal palette:
+# hue windows.  Three lessons shape them, the third learned on hardware:
 #   * adjacent-LED blending -- the eye mixes neighbours at arm's length, so
 #     R next to Y reads as orange (fire, sunset) and M next to B reads as
 #     purple (synthwave, defcon): the two banned colours, recovered optically.
 #   * black as a colour -- gaps and asymmetry read as texture, especially
 #     under rotate/pulse (fire flickers over dark coals, matrix has a void).
+#   * WHITE DESATURATES.  A white LED is ~3x the luminance of any pure colour
+#     and reads as glare that washes out everything beside it -- the original
+#     glacier (two whites of four) looked dull in practice.  Rule: at most ONE
+#     white per theme, used as a glint; contrast comes from black instead.
 THEMES = (
-    (B, W, Cy, W),      # glacier    ice + white glare
+    (B, Cy, B, W),      # glacier    deep ice, one white glint
     (M, B, Cy, M),      # synthwave  neon sunset; M|B edge reads purple
     (M, R, Y, R),       # sunset     magenta -> red -> gold gradient
     (R, Y, R, K),       # fire       flames over a dark coal
@@ -140,10 +144,10 @@ THEMES = (
     (Cy, M, Cy, M),     # miami      hard neon alternation
     (M, B, M, B),       # defcon     reads purple at distance
     (R, B, R, B),       # sirens     you know exactly what this is
-    (Cy, B, W, B),      # ocean      deep water + foam
-    (M, W, Cy, W),      # candy      bubblegum + mint
-    (G, W, Y, W),       # citrus     lime + lemon
-    (R, W, M, W),       # neon rose  hot pink storefront
+    (Cy, B, K, B),      # ocean      deep water over a dark trench
+    (M, Cy, M, W),      # candy      bubblegum + mint, one sparkle
+    (Y, G, Y, G),       # citrus     lime + lemon, undiluted
+    (M, R, M, R),       # neon rose  hot pink via the M|R blend
     (B, Y, B, Y),       # voltage    warning-tape contrast
     (R, K, R, R),       # vampire    moody red with a bite missing
 )
@@ -151,7 +155,12 @@ THEME_NAMES = ("glacier", "synthwave", "sunset", "fire", "matrix", "aurora",
                "toxic", "miami", "defcon", "sirens", "ocean", "candy",
                "citrus", "neon rose", "voltage", "vampire")
 
-BRIGHT_STEPS = (5, 10, 16, 24)
+# SK9822 global current, 0..31, ANALOG so quiet at any value.  Shifted well
+# DOWN from the first pass (5/10/16/24): at high current the LEDs bloom and
+# perceived saturation collapses -- dimmer genuinely reads more vibrant, which
+# was confirmed by eye on hardware.  Bonus: less LED current on the shared
+# rail, and longer battery life.
+BRIGHT_STEPS = (3, 5, 8, 12)
 
 # --- error codes ------------------------------------------------------------
 # Shown as RED BINARY across the four LEDs, LED1 = least significant bit, so a
@@ -583,7 +592,7 @@ async def main():
                 # NAME -- a hardcoded index already broke once when the theme
                 # list was reordered.
                 lights.render(time.ticks_ms() // SLOT_MS,
-                              THEME_NAMES.index("glacier"), 20,
+                              THEME_NAMES.index("glacier"), 10,
                               ANIM_NAMES.index("breathe"))
             else:
                 t, b, a = looks[cur]
