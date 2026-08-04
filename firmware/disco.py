@@ -3,8 +3,9 @@ Silent disco badge -- step 9: + IR receive and SYNC.
 
     boot     -> mount SD -> play the first track alphabetically, on a loop
     CHANNEL  (GP15)  tap = next track (wraps);  hold 10 s = hard reset
-    SYNC     (GP12)  jump to 0, stop transmitting, listen for a neighbour's
-                     timecode, then jump to it
+    SYNC     (GP12)  join a neighbour: playback pauses, the badge listens for
+                     their broadcast, then adopts BOTH their channel and their
+                     position.  Times out back to where you were.
     VOL+/-   (GP14/GP13)  louder / quieter, auto-repeat when held
 
 A track that reaches its end REPLAYS ITSELF -- it never advances on its own.
@@ -32,7 +33,7 @@ the first frame, exactly as in step 4.
 
 IR
 --
-Every IR_TX_PERIOD_MS the badge broadcasts (timecode, channel) so a neighbour
+Every 7-13 s (randomised) the badge broadcasts (timecode, channel) so a neighbour
 can sync to it.  TRANSMIT ONLY at this step -- the receiver is not armed at
 all, which keeps the two halves separable: an earlier build wedged the badge
 because the transmitter left its PWM parked at ~38 kHz between sends, which the
@@ -49,6 +50,7 @@ Next step: arm the receiver and implement SYNC (see disco_full.py).
 
 import time
 import math
+import random
 import asyncio
 import machine
 from machine import Pin
@@ -66,25 +68,42 @@ VOLUME_STEP = 4
 # ~1.8x realtime margin), fast enough for smooth motion.
 FRAME_MS = 40
 
-# How often to broadcast (timecode, channel).
-# NOTE: fixed, so it is easy to verify.  With a room full of badges a fixed
-# period means everyone eventually transmits in lockstep and talks over each
-# other; add jitter here once multi-badge testing starts.
-IR_TX_PERIOD_MS = 10_000
+# Broadcast interval, randomised per send.  With a room full of badges a fixed
+# period drifts everyone into lockstep and every broadcast collides; jitter
+# keeps collisions transient.  Mean ~10 s, so a listener's 25 s window still
+# spans 2-3 broadcasts.
+IR_TX_MIN_MS = 7_000
+IR_TX_MAX_MS = 13_000
 
 # Hold CHANNEL this long for a hard reset.  This is the field escape hatch: if
 # a badge locks up mid-set nobody has a laptop, and the only other way back in
 # is physical BOOTSEL.  Long enough that nobody triggers it by accident.
 RESET_HOLD_MS = 10_000
 
-# How long SYNC listens before giving up.  Must comfortably exceed the other
-# badge's IR_TX_PERIOD_MS or we can time out between its broadcasts.
+# How long SYNC listens before giving up.  Must comfortably exceed the
+# longest broadcast gap (IR_TX_MAX_MS) or we can time out between broadcasts.
 SYNC_LISTEN_MS = 25_000
 
 # TEST HOOK: if non-zero, start a sync automatically this often, so the link
 # can be exercised over USB without a finger on the button.  Set to 0 for
 # normal operation -- this is a debugging aid, not a feature.
 AUTO_SYNC_MS = 0
+
+# Sender-side latency baked into every received timecode: pos_ms is sampled
+# before the ~68 ms blocking send, and the receiver only decodes ~7-27 ms after
+# the last edge (quiet wait + poll cadence).  Receiver-side latency after the
+# decode is measured live via Player.seek_ref, so only this fixed part needs a
+# constant.
+# 85 ms of that is the send itself; the rest is measured residual: with 85
+# alone, a two-badge capture showed the receiver locking a consistent ~125 ms
+# behind (file open + seek-probe SD reads happen after the compensation clock
+# stops).  210 centres the offset near zero; remaining wobble is ~+/-70 ms,
+# which is inaudible across separate headphones and under 2 LED frames.
+IR_SEND_LATENCY_MS = 210
+
+# Playlist index to start on at boot.  0 for shipping; useful in testing to
+# make two badges boot on different channels (e.g. to exercise channel-adopt).
+START_CHANNEL = 0
 
 BLACK = (0, 0, 0)
 R = (255, 0, 0)
@@ -432,6 +451,9 @@ async def main():
         print("  %2d. %-28s %-10s %-10s b%d"
               % (i + 1, _name(p)[:28], THEME_NAMES[t], ANIM_NAMES[a], b))
 
+    if START_CHANNEL:
+        player.index = START_CHANNEL % len(tracks)
+
     vol = VOLUME_STEP
     player.set_volume_step(vol, C.VOL_STEPS)
     print("volume:", _describe(vol))
@@ -442,7 +464,7 @@ async def main():
     listen_until = 0
 
     def start_sync():
-        """Reset to 0, go quiet, and listen for a neighbour."""
+        """Pause playback, go quiet, and listen for a neighbour."""
         nonlocal listening, listen_until
         if rx is None:
             print("sync: IR unavailable")
@@ -452,15 +474,19 @@ async def main():
         if tx is not None:
             tx.idle()               # stop transmitting so we do not hear ourselves
         rx.start()                  # arm the capture IRQ only while listening
-        player.seek_ms = 0
-        player.restart_track()
-        print("sync: listening %ds (reset to 0)" % (SYNC_LISTEN_MS // 1000))
+        if not player.paused:
+            player.toggle_pause()   # silence while listening (I2S drains ~180ms)
+        print("sync: listening %ds (playback paused)" % (SYNC_LISTEN_MS // 1000))
 
-    def end_sync(why):
+    def end_sync(why, resume=True):
+        """resume=False when the caller has already restarted playback (a
+        successful lock un-pauses via the skip machinery)."""
         nonlocal listening
         listening = False
         if rx is not None:
             rx.stop()               # disarm: no IRQ load during playback
+        if resume and player.paused:
+            player.toggle_pause()   # timeout/cancel: pick up where we left off
         print("sync:", why)
 
     async def input_task():
@@ -485,6 +511,8 @@ async def main():
 
             for ev in btns.poll():
                 if ev == "channel":
+                    if listening:
+                        end_sync("cancelled (channel pressed)")
                     player.next_track()
                 elif ev == "sync":
                     if not listening:
@@ -544,6 +572,8 @@ async def main():
             await asyncio.sleep_ms(AUTO_SYNC_MS)
             if not listening:
                 start_sync()
+                return          # fire ONCE -- so a scripted drift measurement
+                                # is not re-corrected every cycle
 
     async def ir_task():
         """Broadcast (timecode, channel) periodically; listen instead on SYNC.
@@ -554,21 +584,30 @@ async def main():
         """
         if tx is None:
             return
-        next_tx = time.ticks_add(time.ticks_ms(), IR_TX_PERIOD_MS)
+        next_tx = time.ticks_add(time.ticks_ms(), random.randint(IR_TX_MIN_MS, IR_TX_MAX_MS))
         while True:
             if listening:
                 got = rx.poll()
                 if got:
                     tc100, ch = got
-                    ms = tc100 * 100
+                    # Timestamp NOW: everything that happens between here and
+                    # the actual file seek is measured and added back by the
+                    # player, so track-switch/SD latency cannot become lag.
+                    player.seek_ref = time.ticks_ms()
+                    player.seek_ms = tc100 * 100 + IR_SEND_LATENCY_MS
+                    ntr = len(player.playlist)
+                    ch %= ntr
                     note = ""
-                    if ch != (player.index % len(player.playlist)):
-                        note = " (they are on channel %d)" % (ch + 1)
-                    player.seek_ms = ms
-                    player.restart_track()
-                    end_sync("locked to %d.%01ds%s"
-                             % (ms // 1000, (ms % 1000) // 100, note))
-                    next_tx = time.ticks_add(time.ticks_ms(), IR_TX_PERIOD_MS)
+                    if ch != (player.index % ntr):
+                        player.goto_track(ch)      # join their channel too
+                        note = " joined ch %d" % (ch + 1)
+                    else:
+                        player.restart_track()
+                    end_sync("locked to ch %d @ %d.%01ds%s"
+                             % (ch + 1, player.seek_ms // 1000,
+                                (player.seek_ms % 1000) // 100, note),
+                             resume=False)
+                    next_tx = time.ticks_add(time.ticks_ms(), random.randint(IR_TX_MIN_MS, IR_TX_MAX_MS))
                 elif time.ticks_diff(time.ticks_ms(), listen_until) >= 0:
                     # Say WHY it failed.  "edges=0" means nothing reached the
                     # receiver at all; a list of widths means a frame arrived
@@ -579,7 +618,7 @@ async def main():
                     else:
                         print("sync: live buffer:", rx.dump())
                     end_sync("timed out, nothing decoded")
-                    next_tx = time.ticks_add(time.ticks_ms(), IR_TX_PERIOD_MS)
+                    next_tx = time.ticks_add(time.ticks_ms(), random.randint(IR_TX_MIN_MS, IR_TX_MAX_MS))
                 await asyncio.sleep_ms(20)
             else:
                 if time.ticks_diff(time.ticks_ms(), next_tx) >= 0:
@@ -591,7 +630,7 @@ async def main():
                                                             (pos % 1000) // 100))
                     except Exception as e:
                         print("ir tx failed:", e)
-                    next_tx = time.ticks_add(time.ticks_ms(), IR_TX_PERIOD_MS)
+                    next_tx = time.ticks_add(time.ticks_ms(), random.randint(IR_TX_MIN_MS, IR_TX_MAX_MS))
                 await asyncio.sleep_ms(50)
 
     try:

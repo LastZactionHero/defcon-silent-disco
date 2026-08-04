@@ -11,6 +11,7 @@ I2S.MONO/STEREO from the channel count, and write with StreamWriter backpressure
 """
 
 import gc
+import time
 import asyncio
 from machine import I2S, Pin
 
@@ -26,7 +27,7 @@ HAVE_MP3 = mp3 is not None
 
 # Set True to trace why a track started/stopped.  Prints once per track, never
 # inside the decode loop, so it cannot itself cause an underrun.
-DEBUG = True
+DEBUG = False
 
 
 # MPEG1 Layer III bitrate table, indexed by the header's 4-bit bitrate field.
@@ -107,6 +108,10 @@ class Player:
         # plain player is unaffected.
         self.repeat_track = False   # True: a track ending replays itself
         self.seek_ms = 0            # ONE-SHOT: where the next track start begins
+        self.seek_ref = None        # ticks_ms when seek_ms was CORRECT; the
+                                    # elapsed time until the seek actually runs
+                                    # is added, so restart latency (skip, file
+                                    # open, SD reads) does not become sync lag
         self._base_ms = 0           # offset the current playback started at
         self._played_ms = 0.0       # decoded audio time since that start
 
@@ -156,6 +161,13 @@ class Player:
 
     def prev_track(self):
         self._jump = -1
+        self._skip = True
+        self._run.set()
+
+    def goto_track(self, i):
+        """Jump to absolute playlist index i, interrupting the current track."""
+        if self.playlist:
+            self._jump = i - (self.index % len(self.playlist))
         self._skip = True
         self._run.set()
 
@@ -401,8 +413,15 @@ class Player:
         self._skip = False
         # seek_ms is one-shot: consume it here so a natural loop (or the next
         # track) starts from the top rather than repeating the seek forever.
-        self._base_ms = self.seek_ms
+        # If seek_ref is set, seek_ms was correct at that instant -- add the
+        # wall time spent getting here (track teardown, file open, SD traffic),
+        # which measured in the hundreds of ms and was audible as sync lag.
+        base = self.seek_ms
+        if base > 0 and self.seek_ref is not None:
+            base += time.ticks_diff(time.ticks_ms(), self.seek_ref)
+        self._base_ms = base
         self.seek_ms = 0
+        self.seek_ref = None
         self._played_ms = 0.0
         if path.lower().endswith(".mp3"):
             await self._play_mp3_file(path)
