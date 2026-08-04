@@ -174,9 +174,16 @@ CPU_FREQ = 276_000_000
 #     top of a bad read: ~111 ms.  181 ms keeps ~1.6x margin on THAT, whereas
 #     40 KB (113 ms) would have had essentially none.
 #
-# If dropouts ever appear, this is the first number to raise -- but re-check
-# the RAM headroom at the same time.
-I2S_IBUF = 64_000
+# 2026-08-04: preferred size back UP to 80 KB (227 ms), with 64 KB as the
+# guaranteed floor.  The original 80 KB failure was allocation ORDER, not
+# capacity: the buffer was first allocated lazily inside _emit(), after the
+# heap had been carved up by imports and track scanning, and MicroPython's GC
+# cannot compact.  The Player now allocates it in __init__, before the heap
+# fragments, and falls back 80 -> 64 with a console note if even that fails.
+# The extra 46 ms of buffer directly absorbs the stall stack (flash-write
+# freeze ~100 ms + IR send ~68 ms) that showed up as occasional stutters.
+I2S_IBUF = 80_000
+I2S_IBUF_MIN = 64_000
 # PCM read chunk (bytes).  Multiple of 4 so it divides both mono(2) and stereo(4)
 # frame sizes.  ~64 ms of audio per read at 16 kHz mono.
 AUDIO_CHUNK = 2048

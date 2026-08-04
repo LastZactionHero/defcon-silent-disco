@@ -1,7 +1,7 @@
 """
-Silent disco badge -- step 9: + IR receive and SYNC.
+Silent disco badge.
 
-    boot     -> mount SD -> play the first track alphabetically, on a loop
+    boot     -> mount SD -> resume where the badge last was (or channel 1)
     CHANNEL  (GP15)  tap = next track (wraps);  hold 10 s = hard reset
     SYNC     (GP12)  join a neighbour: playback pauses, the badge listens for
                      their broadcast, then adopts BOTH their channel and their
@@ -9,45 +9,45 @@ Silent disco badge -- step 9: + IR receive and SYNC.
     VOL+/-   (GP14/GP13)  louder / quieter, auto-repeat when held
 
 A track that reaches its end REPLAYS ITSELF -- it never advances on its own.
+Channel, position and volume persist to internal flash, so a brownout resumes
+mid-set (rewound a few seconds).  Faults show as red binary on the LEDs
+(codes below); the badge stays alive and resettable on every error path.
 
 LEDs
 ----
-Each track name picks a THEME (four colours) and, from a DIFFERENT slice of the
-same hash, an ANIMATION.  The two are independent, so a card gives you a mix of
-colour/motion pairings rather than 12 fixed looks.
+Each track name hashes to a THEME (four colours), an ANIMATION and a
+brightness -- independent slices of the hash, so a card mixes colour and
+motion freely.  All animation is a pure function of the PLAYBACK clock
+(pos_ms // SLOT_MS): badges synced to the same position flash at the same
+moments and stay locked, and a re-sync snaps lights and music together.
 
-Two hard rules, both from the rev-2 audio noise work:
+Hard rules, learned on hardware and enforced by tools/host_tests.py:
+  * Every channel value is 0 or 255 -- mid-range PWM couples audibly into the
+    audio (config.py:29-33), so nothing ever crossfades; motion is WHICH LED
+    shows WHICH colour.  Brightness "fades" use the SK9822 global current,
+    which is analog and silent.
+  * At most one white per theme (white glares and desaturates); contrast
+    comes from black.  No naked-primary pairings (they read like a toy);
+    the good looks are secondaries and adjacency blends -- R|Y reads orange,
+    B|M reads purple, which is how the banned colours exist at all.
+  * Full-field flashing stays under ~1.5 Hz (photosensitivity).
 
-  * Every channel value is always 0 or 255.  Mid-range values are the one case
-    config.py:29-33 found audible (~4.7 kHz PWM near 50% duty).  This is why
-    NO animation crossfades between colours -- a fade would walk every channel
-    straight through the bad range.  Motion comes from WHICH led shows WHICH
-    colour instead.
-  * Brightness animation uses the SK9822 global current field, which is an
-    analog current scale rather than a duty cycle, so ramping it is quiet.
-    That is the only "fade" available to us, and it is free.
+IR sync
+-------
+Every 7-13 s (randomised, so a room of badges cannot lockstep-collide) the
+badge broadcasts (timecode, channel) over IR.  SYNC arms the receiver
+instead: NEC-style frames, decoded by a hard-IRQ edge-capture that resyncs
+on the 9 ms header mark (ambient light fires ~660 edges/s; see irsync.py).
+Received timecodes are latency-compensated (IR_SEND_LATENCY_MS + a live
+measurement of our own restart cost) -- measured residual ~+/-70 ms.
 
-Static themes still cost nothing: the chain is only written when the output
-actually changes, so a STATIC animation produces zero bit-bang traffic after
-the first frame, exactly as in step 4.
-
-IR
---
-Every 7-13 s (randomised) the badge broadcasts (timecode, channel) so a neighbour
-can sync to it.  TRANSMIT ONLY at this step -- the receiver is not armed at
-all, which keeps the two halves separable: an earlier build wedged the badge
-because the transmitter left its PWM parked at ~38 kHz between sends, which the
-TSOP4838 centimetres away read as a permanent carrier and turned into an
-interrupt storm.  irsync.IrTx now builds the PWM per send and tears it down
-afterwards, leaving the pin a plain GPIO high (the LED is active low).
-
-A send blocks for ~35-60 ms.  The I2S buffer holds ~230 ms at the default
-I2S_IBUF, so it should pass unheard -- if you hear a tick every 10 s, that is
-the first thing to look at.
-
-Next step: arm the receiver and implement SYNC (see disco_full.py).
+The two things that can stall the VM -- internal-flash state writes (XIP
+freeze, up to ~100 ms) and the ~68 ms blocking IR send -- are deliberately
+kept STALL_SPACING_MS apart so they cannot stack inside one I2S buffer.
+The emit watchdog logs any gap over 150 ms with blame attribution.
 """
 
+import gc
 import os
 import time
 import json
@@ -92,16 +92,51 @@ RESET_HOLD_MS = 10_000
 SYNC_LISTEN_MS = 25_000
 
 # Crash resilience: channel, position and volume persist to INTERNAL flash
-# (never the SD -- card writes are unproven on this board) and are restored
-# on boot, so a brownout or an unreliable board resumes where it was instead
-# of restarting the set.  Position is saved when it drifts >10 s from the
-# last write (~every 12 s -> a reboot rewinds a few seconds, which feels
-# right), channel/volume within 2 s of changing.  Writes are atomic
-# (write-new + rename) so power loss mid-write cannot tear the file, and the
-# ~50 ms worst-case flash stall hides inside the 181 ms I2S buffer.
-PERSIST_FILE = "/disco_state.json"
+# (never the SD -- card writes are unproven on this board) and are restored on
+# boot, so a brownout resumes mid-set instead of restarting it.
+#
+# Every internal-flash write SUSPENDS XIP: the whole VM freezes for the
+# duration (up to ~100 ms when an erase is involved).  That is unavoidable --
+# so the design minimises how often and how badly it can hurt:
+#   * A/B slot files with a sequence number instead of write-temp-and-rename:
+#     each checkpoint touches ONE small file (rename doubled the metadata
+#     traffic).  Torn writes are survivable -- the loader takes the newest
+#     slot that parses and checksums; the other slot is the fallback.
+#   * Position checkpoints every ~30 s (a brownout rewinds up to that much,
+#     which is fine at a party); channel/volume within 2 s of changing.
+#   * Coordinated with the IR transmitter (see STALL_SPACING_MS): the ~68 ms
+#     send and the flash freeze are each survivable alone, but stacked inside
+#     one I2S buffer window they were the leading suspect for the "occasional
+#     stutter" reports.  Now they keep their distance by construction.
+PERSIST_SLOTS = ("/state_a.json", "/state_b.json")
+PERSIST_LEGACY = "/disco_state.json"       # migrated from, then ignored
 PERSIST_TICK_MS = 2000
-PERSIST_POS_DELTA_MS = 10_000
+PERSIST_POS_DELTA_MS = 30_000
+
+# Minimum spacing between the two known VM-stallers (flash write, IR send).
+STALL_SPACING_MS = 700
+
+
+def _state_ck(st):
+    """Tiny integrity checksum -- catches torn flash writes, not attackers."""
+    return (st.get("seq", 0) + st.get("pos", 0) + st.get("vol", 0)
+            + len(st.get("track", ""))) & 0xFFFF
+
+
+def load_state():
+    """Newest valid slot wins; falls back to the legacy single file."""
+    best = None
+    for path in PERSIST_SLOTS + (PERSIST_LEGACY,):
+        try:
+            with open(path) as f:
+                st = json.load(f)
+            if path != PERSIST_LEGACY and st.get("ck") != _state_ck(st):
+                continue                     # torn write: use the other slot
+            if best is None or st.get("seq", 0) > best.get("seq", 0):
+                best = st
+        except Exception:
+            pass
+    return best
 
 # TEST HOOK: if non-zero, start a sync automatically this often, so the link
 # can be exercised over USB without a finger on the button.  Set to 0 for
@@ -488,6 +523,7 @@ async def main():
     player = Player(C.I2S_ID, C.I2S_SCK, C.I2S_WS, C.I2S_SD,
                     C.I2S_IBUF, C.AUDIO_CHUNK)
     player.repeat_track = True
+    player.blame = {}               # stall attribution for the emit watchdog
 
     btns = Buttons({
         "channel": C.BTN_PLAY,
@@ -552,8 +588,7 @@ async def main():
     vol = VOLUME_STEP
     names = [_name(p) for p in tracks]
     try:
-        with open(PERSIST_FILE) as f:
-            st = json.load(f)
+        st = load_state() or {}
         if st.get("track") in names:
             player.index = names.index(st["track"])
         pos = st.get("pos")
@@ -562,10 +597,9 @@ async def main():
         v = st.get("vol")
         if isinstance(v, int) and 0 <= v <= C.VOL_STEPS:
             vol = v
-        print("restored: %s @ %ds, vol %d/%d"
-              % (st.get("track"), (pos or 0) // 1000, vol, C.VOL_STEPS))
-    except OSError:
-        pass                            # first boot: no state yet
+        if st:
+            print("restored: %s @ %ds, vol %d/%d"
+                  % (st.get("track"), (pos or 0) // 1000, vol, C.VOL_STEPS))
     except Exception as e:
         print("state restore failed:", e)
 
@@ -692,10 +726,18 @@ async def main():
             await asyncio.sleep_ms(LED_POLL_MS)
 
     async def persist_task():
-        """Checkpoint (track, position, volume) to internal flash."""
+        """Checkpoint (track, position, volume) to internal flash.
+
+        Also hosts the housekeeping GC: collecting on OUR schedule keeps the
+        automatic collector from firing at a random moment inside the audio
+        path, and keeps fragmentation down for track-change allocations.
+        """
         last = {}
+        seq = 0
+        slot = 0
         while True:
             await asyncio.sleep_ms(PERSIST_TICK_MS)
+            gc.collect()
             if not player.playlist:
                 continue
             st = {"track": _name(player.playlist[player.index %
@@ -706,11 +748,22 @@ async def main():
                     and abs(st["pos"] - last.get("pos", -1 << 30))
                     < PERSIST_POS_DELTA_MS):
                 continue
+            # keep the flash freeze away from a fresh IR send
+            if (player.blame and "ir" in player.blame and
+                    time.ticks_diff(time.ticks_ms(),
+                                    player.blame["ir"]) < STALL_SPACING_MS):
+                continue                     # retry on the next 2 s tick
+            seq += 1
+            st["seq"] = seq
+            st["ck"] = _state_ck(st)
             try:
-                with open(PERSIST_FILE + ".new", "w") as f:
+                with open(PERSIST_SLOTS[slot], "w") as f:
                     json.dump(st, f)
-                os.rename(PERSIST_FILE + ".new", PERSIST_FILE)
+                slot ^= 1
+                st.pop("seq"); st.pop("ck")
                 last = st
+                if player.blame is not None:
+                    player.blame["persist"] = time.ticks_ms()
             except Exception as e:
                 print("persist failed:", e)
 
@@ -773,10 +826,19 @@ async def main():
                 await asyncio.sleep_ms(20)
             else:
                 if time.ticks_diff(time.ticks_ms(), next_tx) >= 0:
+                    # keep the ~68 ms blocking send away from a fresh flash
+                    # write -- stacked, the two stalls can outrun the I2S
+                    # buffer; spaced, each hides inside it comfortably
+                    if (player.blame and "persist" in player.blame and
+                            time.ticks_diff(time.ticks_ms(),
+                                            player.blame["persist"])
+                            < STALL_SPACING_MS):
+                        await asyncio.sleep_ms(STALL_SPACING_MS)
                     ch = player.index % len(player.playlist)
                     pos = player.pos_ms
                     try:
-                        tx.send(pos // 100, ch)      # blocks ~35-60 ms
+                        tx.send(pos // 100, ch)      # blocks ~68 ms
+                        player.blame["ir"] = time.ticks_ms()
                         print("ir tx: ch %d  t=%d.%01ds" % (ch + 1, pos // 1000,
                                                             (pos % 1000) // 100))
                     except Exception as e:

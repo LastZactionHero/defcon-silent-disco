@@ -91,6 +91,25 @@ class Player:
         self._out32 = bytearray(need)
         self._mv32 = memoryview(self._out32)
 
+        # Claim the I2S ring buffer NOW, while the heap is one clean run.
+        # Allocating it lazily at first play -- after imports and the SD track
+        # scan have fragmented the heap -- is what originally made an 80 KB
+        # buffer unobtainable with ~155 KB nominally free (the GC does not
+        # compact).  All badge content is 44.1 kHz stereo, so this exact
+        # configuration is reused as-is; anything else just reinits.
+        try:
+            self._ensure_i2s(44100, I2S.STEREO)
+        except Exception as e:
+            print("i2s pre-init failed (will retry at play):", e)
+
+        # Stall telemetry: consecutive-emit gaps big enough to threaten the
+        # ring buffer, with enough context to attribute the cause.
+        self.stall_log_ms = 150     # log emits further apart than this
+        self.stall_count = 0
+        self.max_gap_ms = 0
+        self.blame = None           # dict of name -> ticks_ms of last stall source
+        self._last_emit = None
+
         self.volume = 128        # 0..VOL_UNITY (32768 == unity); 128 == -48 dBFS
         self.level = 0           # recent output peak 0..32767 (for VU lights)
         self.playlist = []
@@ -186,12 +205,27 @@ class Player:
             return
         if self.audio is not None:
             self.audio.deinit()
-        gc.collect()            # 80 KB wants a contiguous block; compact first
-        self.audio = I2S(
-            self._id,
-            sck=Pin(self._sck), ws=Pin(self._ws), sd=Pin(self._sd),
-            mode=I2S.TX, bits=C.I2S_BITS, format=fmt, rate=rate, ibuf=self._ibuf,
-        )
+        gc.collect()            # a big ibuf wants a contiguous block; compact first
+        # Prefer the full buffer, fall back to the floor rather than dying:
+        # more buffer = more stall absorption, but a badge that plays with
+        # 181 ms of margin beats one that raises MemoryError with 227.
+        for ibuf in (self._ibuf, getattr(C, "I2S_IBUF_MIN", self._ibuf)):
+            try:
+                self.audio = I2S(
+                    self._id,
+                    sck=Pin(self._sck), ws=Pin(self._ws), sd=Pin(self._sd),
+                    mode=I2S.TX, bits=C.I2S_BITS, format=fmt, rate=rate,
+                    ibuf=ibuf,
+                )
+                if ibuf != self._ibuf:
+                    print("i2s: fell back to %d-byte buffer" % ibuf)
+                self._ibuf = ibuf          # keep whatever worked for reinits
+                break
+            except MemoryError:
+                gc.collect()
+        else:
+            raise MemoryError("i2s buffer: even %d failed"
+                              % getattr(C, "I2S_IBUF_MIN", self._ibuf))
         self._swriter = asyncio.StreamWriter(self.audio)
         self._cur_rate = rate
         self._cur_fmt = fmt
@@ -228,6 +262,22 @@ class Player:
         mv = self._ensure_out32(nsamp)
         # Volume, LSBJ reframing and the VU peak all happen in one pass.
         self.level = pcm16_to_lsbj32(buf, self._out32, nsamp, self.volume)
+        now = time.ticks_ms()
+        if self._last_emit is not None:
+            gap = time.ticks_diff(now, self._last_emit)
+            if gap > self.max_gap_ms:
+                self.max_gap_ms = gap
+            if gap > self.stall_log_ms:
+                self.stall_count += 1
+                who = ""
+                if self.blame:
+                    who = "  " + " ".join(
+                        "%s=%dms-ago" % (k, time.ticks_diff(now, v))
+                        for k, v in self.blame.items())
+                print("[stall] %d ms emit gap at %d.%01ds (#%d)%s"
+                      % (gap, self.pos_ms // 1000, (self.pos_ms % 1000) // 100,
+                         self.stall_count, who))
+        self._last_emit = now
         self._played_ms += (nsamp // ch) * 1000.0 / rate
         self._swriter.write(mv[:nsamp << 2])
         await self._swriter.drain()            # backpressure; yields to other tasks
