@@ -2,3 +2,7 @@
 __pycache__/
 # extracted duplicate of fab_rev2.zip
 defcon_badge/fab_rev2/
+# KiCad session artifacts
+.history/
+*-backups/
+*.kicad_prl
