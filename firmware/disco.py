@@ -127,6 +127,13 @@ def _state_ck(st):
             + len(st.get("track", ""))) & 0xFFFF
 
 
+def batt_low(volts, was_low):
+    """Low-battery decision with hysteresis (pure, host-tested)."""
+    if was_low:
+        return volts < C.BATT_LOW_V + C.BATT_HYST_V
+    return volts < C.BATT_LOW_V
+
+
 def should_persist(last, st):
     """Write only when something meaningful changed (pure, host-tested)."""
     return not (st["track"] == last.get("track")
@@ -791,6 +798,34 @@ async def main():
             except Exception as e:
                 print("persist failed:", e)
 
+    async def battery_task():
+        """Warn about a dying battery BEFORE it wrecks the audio and the SD.
+
+        Inert unless the SAO divider bodge is fitted (config.BATT_ADC_GPIO).
+        Warning is deliberately subtle: LED1 winks red between animation
+        frames every few seconds -- visible to the wearer, not a light show.
+        """
+        if getattr(C, "BATT_ADC_GPIO", None) is None:
+            return
+        from machine import ADC
+        adc = ADC(C.BATT_ADC_GPIO)
+        low = False
+        while True:
+            await asyncio.sleep_ms(5000)
+            v = adc.read_u16() * 3.3 * C.BATT_DIVIDER / 65535
+            now_low = batt_low(v, low)
+            if now_low and not low:
+                print("BATTERY LOW: %.2f V -- swap the AAA soon" % v)
+            low = now_low
+            if low and lights.leds is not None:
+                # brief red wink on LED1 only; render() repaints the theme
+                # on its next change so this never sticks
+                lights.leds.set_brightness(8)
+                lights.leds.set(0, (255, 0, 0))
+                lights.leds.write()
+                await asyncio.sleep_ms(180)
+                lights._cur_b = None          # force theme repaint
+
     async def sd_recovery_task():
         """If playback keeps failing (yanked/flaky card), try a full remount.
 
@@ -906,7 +941,7 @@ async def main():
     try:
         await asyncio.gather(player.run(), input_task(), led_task(), ir_task(),
                              auto_sync_task(), persist_task(),
-                             sd_recovery_task())
+                             sd_recovery_task(), battery_task())
     finally:
         player.deinit()
         lights.off()

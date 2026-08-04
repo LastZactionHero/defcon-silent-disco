@@ -361,6 +361,15 @@ check("position drift past threshold -> write",
 check("first write always happens", disco.should_persist({}, base))
 
 # ---------------------------------------------------------------------------
+print("== disco: battery hysteresis ==")
+check("healthy voltage -> not low", not disco.batt_low(3.9, False))
+check("below threshold -> low", disco.batt_low(3.4, False))
+check("recovers only past hysteresis band",
+      disco.batt_low(3.6, True) and not disco.batt_low(3.75, True))
+check("sag near threshold does not flap",
+      not disco.batt_low(3.6, False) and disco.batt_low(3.6, True))
+
+# ---------------------------------------------------------------------------
 print("== config: volume ladder ==")
 config = fw.config
 import math  # noqa: E402

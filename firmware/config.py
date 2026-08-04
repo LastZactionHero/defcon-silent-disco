@@ -127,6 +127,21 @@ IR_TX = 9
 IR_RX = 27
 
 # ---------------------------------------------------------------------------
+# Battery sense (OPTIONAL -- requires a 2-resistor bodge)
+# ---------------------------------------------------------------------------
+# The RP2040 cannot read its own supply, and this board has no battery
+# divider -- but GPIO26/ADC0 is exposed on the SAO header.  Tack two 100k
+# resistors: battery+ -> 100k -> SAO GPIO1, SAO GPIO1 -> 100k -> GND, then
+# set BATT_ADC_GPIO = 26.  A dying battery announces itself (LED1 red wink
+# every few seconds + console line) BEFORE the badge starts sounding like a
+# modem and dropping its SD card -- which is exactly how an unsensed low
+# battery presents, and it looks identical to a firmware bug.
+BATT_ADC_GPIO = None       # 26 once the divider is fitted; None = disabled
+BATT_DIVIDER = 2.0         # (Rtop+Rbot)/Rbot for equal 100k resistors
+BATT_LOW_V = 3.55          # warn below this (LDO dropout territory)
+BATT_HYST_V = 0.15         # clear the warning above LOW+HYST (no flapping)
+
+# ---------------------------------------------------------------------------
 # CPU clock
 # ---------------------------------------------------------------------------
 # MP3 decode of 44.1 kHz stereo measured ~94% of a core at the stock 125 MHz
