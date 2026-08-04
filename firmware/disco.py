@@ -64,9 +64,14 @@ import irsync
 
 VOLUME_STEP = 4
 
-# LED frame period.  Slow enough to be cheap next to the decoder (which has
-# ~1.8x realtime margin), fast enough for smooth motion.
-FRAME_MS = 40
+# Animations advance on a fixed TIME GRID locked to the playback position:
+# everything steps at multiples of SLOT_MS of *track time*, so two badges
+# synced to the same position flash at the same moments -- the step boundary
+# is a property of the track clock, not of whoever's scheduler woke up first.
+# The loop polls every LED_POLL_MS (cheap: the chain is only written when the
+# output actually changes), so an edge lands within one poll of its true spot.
+SLOT_MS = 160
+LED_POLL_MS = 25
 
 # Broadcast interval, randomised per send.  With a room full of badges a fixed
 # period drifts everyone into lockstep and every broadcast collides; jitter
@@ -154,9 +159,9 @@ ERR_NAMES = {
 }
 ERR_COLOR = R
 ERR_BRIGHT = 12
-# At FRAME_MS=40: pattern lit ~1.2 s, blank ~0.4 s.
-ERR_ON_FRAMES = 30
-ERR_CYCLE_FRAMES = 40
+# Pattern lit 1.2 s, blank 0.4 s -- countable, and never mistakable for a theme.
+ERR_ON_MS = 1200
+ERR_CYCLE_MS = 1600
 
 
 def _tri(x, period):
@@ -167,70 +172,73 @@ def _tri(x, period):
 
 
 # --- animations -------------------------------------------------------------
-# Signature: fn(frame, theme, out, n, base_b) -> brightness
+# Signature: fn(slot, theme, out, n, base_b) -> brightness
+# `slot` is track-time // SLOT_MS, so every step below is an absolute position
+# in the track: synced badges compute identical output at identical moments.
 # Fills `out` (a preallocated list) with `n` colours and returns the global
 # brightness to use.  Never produces a channel value other than 0 or 255.
 
-def an_static(f, theme, out, n, base_b):
+def an_static(slot, theme, out, n, base_b):
     for i in range(n):
         out[i] = theme[i & 3]
     return base_b
 
 
-def an_rotate(f, theme, out, n, base_b):
-    """Theme colours march around the ring."""
-    s = (f >> 3) & 3
+def an_rotate(slot, theme, out, n, base_b):
+    """Theme colours march around the ring.  One step per 320 ms."""
+    s = (slot >> 1) & 3
     for i in range(n):
         out[i] = theme[(i + s) & 3]
     return base_b
 
 
-def an_chase(f, theme, out, n, base_b):
-    """One lit LED runs around; the rest are dark."""
-    pos = (f >> 2) % n
+def an_chase(slot, theme, out, n, base_b):
+    """One lit LED runs around; the rest are dark.  160 ms per step."""
+    pos = slot % n
     for i in range(n):
         out[i] = theme[i & 3] if i == pos else BLACK
     return base_b
 
 
-def an_pingpong(f, theme, out, n, base_b):
-    """Lit LED bounces back and forth instead of wrapping."""
+def an_pingpong(slot, theme, out, n, base_b):
+    """Lit LED bounces back and forth instead of wrapping.  160 ms per step."""
     span = (n - 1) * 2 if n > 1 else 1
-    p = (f >> 2) % span
+    p = slot % span
     pos = p if p < n else span - p
     for i in range(n):
         out[i] = theme[i & 3] if i == pos else BLACK
     return base_b
 
 
-def an_alternate(f, theme, out, n, base_b):
-    """Odd/even LEDs swap between two theme colours."""
-    s = (f >> 3) & 1
+def an_alternate(slot, theme, out, n, base_b):
+    """Odd/even LEDs swap between two theme colours every 320 ms."""
+    s = (slot >> 1) & 1
     for i in range(n):
         out[i] = theme[((i + s) & 1) * 2 + ((i >> 1) & 1)]
     return base_b
 
 
-def an_pulse(f, theme, out, n, base_b):
-    """Brightness ramp -- ANALOG current, so electrically silent."""
+def an_pulse(slot, theme, out, n, base_b):
+    """Brightness ramp over ~1.3 s -- ANALOG current, electrically silent."""
     for i in range(n):
         out[i] = theme[i & 3]
     lo = 1 + (base_b >> 2)
-    return lo + ((base_b - lo) * _tri(f, 20)) // 10
+    return lo + ((base_b - lo) * _tri(slot, 8)) // 4
 
 
-def an_breathe(f, theme, out, n, base_b):
-    """Same idea as pulse, much slower."""
+def an_breathe(slot, theme, out, n, base_b):
+    """Same idea as pulse over ~3.8 s."""
     for i in range(n):
         out[i] = theme[i & 3]
     lo = 1 + (base_b >> 3)
-    return lo + ((base_b - lo) * _tri(f, 90)) // 45
+    return lo + ((base_b - lo) * _tri(slot, 24)) // 12
 
 
-def an_strobe(f, theme, out, n, base_b):
-    """All on / all off.  Kept deliberately slow -- fast strobing is both
-    unpleasant and a seizure risk in a dark room."""
-    on = ((f >> 3) & 3) != 0        # on 3 frames of every 4 ticks
+def an_strobe(slot, theme, out, n, base_b):
+    """All on / all off: 320 ms dark in every 1.28 s.  Kept deliberately
+    slow -- fast strobing is both unpleasant and a seizure risk in a dark
+    room."""
+    on = ((slot >> 1) & 3) != 0
     for i in range(n):
         out[i] = theme[i & 3] if on else BLACK
     return base_b
@@ -329,10 +337,10 @@ class Lights:
             Pin(C.LED_CLK, Pin.OUT, value=0)
             Pin(C.LED_DAT, Pin.OUT, value=0)
 
-    def render(self, frame, theme_idx, bright, anim_idx):
+    def render(self, slot, theme_idx, bright, anim_idx):
         if self.leds is None:
             return
-        b = ANIMS[anim_idx](frame, THEMES[theme_idx], self._buf, self.n, bright)
+        b = ANIMS[anim_idx](slot, THEMES[theme_idx], self._buf, self.n, bright)
         if b == self._cur_b and self._buf == self._cur:
             return                              # nothing changed: stay silent
         self._cur_b = b
@@ -342,11 +350,11 @@ class Lights:
             self.leds.set(i, self._buf[i])
         self.leds.write()
 
-    def error(self, frame, code):
+    def error(self, now_ms, code):
         """Blink `code` in red binary.  LED1 is the least significant bit."""
         if self.leds is None:
             return
-        lit_phase = (frame % ERR_CYCLE_FRAMES) < ERR_ON_FRAMES
+        lit_phase = (now_ms % ERR_CYCLE_MS) < ERR_ON_MS
         for i in range(self.n):
             on = lit_phase and ((code >> i) & 1)
             self._buf[i] = ERR_COLOR if on else BLACK
@@ -426,10 +434,8 @@ async def main():
         print("buttons still live: hold CHANNEL %ds to reset"
               % (RESET_HOLD_MS // 1000))
         hold_t0 = None
-        frame = 0
         while True:
-            if not (frame & 1):                 # render every other 20 ms tick
-                lights.error(frame >> 1, err)
+            lights.error(time.ticks_ms(), err)   # dedups internally
             if btns.pressed("channel"):
                 if hold_t0 is None:
                     hold_t0 = time.ticks_ms()
@@ -440,7 +446,6 @@ async def main():
                     print("CHANNEL held -- hard reset")
                     time.sleep_ms(60)
                     machine.reset()
-            frame += 1
             await asyncio.sleep_ms(20)
 
     player.playlist = tracks
@@ -536,15 +541,22 @@ async def main():
             await asyncio.sleep_ms(20)
 
     async def led_task():
-        """Drives LEDs from the player's own index, so what you see matches
-        what is actually playing rather than what was requested."""
-        frame = 0
+        """Drives LEDs from the player's own index and CLOCK.
+
+        Animation phase is the playback position quantised to SLOT_MS, not a
+        local counter: a counter ticked by sleep_ms runs percent-level slow
+        under decode load and differently per badge, which is exactly the
+        "lights drift apart" that was visible by eye.  Position-derived slots
+        mean badges locked to the same track time flash at the same track
+        time, always -- and a re-sync snaps the lights together with the
+        audio.  The chain is only written when the computed output changes,
+        so polling fast costs no LED traffic.
+        """
         last = None
         while True:
             cur = player.index % len(player.playlist)
             if cur != last:
                 last = cur
-                frame = 0
                 t, b, a = looks[cur]
                 print("channel %d/%d: %-28s %s + %s"
                       % (cur + 1, len(player.playlist),
@@ -553,15 +565,15 @@ async def main():
             if player.errors >= 3:
                 # Repeated failures are worth showing on the badge, not just
                 # on a console nobody is watching.
-                lights.error(frame, ERR_PLAYBACK)
+                lights.error(time.ticks_ms(), ERR_PLAYBACK)
             elif listening:
-                # glacier + breathe: visibly different from any track look
-                lights.render(frame, 7, 20, 6)
+                # glacier + breathe on the WALL clock: playback is paused
+                # while listening, so track time is frozen here.
+                lights.render(time.ticks_ms() // SLOT_MS, 7, 20, 6)
             else:
                 t, b, a = looks[cur]
-                lights.render(frame, t, b, a)
-            frame += 1
-            await asyncio.sleep_ms(FRAME_MS)
+                lights.render(player.pos_ms // SLOT_MS, t, b, a)
+            await asyncio.sleep_ms(LED_POLL_MS)
 
     async def auto_sync_task():
         """Fire SYNC on a timer.  Test hook only; disabled when AUTO_SYNC_MS=0."""
