@@ -34,6 +34,7 @@ Restore the normal player with:  mpremote connect PORT fs cp main.py :
 import time
 import math
 import gc
+import machine
 from machine import Pin, SPI, I2S
 
 import config as C
@@ -47,16 +48,24 @@ except ImportError:
     mp3 = None
 
 # -- modes -------------------------------------------------------------------
-TONE, SWEEP, MUSIC, ZEROS, CLKOFF = range(5)
-MODE_NAMES = ("TONE", "SWEEP", "MUSIC", "ZEROS", "CLKOFF")
+TONE, SWEEP, MUSIC, ZEROS, CLKOFF, FREQ = range(6)
+MODE_NAMES = ("TONE", "SWEEP", "MUSIC", "ZEROS", "CLKOFF", "FREQ")
 MODE_COLORS = (
     (255, 0, 0),      # TONE    red
     (255, 170, 0),    # SWEEP   yellow
     (0, 255, 0),      # MUSIC   green
     (0, 80, 255),     # ZEROS   blue
     (255, 255, 255),  # CLKOFF  white
+    (255, 0, 255),    # FREQ    magenta
 )
-N_MODES = 5
+N_MODES = 6
+
+# FREQ mode: frames per sine period at 44.1 kHz, so tone = 44100/n Hz.  Values
+# chosen to divide 44100 exactly, so the buffer loops without a phase step.
+# Use this to size the DAC output filter cap: sweep upward and listen for where
+# the top end starts dropping.  A cap big enough to kill the buzz but small
+# enough to keep 10-15 kHz intact is the one you want.
+FREQ_NS = (441, 200, 100, 44, 22, 10, 6, 4, 3)   # 100 Hz .. 14.7 kHz
 
 MAX_LEVEL = 15
 SWEEP_SECS = 20.0
@@ -72,6 +81,18 @@ TONE_FRAMES = TONE_PERIODS * 100
 def level_to_amp(level):
     """Level 0..15 -> peak amplitude 1..32767, 6 dB per step."""
     return min(32767, 1 << level)
+
+
+# In ZEROS mode the level is meaningless (every sample is 0), so VOL+/- are
+# repurposed to step the CPU clock instead.  This probes whether the noise
+# floor tracks RP2040 current draw coupling into the shared 3V3 rail through
+# the ME6211 LDO -- if the buzz shifts with clock, that is the mechanism.
+#
+# Entries at/above 250 MHz are the only ones viable for MP3 playback (125 MHz
+# measured 0.57x realtime, see config.py:119), so the useful search for a
+# quieter operating point happens up there.  The low values stay for diagnosis.
+CPU_FREQS = (48_000_000, 96_000_000, 125_000_000, 200_000_000,
+             250_000_000, 252_000_000, 264_000_000, 276_000_000)
 
 
 class Mp3Stream:
@@ -165,6 +186,14 @@ class Lab:
         self.level = 0
         self.playing = False
 
+        # Start at whatever config asked for, so the first ZEROS reading
+        # matches normal operating conditions.
+        self.cpu_idx = len(CPU_FREQS) - 1
+        for i, f in enumerate(CPU_FREQS):
+            if f == C.CPU_FREQ:
+                self.cpu_idx = i
+                break
+
         self.audio = None
         self.stream = None
         self.sweep_t0 = None
@@ -173,7 +202,10 @@ class Lab:
         # All output is LSBJ-reframed to 32-bit words -> 4 bytes per sample,
         # i.e. 8 bytes per stereo frame.  See dsp.pcm16_to_lsbj32 / BADGE.md.
         self.tone = bytearray(TONE_FRAMES * 8)
-        self.tone_amp = None
+        self.tone_mv = memoryview(self.tone)
+        self.tone_key = None          # (frames_per_period, amp) currently built
+        self.tone_len = TONE_FRAMES   # frames actually valid in self.tone
+        self.freq_idx = 2             # FREQ mode start: n=100 -> 441 Hz
         self.zeros = bytearray(4000)
         self.scratch = bytearray(mp3.MAX_FRAME_BYTES * 2) if mp3 else None
         self.sweep_step = 0
@@ -240,6 +272,26 @@ class Lab:
                           Pin(C.I2S_WS, Pin.OUT, value=0),
                           Pin(C.I2S_SD, Pin.OUT, value=0)]
 
+    def _set_cpu(self, idx):
+        """Change CPU clock, cycling I2S around it.
+
+        The I2S bit clock is derived from sys_clk, so the peripheral must be
+        torn down and rebuilt or the sample rate goes wrong.
+        """
+        self.cpu_idx = idx % len(CPU_FREQS)
+        f = CPU_FREQS[self.cpu_idx]
+        had_i2s = self.audio is not None
+        if had_i2s:
+            self._i2s_down()
+        try:
+            machine.freq(f)
+        except Exception as e:
+            print("freq %d failed: %s" % (f, e))
+        if had_i2s:
+            self._i2s_up()
+        print("CPU -> %d MHz (actual %d)" % (f // 1000000,
+                                             machine.freq() // 1000000))
+
     def _apply_mode(self):
         if self.stream is not None:
             self.stream.close()
@@ -257,23 +309,31 @@ class Lab:
                 self.stream = None
         if self.mode == SWEEP:
             self.sweep_t0 = time.ticks_ms()
-        self.tone_amp = None       # force a rebuild
+        self.tone_key = None       # force a rebuild
 
     # -- signal generation ---------------------------------------------------
-    def _fill_tone(self, amp):
-        """Build one LSBJ-reframed 441 Hz period and tile it across the buffer."""
-        if amp == self.tone_amp:
+    def _fill_tone(self, amp, n=100):
+        """Build one LSBJ-reframed sine period of `n` frames and tile it.
+
+        `n` frames per period at 44.1 kHz gives 44100/n Hz.  The buffer holds as
+        many whole periods as fit, so playback loops with no phase discontinuity
+        (a step at the seam would be an audible click at the buffer rate).
+        """
+        key = (n, amp)
+        if key == self.tone_key:
             return
-        self.tone_amp = amp
+        self.tone_key = key
+        reps = max(1, TONE_FRAMES // n)
+        self.tone_len = reps * n
         b = self.tone
-        for i in range(100):
-            s = int(amp * math.sin(2 * math.pi * i / 100))
+        for i in range(n):
+            s = int(amp * math.sin(2 * math.pi * i / n))
             w = (s & 0xFFFF) << 1          # sample into bits 16..1
             b0 = w & 0xFF
             b1 = (w >> 8) & 0xFF
             b2 = (w >> 16) & 0xFF
-            for p in range(TONE_PERIODS):
-                j = ((p * 100) + i) * 8
+            for p in range(reps):
+                j = ((p * n) + i) * 8
                 b[j] = b0                   # left channel, little-endian u32
                 b[j + 1] = b1
                 b[j + 2] = b2
@@ -300,10 +360,13 @@ class Lab:
             self.audio.write(self.zeros)
         elif self.mode == TONE:
             self._fill_tone(level_to_amp(self.level))
-            self.audio.write(self.tone)
+            self.audio.write(self.tone_mv[:self.tone_len * 8])
+        elif self.mode == FREQ:
+            self._fill_tone(level_to_amp(self.level), FREQ_NS[self.freq_idx])
+            self.audio.write(self.tone_mv[:self.tone_len * 8])
         elif self.mode == SWEEP:
             self._fill_tone(self._sweep_amp())
-            self.audio.write(self.tone)
+            self.audio.write(self.tone_mv[:self.tone_len * 8])
         elif self.mode == MUSIC:
             if self.stream is None:
                 time.sleep_ms(20)
@@ -321,11 +384,23 @@ class Lab:
 
     # -- LEDs ----------------------------------------------------------------
     def _render(self):
+        # C.LED_ENABLE=False parks the chain so the bit-bang edges on GP24/GP25
+        # cannot contaminate a noise measurement.  Mode/level still print to the
+        # console via _announce().
+        if not getattr(C, "LED_ENABLE", True):
+            return
         col = MODE_COLORS[self.mode]
         dim = scale(col, 10)
         # SWEEP drives its own amplitude, so show the live ramp position there
         # rather than the (unused) level -- the LEDs visibly count up.
-        shown = self.sweep_step if (self.mode == SWEEP and self.playing) else self.level
+        if self.mode == SWEEP and self.playing:
+            shown = self.sweep_step        # live ramp position
+        elif self.mode == ZEROS:
+            shown = self.cpu_idx           # VOL+/- step the CPU clock here
+        elif self.mode == FREQ:
+            shown = self.freq_idx          # VOL+/- step tone frequency here
+        else:
+            shown = self.level
         for i in range(C.LED_COUNT):
             self.leds.set(i, col if (shown >> i) & 1 else dim)
         # Kept low: LED current couples into the audio rail (BADGE.md quirk 7).
@@ -334,9 +409,15 @@ class Lab:
         self.leds.write()
 
     def _announce(self):
-        print("mode %-6s level %2d (amp %5d)  %s"
+        extra = ""
+        if self.mode == FREQ:
+            extra = "  tone %5d Hz" % (44100 // FREQ_NS[self.freq_idx])
+        elif self.mode == ZEROS:
+            extra = "  cpu %d MHz" % (machine.freq() // 1000000)
+        print("mode %-6s level %2d (amp %5d)  %s%s"
               % (MODE_NAMES[self.mode], self.level,
-                 level_to_amp(self.level), "RUNNING" if self.playing else "stopped"))
+                 level_to_amp(self.level),
+                 "RUNNING" if self.playing else "stopped", extra))
 
     # -- main loop -----------------------------------------------------------
     def run(self):
@@ -356,11 +437,21 @@ class Lab:
                         self.sweep_t0 = time.ticks_ms()
                     self._announce()
                 elif ev == "vol_up":
-                    if self.level < MAX_LEVEL:
+                    if self.mode == ZEROS:        # level is meaningless here
+                        self._set_cpu(self.cpu_idx + 1)
+                    elif self.mode == FREQ:       # step tone frequency instead
+                        self.freq_idx = min(len(FREQ_NS) - 1, self.freq_idx + 1)
+                        self._announce()
+                    elif self.level < MAX_LEVEL:
                         self.level += 1
                         self._announce()
                 elif ev == "vol_down":
-                    if self.level > 0:
+                    if self.mode == ZEROS:
+                        self._set_cpu(self.cpu_idx - 1)
+                    elif self.mode == FREQ:
+                        self.freq_idx = max(0, self.freq_idx - 1)
+                        self._announce()
+                    elif self.level > 0:
                         self.level -= 1
                         self._announce()
 
@@ -375,10 +466,21 @@ class Lab:
                 next_render = time.ticks_add(now, 120)
 
 
-def run():
+def run(autostart=False, mode=TONE, level=0):
+    """Start the lab.
+
+    autostart=True begins playing immediately at `level` instead of the safe
+    stopped/level-0 default -- use it when you want a continuous tone up as soon
+    as the badge powers on, with no button presses.
+    """
     import machine
     machine.freq(C.CPU_FREQ)
     lab = Lab()
+    if autostart:
+        lab.mode = mode
+        lab.level = min(MAX_LEVEL, max(0, level))
+        lab._apply_mode()
+        lab.playing = True
     try:
         lab.run()
     finally:

@@ -23,10 +23,20 @@ class Buttons:
         self._raw = {name: 1 for name in pin_map}        # last raw level
         self._t_change = {name: 0 for name in pin_map}   # last raw transition (ms)
         self._t_repeat = {name: 0 for name in pin_map}   # next repeat time (ms)
+        self._t_press = {name: 0 for name in pin_map}    # when the press began
+        self._held = {name: False for name in pin_map}   # long-press already fired
         self.debounce_ms = debounce_ms
         self.repeat_ms = repeat_ms
         self.repeat_after_ms = repeat_after_ms
         self.repeat = set()
+        # Names in `hold` get short/long press semantics instead of fire-on-press:
+        #   held < hold_ms  -> plain "<name>" event, emitted on RELEASE
+        #   held >= hold_ms -> "<name>_hold" event, emitted once as soon as the
+        #                      threshold passes (so it feels responsive), and no
+        #                      plain event on the eventual release.
+        # Used for "tap = next track, hold = previous track".
+        self.hold = set()
+        self.hold_ms = 550
 
     def poll(self):
         events = []
@@ -41,8 +51,21 @@ class Buttons:
             if v != self._stable[name] and time.ticks_diff(now, self._t_change[name]) >= self.debounce_ms:
                 self._stable[name] = v
                 if v == 0:  # pressed (falling edge)
-                    events.append(name)
+                    if name in self.hold:
+                        self._t_press[name] = now
+                        self._held[name] = False
+                    else:
+                        events.append(name)
                     self._t_repeat[name] = time.ticks_add(now, self.repeat_after_ms)
+                elif name in self.hold:      # released (rising edge)
+                    if not self._held[name]:
+                        events.append(name)  # short tap
+            # long-press: fire once the moment the threshold is crossed
+            if (name in self.hold and self._stable[name] == 0
+                    and not self._held[name]
+                    and time.ticks_diff(now, self._t_press[name]) >= self.hold_ms):
+                self._held[name] = True
+                events.append(name + "_hold")
             # auto-repeat while held down
             if self._stable[name] == 0 and name in self.repeat:
                 if time.ticks_diff(now, self._t_repeat[name]) >= 0:
