@@ -1,77 +1,96 @@
-# DEF CON silent disco badge
+# DEF CON Silent Disco Badge
 
-RP2040-based wearable badge with 4 addressable RGB LEDs, microSD audio
-playback, headphone amp, IR receive/transmit, and Shitty Add-On (SAO).
-Mecha Tokyo dance party silkscreen aesthetic.
-Designed for board-to-board pairing via sawtooth interlocking edges +
-3D-printed IR light covers.
-
-## Current state — review on phone
-
-### Iso 3D (the hero shots)
+An RP2040 wearable that turns a crowd into a **silent disco**: each badge
+streams MP3 "channels" from its microSD to your headphones, runs a
+per-track LED light show, and can **sync channel + playback position to a
+neighbouring badge over infrared** — press one button, touch badges
+together, and you're dancing to the same beat, lights flashing in step.
 
 ![Front iso](docs/hero_front.png)
 
+## You're holding one?
+
+- **Headphones** in the top jack. **Power switch** on the edge.
+- **CHANNEL** — next channel (each channel is one DJ mix, looping forever).
+  Hold it **10 seconds** for a hard reset.
+- **VOL+ / VOL−** — eight steps; bottom is true mute. Hold to ramp.
+- **SYNC** — join a neighbour: your music pauses, the badge listens for
+  another badge's IR broadcast (~25 s), then jumps to **their channel at
+  their position**. Interlock the sawtooth edges for a guaranteed link —
+  that's what the jagged sides are for. When it locks, both badges shimmer.
+- **LEDs blinking red?** That's an error code, binary, leftmost LED = 1:
+  **1** no SD card · **2** card empty · **3** card unreadable · **4**
+  playback failing.
+- **Sounds like a modem, or the card "disappears"? Swap the battery.**
+  A dying cell warps the audio and breaks the SD card before it kills the
+  badge — it looks exactly like a software bug and it never is.
+
+Every badge broadcasts its channel + timecode over IR every 7–13 s, so any
+badge can join any other at any time. Synced badges' light shows stay
+frame-locked because animations are a pure function of the *track clock*,
+not a local timer.
+
+## The hardware
+
+86 × 54 mm credit-card badge, 4-layer, USB-C. Sawtooth left/right edges
+interlock badge-to-badge and align each badge's IR emitter with its
+neighbour's receiver. Mecha Tokyo dance party silkscreen.
+
+- **MCU:** RP2040 + QSPI flash + 12 MHz crystal — running MicroPython with
+  a native (Helix) MP3 decoder C module at a 276 MHz overclock
+- **Audio:** microSD → TM8211 I²S DAC → TDA1308 headphone amp → 3.5 mm jack
+- **LEDs:** 4× SK9822 addressable RGB across the top edge
+- **IR:** TSOP4838 receiver in a left-edge notch, 940 nm emitter on a
+  right-edge tooth — NEC-style frames carry (timecode, channel)
+- **Power:** battery (JST) → switch → 3.3 V LDO; charger on USB-C
+- **SAO connector** with two ADC-capable GPIOs (see the battery-monitor
+  bodge in [`firmware/README.md`](firmware/README.md))
+
+Fab outputs for rev 2 are in
+[`defcon_badge/fab_rev2.zip`](defcon_badge/fab_rev2.zip) (gerbers, drill,
+placement) — the KiCad sources live in [`defcon_badge/`](defcon_badge/).
+
 ![Back iso](docs/hero_back.png)
 
-### Straight-on 3D (manufactured look)
+## The firmware
 
-| Front | Back |
-|---|---|
-| ![Front](docs/front_3d.png) | ![Back](docs/back_3d.png) |
+**[`firmware/README.md`](firmware/README.md)** is the full story. The
+short version: MicroPython + a fixed-point C MP3 decoder, an async player
+with byte-offset CBR seeking (that's what makes IR time-sync possible), an
+edge-captured hard-IRQ IR receiver that survives 60 Hz ambient light, 16
+LED themes × 12 animations locked to the playback clock, crash persistence
+to internal flash, and a 44-check host-side regression suite that runs the
+real firmware modules on a laptop.
 
-### 2D plan view (top-down, courtyards visible — design review)
+Some engineering war stories are preserved in the commit history and
+[`firmware/BADGE.md`](firmware/BADGE.md), including:
 
-![Front plan](docs/front_plan.png)
+- the manufacturing run split between two QSPI flash vendors, fixed with a
+  **custom boot2** whose continuous-read mode byte satisfies both
+- the missing DAC reconstruction filter, diagnosed with a tacked-on
+  capacitor and a button-driven audio lab
+- why no LED animation ever crossfades (mid-range PWM couples into the
+  audio), and how orange and purple exist anyway (your eye blends
+  adjacent LEDs)
+- the IR link that failed until the pulses became NEC-standard and the
+  receive IRQ became a hard IRQ
 
-## Spec at a glance
-- **Outline:** 86 × 54 mm credit-card form factor, sharp corners
-- **Pairing geometry:** Real-sawtooth left + right edges (9 teeth per side, 6mm period, 2mm depth) — A's right teeth slot into B's left notches
-- **Stackup:** 4-layer (F.Cu, In1.Cu = GND, In2.Cu = +3V3, B.Cu = GND pour)
-- **Components:** 80 placed (79 on F.Cu, 1 on B.Cu microSD)
-- **Mounting:** 4× M2.5 holes (2.7mm) at corners
-- **Ratsnest length:** 1422.9 mm across 87 nets (excluding GND, which is the inner plane)
+## Build / hack on it
 
-## Subsystems
-- **MCU:** RP2040 (U3) + W25Q16 flash (U2) + 12 MHz crystal Y1 with 15p load caps + 12-cap decoupling ring (one 100n adjacent to each U3 power pin)
-- **Power:** USB-C (J10) → TP4056 charger (U10) → JST-PH LiPo (J11) → SS-12D00 switch (SW1) → ME6211C33 LDO (U11) → +3V3 rail
-- **LEDs:** 4× SK9822-EC20 5×5mm RGB addressable across the top edge with 10nF bypass per LED
-- **Audio:** TM8211 I²S DAC (U20) → FDA1308 headphone amp (U21) → 220µF AC coupling (C45/C46) → Amphenol 10038075-D0P stereo jack (J20, plug exits up off top edge)
-- **IR:** TSOP4838 receiver (U30) in the left-edge sawtooth notch, IR LED (D20) on the right-edge sawtooth peak — both at y=110 for board-pair alignment
-- **Buttons:** 3× TS-1187A tactile (SW20-22) mid-board row
-- **Connectors:** SAO 2×3 (J30, near U3 SAO pins for short routing), Dev/SWD 1×5 (J33, bottom row), UART 1×3 (J32, near U3 UART pins), microSD (J31, on B.Cu so card slot accessible from below)
-
-## Silkscreen — mecha Tokyo dance party
-- **Back:** Big bold mirrored DEFCON wordmark with a 24-ray sunburst, "// SILENT DISCO //" tagline, octagonal DC32 emblem with hex glyphs flanking, corner armor brackets, chevron frame stripes, diagonal hatch shading in the corners, dot-grid "LED rain" patterns, github URL, 0xC0FFEE / @LZH flavor.
-- **Front:** Subtle corner brackets and accent chevrons indicating data flow toward USB-C and audio jack. Refdes silk stays prominent for assembly.
-
-## Tooling
-
-Project-local tools under `defcon_badge/tools/`:
-- `render_pcb.sh` — SVG/PNG renders
-- `set_outline_v2.py` — sawtooth board outline generator (period, depth, IR-Y configurable)
-- `silk_mecha.py` — vector silk art generator (idempotent, tagged uuids)
-- `move_components.py`, `flip_footprint.py`, `place_lib_footprint.py` — placement legacy tools
-- `sync_nets.py`, `fix_pad_nets.py`, `patch_j10_nets.py` — net assignment tools
-- `sweep_offboard.py` — sweep all parts to staging grid
-
-Skills shipped to `~/.claude/skills/` for any future PCB work:
-- **pcb-placement** — `fp_meta.py` (full pad metadata after rotation), `place_at.py` (pad-relative anchor with 0.1mm grid snap), `align.py` (row/col/distribute), `ratsnest.py` (MST length quality metric), `whats_near.py` (describe board area), `check_courtyards.py`, `check_edge_components.py`, `rotate.py`
-- **pcb-views** — `render_all.sh` (6 standard angles), `render_area.py` (orthographic top-down zoom on any region)
-
-## Build
 ```sh
-make render   # SVG/PNG renders
-make fab      # gerbers + drill + pos + BOM to fab/
-make drc      # design rules check
-make erc      # ERC summary
-make clean    # wipe generated artifacts
+cd firmware
+python3 tools/host_tests.py        # run the suite (no hardware needed)
+tools/flash_badge.sh               # provision a badge end-to-end
+tools/prepare_card.sh /Volumes/SD  mix1.wav mix2.flac   # make a card
 ```
 
-## Known gaps
-- No copper routing yet — placement-complete, ratsnest visible but signals not yet wired (would need freerouting w/ JRE or hand routing in KiCad)
-- Schematic has 71 ERC violations (mostly off-grid endpoints and missing PWR_FLAG) — none change topology
-- J10 USB-C wiring patched in PCB via `patch_j10_nets.py` because the original schematic miswired CC/VBUS/GND all to one net
+Rebuilding the firmware UF2 (`tools/build_firmware.sh`) fetches
+MicroPython, the pico-sdk and the Helix MP3 decoder
+([picomp3lib](https://github.com/ikjordan/picomp3lib), RealNetworks
+RPSL/RCSL licence) at build time. Demo cards carry Creative
+Commons-licensed mixes with attribution in `CREDITS.txt` on the card.
 
 ## License
-MIT — see LICENSE file.
+
+MIT — see [LICENSE](LICENSE). Board art, sawtooth geometry and firmware
+all live here; go make a dance floor.
