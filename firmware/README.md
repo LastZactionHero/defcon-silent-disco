@@ -107,6 +107,11 @@ flash-rate safety), and the volume ladder. Run it before deploying changes.
 
 ## Recovery / field notes
 
+- **Sounds like a modem / horrible hum, or the card stops reading?  Fresh
+  battery first.**  A sagging AAA amplitude-modulates the DAC (its output is
+  ratiometric to the rail) and breaks SD init -- both look exactly like
+  firmware bugs.  USB power masks it, so a badge that "tests fine on the
+  laptop" can still be a dead battery.  Pack spares.
 - **Hold CHANNEL at power-on** → skip autostart, drop to the REPL.
 - **Hold CHANNEL 10 s while running** → hard reset (works on error screens too).
 - Red binary blink = error code (see above). Code 1: reseat the SD card.
