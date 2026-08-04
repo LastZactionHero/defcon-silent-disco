@@ -201,8 +201,16 @@ def _tri(x, period):
 # Signature: fn(slot, theme, out, n, base_b) -> brightness
 # `slot` is track-time // SLOT_MS, so every step below is an absolute position
 # in the track: synced badges compute identical output at identical moments.
-# Fills `out` (a preallocated list) with `n` colours and returns the global
-# brightness to use.  Never produces a channel value other than 0 or 255.
+# Randomness comes from _shash(slot) -- a hash of the slot, so "random" looks
+# are still pure functions of track time and match across badges.
+# Never a channel value other than 0/255; brightness is the SK9822 analog
+# current field (silent).  Full-field flashing stays at or under ~1.5 Hz.
+
+def _shash(x):
+    """Cheap deterministic slot hash (Knuth multiplicative + xor fold)."""
+    x = (x * 2654435761) & 0xFFFFFFFF
+    return x ^ (x >> 13)
+
 
 def an_static(slot, theme, out, n, base_b):
     for i in range(n):
@@ -210,29 +218,35 @@ def an_static(slot, theme, out, n, base_b):
     return base_b
 
 
-def an_rotate(slot, theme, out, n, base_b):
-    """Theme colours march around the ring.  One step per 320 ms."""
-    s = (slot >> 1) & 3
+def an_spin(slot, theme, out, n, base_b):
+    """Theme colours whip around the ring, one step per slot (160 ms)."""
+    s = slot & 3
     for i in range(n):
         out[i] = theme[(i + s) & 3]
     return base_b
 
 
-def an_chase(slot, theme, out, n, base_b):
-    """One lit LED runs around; the rest are dark.  160 ms per step."""
-    pos = slot % n
+def an_comet(slot, theme, out, n, base_b):
+    """A head runs the ring with a contrasting tail one step behind."""
+    head = slot % n
+    tail = (head - 1) % n
     for i in range(n):
-        out[i] = theme[i & 3] if i == pos else BLACK
+        if i == head:
+            out[i] = theme[head & 3]
+        elif i == tail:
+            out[i] = theme[(head + 2) & 3]
+        else:
+            out[i] = BLACK
     return base_b
 
 
-def an_pingpong(slot, theme, out, n, base_b):
-    """Lit LED bounces back and forth instead of wrapping.  160 ms per step."""
-    span = (n - 1) * 2 if n > 1 else 1
+def an_scanner(slot, theme, out, n, base_b):
+    """Two adjacent LEDs sweep back and forth -- wider, meaner pingpong."""
+    span = (n - 2) * 2 if n > 2 else 1
     p = slot % span
-    pos = p if p < n else span - p
+    pos = p if p < (n - 1) else span - p
     for i in range(n):
-        out[i] = theme[i & 3] if i == pos else BLACK
+        out[i] = theme[i & 3] if i in (pos, pos + 1) else BLACK
     return base_b
 
 
@@ -244,6 +258,16 @@ def an_alternate(slot, theme, out, n, base_b):
     return base_b
 
 
+def an_thump(slot, theme, out, n, base_b):
+    """Brightness KICK every 4 slots (~94 BPM): slam bright, decay, repeat.
+    Colour never changes -- all the motion is the analog current, so it is
+    electrically silent and reads exactly like a beat."""
+    for i in range(n):
+        out[i] = theme[i & 3]
+    m = (8, 4, 3, 2)[slot & 3]          # 2x, 1x, .75x, .5x of base
+    return max(1, min(31, (base_b * m) >> 2))
+
+
 def an_pulse(slot, theme, out, n, base_b):
     """Brightness ramp over ~1.3 s -- ANALOG current, electrically silent."""
     for i in range(n):
@@ -253,27 +277,55 @@ def an_pulse(slot, theme, out, n, base_b):
 
 
 def an_breathe(slot, theme, out, n, base_b):
-    """Same idea as pulse over ~3.8 s."""
+    """Same idea as pulse over ~3.8 s -- the one calm option in the set."""
     for i in range(n):
         out[i] = theme[i & 3]
     lo = 1 + (base_b >> 3)
     return lo + ((base_b - lo) * _tri(slot, 24)) // 12
 
 
-def an_strobe(slot, theme, out, n, base_b):
+def an_sparkle(slot, theme, out, n, base_b):
+    """Deterministic glitter: a hashed subset of LEDs lights each slot.
+    Sparse per-LED twinkle, never a full-field flash."""
+    bits = _shash(slot) & 0xF
+    if not bits & ((1 << n) - 1):
+        bits = 0b0101                    # never fully dark
+    for i in range(n):
+        out[i] = theme[i & 3] if (bits >> i) & 1 else BLACK
+    return base_b
+
+
+def an_wave(slot, theme, out, n, base_b):
+    """Spin and pulse at once -- colours orbit while brightness rolls."""
+    s = (slot >> 1) & 3
+    for i in range(n):
+        out[i] = theme[(i + s) & 3]
+    lo = 1 + (base_b >> 2)
+    return lo + ((base_b - lo) * _tri(slot, 8)) // 4
+
+
+def an_flash(slot, theme, out, n, base_b):
     """All on / all off: 320 ms dark in every 1.28 s.  Kept deliberately
-    slow -- fast strobing is both unpleasant and a seizure risk in a dark
-    room."""
+    slow -- fast full-field strobing is a seizure risk in a dark room."""
     on = ((slot >> 1) & 3) != 0
     for i in range(n):
         out[i] = theme[i & 3] if on else BLACK
     return base_b
 
 
-ANIMS = (an_static, an_rotate, an_chase, an_pingpong,
-         an_alternate, an_pulse, an_breathe, an_strobe)
-ANIM_NAMES = ("static", "rotate", "chase", "pingpong",
-              "alternate", "pulse", "breathe", "strobe")
+def an_jump(slot, theme, out, n, base_b):
+    """The whole colour arrangement teleports to a hashed rotation every
+    320 ms -- jump-cut dancing instead of smooth motion."""
+    s = _shash(slot >> 1) & 3
+    for i in range(n):
+        out[i] = theme[(i + s) & 3]
+    return base_b
+
+
+ANIMS = (an_static, an_spin, an_comet, an_scanner, an_alternate, an_thump,
+         an_pulse, an_breathe, an_sparkle, an_wave, an_flash, an_jump)
+ANIM_NAMES = ("static", "spin", "comet", "scanner", "alternate", "thump",
+              "pulse", "breathe", "sparkle", "wave", "flash", "jump")
 
 
 def name_hash(name):
