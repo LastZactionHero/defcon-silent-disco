@@ -116,11 +116,23 @@ PERSIST_POS_DELTA_MS = 30_000
 # Minimum spacing between the two known VM-stallers (flash write, IR send).
 STALL_SPACING_MS = 700
 
+# How often to re-probe a missing/failed SD card.  Each probe blocks for up
+# to ~1 s (5 init attempts), so this only runs when audio is already dead.
+SD_RETRY_MS = 5_000
+
 
 def _state_ck(st):
     """Tiny integrity checksum -- catches torn flash writes, not attackers."""
     return (st.get("seq", 0) + st.get("pos", 0) + st.get("vol", 0)
             + len(st.get("track", ""))) & 0xFFFF
+
+
+def should_persist(last, st):
+    """Write only when something meaningful changed (pure, host-tested)."""
+    return not (st["track"] == last.get("track")
+                and st["vol"] == last.get("vol")
+                and abs(st["pos"] - last.get("pos", -1 << 30))
+                < PERSIST_POS_DELTA_MS)
 
 
 def load_state():
@@ -539,42 +551,48 @@ async def main():
     btns.hold = {"channel"}
     btns.hold_ms = RESET_HOLD_MS
 
+    # Mount the card -- and if it is missing/empty, KEEP TRYING while
+    # blinking the error code.  Inserting a card must bring the badge to
+    # life without a reset: it will be handed to people who have never
+    # heard of BOOTSEL.
     tracks = []
     err = 0
-    try:
-        if mount_sd():
-            tracks = find_tracks()
-            if not tracks:
-                err = ERR_NO_TRACKS
+    hold_t0 = None
+    last_try = -60_000
+    while True:
+        if time.ticks_diff(time.ticks_ms(), last_try) >= SD_RETRY_MS:
+            last_try = time.ticks_ms()
+            err = 0
+            try:
+                os.umount(C.SD_MOUNT)          # clean slate for the retry
+            except Exception:
+                pass
+            try:
+                if mount_sd():
+                    tracks = find_tracks()
+                    if not tracks:
+                        err = ERR_NO_TRACKS
+                else:
+                    err = ERR_NO_CARD
+            except Exception as e:
+                print("SD mount raised:", e)
+                err = ERR_SD_EXC
+            if not err:
+                break
+            print("ERROR %d: %s -- will keep retrying; insert a card"
+                  % (err, ERR_NAMES.get(err, "?")))
+        lights.error(time.ticks_ms(), err or ERR_NO_CARD)
+        if btns.pressed("channel"):
+            if hold_t0 is None:
+                hold_t0 = time.ticks_ms()
         else:
-            err = ERR_NO_CARD
-    except Exception as e:
-        print("SD mount raised:", e)
-        err = ERR_SD_EXC
-
-    if err:
-        # Do NOT return.  Bailing out left the badge totally inert -- no
-        # buttons, and no hold-to-reset either, which is precisely the state
-        # the escape hatch exists for.  Stay alive, blink the code, keep the
-        # reset available.
-        print("ERROR %d: %s" % (err, ERR_NAMES.get(err, "unknown")))
-        print("LEDs show the code in red binary (LED1 = LSB)")
-        print("buttons still live: hold CHANNEL %ds to reset"
-              % (RESET_HOLD_MS // 1000))
-        hold_t0 = None
-        while True:
-            lights.error(time.ticks_ms(), err)   # dedups internally
-            if btns.pressed("channel"):
-                if hold_t0 is None:
-                    hold_t0 = time.ticks_ms()
-            else:
-                hold_t0 = None
-            for ev in btns.poll():
-                if ev == "channel_hold":
-                    print("CHANNEL held -- hard reset")
-                    time.sleep_ms(60)
-                    machine.reset()
-            await asyncio.sleep_ms(20)
+            hold_t0 = None
+        for ev in btns.poll():
+            if ev == "channel_hold":
+                print("CHANNEL held -- hard reset")
+                time.sleep_ms(60)
+                machine.reset()
+        await asyncio.sleep_ms(20)
 
     player.playlist = tracks
     looks = assign_looks([_name(p) for p in tracks])
@@ -613,6 +631,7 @@ async def main():
 
     listening = False
     listen_until = 0
+    celebrate_until = 0
 
     def start_sync():
         """Pause playback, go quiet, and listen for a neighbour."""
@@ -720,6 +739,13 @@ async def main():
                 lights.render(time.ticks_ms() // SLOT_MS,
                               THEME_NAMES.index("glacier"), 10,
                               ANIM_NAMES.index("breathe"))
+            elif time.ticks_diff(celebrate_until, time.ticks_ms()) > 0:
+                # sync-lock celebration: a bright fast shimmer in the NEW
+                # channel's theme, so both people SEE the join land.  Colour
+                # swap only -- never a dark field, so no flash-rate concern.
+                t, b, a = looks[cur]
+                lights.render(time.ticks_ms() // 80, t, 16,
+                              ANIM_NAMES.index("alternate"))
             else:
                 t, b, a = looks[cur]
                 lights.render(player.pos_ms // SLOT_MS, t, b, a)
@@ -744,9 +770,7 @@ async def main():
                                                  len(player.playlist)]),
                   "pos": player.pos_ms,
                   "vol": vol}
-            if (st["track"] == last.get("track") and st["vol"] == last.get("vol")
-                    and abs(st["pos"] - last.get("pos", -1 << 30))
-                    < PERSIST_POS_DELTA_MS):
+            if not should_persist(last, st):
                 continue
             # keep the flash freeze away from a fresh IR send
             if (player.blame and "ir" in player.blame and
@@ -766,6 +790,37 @@ async def main():
                     player.blame["persist"] = time.ticks_ms()
             except Exception as e:
                 print("persist failed:", e)
+
+    async def sd_recovery_task():
+        """If playback keeps failing (yanked/flaky card), try a full remount.
+
+        Only runs once audio is already dead (player.errors gate), because a
+        probe of an absent card blocks up to ~1 s.  On success the playlist
+        AND the per-track looks are rebuilt -- the card that comes back may
+        not be the card that left.
+        """
+        nonlocal looks
+        while True:
+            await asyncio.sleep_ms(SD_RETRY_MS)
+            if player.errors < 4:
+                continue
+            print("sd: attempting recovery...")
+            try:
+                os.umount(C.SD_MOUNT)
+            except Exception:
+                pass
+            try:
+                if mount_sd():
+                    nt = find_tracks()
+                    if nt:
+                        player.playlist = nt
+                        looks = assign_looks([_name(x) for x in nt])
+                        player.errors = 0
+                        player.seek_ms = 0
+                        player.restart_track()
+                        print("sd: recovered, %d track(s)" % len(nt))
+            except Exception as e:
+                print("sd: recovery failed:", e)
 
     async def auto_sync_task():
         """Fire SYNC on a timer.  Test hook only; disabled when AUTO_SYNC_MS=0."""
@@ -790,6 +845,7 @@ async def main():
             return
         next_tx = time.ticks_add(time.ticks_ms(), random.randint(IR_TX_MIN_MS, IR_TX_MAX_MS))
         while True:
+            nonlocal celebrate_until
             if listening:
                 got = rx.poll()
                 if got:
@@ -807,6 +863,7 @@ async def main():
                         note = " joined ch %d" % (ch + 1)
                     else:
                         player.restart_track()
+                    celebrate_until = time.ticks_add(time.ticks_ms(), 1400)
                     end_sync("locked to ch %d @ %d.%01ds%s"
                              % (ch + 1, player.seek_ms // 1000,
                                 (player.seek_ms % 1000) // 100, note),
@@ -848,7 +905,8 @@ async def main():
 
     try:
         await asyncio.gather(player.run(), input_task(), led_task(), ir_task(),
-                             auto_sync_task(), persist_task())
+                             auto_sync_task(), persist_task(),
+                             sd_recovery_task())
     finally:
         player.deinit()
         lights.off()

@@ -11,7 +11,10 @@
 #   * 44.1 kHz is load-bearing too: the DAC has no reconstruction filter, so a
 #     lower sample rate folds ultrasonic images DOWN toward the audible band.
 #   * Loudness-normalised (EBU R128, -16 LUFS) so channel-surfing between two
-#     different DJs does not whiplash between quiet and loud.
+#     different DJs does not whiplash between quiet and loud.  TWO-PASS
+#     (measure, then apply linearly): single-pass loudnorm adjusts gain
+#     dynamically and audibly "pumps" on dynamic material -- exactly wrong
+#     for a DJ mix.  Two-pass applies one constant gain.
 #   * Metadata/artwork stripped -- a display-less badge has no use for 500 KB
 #     of embedded cover art (the first test file wasted 5.6% on exactly that).
 #
@@ -47,11 +50,29 @@ for src in "$@"; do
   safe="$(printf '%s' "$base" | tr -c 'A-Za-z0-9._-' '_' | cut -c1-40)"
   out="$DEST/$safe.mp3"
   echo "-> $out"
-  ffmpeg -y -v error -i "$src" \
-    -vn -codec:a libmp3lame -b:a "$BITRATE" -joint_stereo 1 -ar 44100 -ac 2 \
-    -af loudnorm=I=-16:TP=-1.5:LRA=11 \
-    -map_metadata -1 -id3v2_version 0 -write_id3v1 0 \
-    "$out"
+
+  # pass 1: measure loudness (writes nothing)
+  MEAS=$(ffmpeg -hide_banner -nostats -i "$src"           -af loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json -f null - 2>&1 |
+         python3 -c '
+import json, sys
+txt = sys.stdin.read()
+try:
+    j = json.loads(txt[txt.rindex("{"):txt.rindex("}") + 1])
+    print(":".join("measured_%s=%s" % (k, j["input_" + k.lower()])
+                   for k in ("I", "TP", "LRA", "thresh"))
+          + ":offset=%s" % j["target_offset"])
+except Exception:
+    pass')
+
+  if [ -n "$MEAS" ]; then
+    NORM="loudnorm=I=-16:TP=-1.5:LRA=11:$MEAS:linear=true"
+  else
+    echo "   (measurement failed -- falling back to single-pass loudnorm)" >&2
+    NORM="loudnorm=I=-16:TP=-1.5:LRA=11"
+  fi
+
+  # pass 2: one constant gain, then encode
+  ffmpeg -y -v error -i "$src"     -vn -codec:a libmp3lame -b:a "$BITRATE" -joint_stereo 1 -ar 44100 -ac 2     -af "$NORM"     -map_metadata -1 -id3v2_version 0 -write_id3v1 0     "$out"
   sz=$(stat -f%z "$out" 2>/dev/null || stat -c%s "$out")
   total=$((total + sz))
   echo "   $((sz / 1048576)) MB"

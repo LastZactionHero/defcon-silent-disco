@@ -40,6 +40,13 @@ python3 -m mpremote version >/dev/null 2>&1 || { echo "error: mpremote not avail
 flash_one() {
   local n="$1"
 
+  # One badge at a time: with two CDC devices attached the port detection
+  # below grabs whichever enumerates first and deploys to the WRONG badge.
+  if [ "$(ls /dev/cu.usbmodem* 2>/dev/null | wc -l)" -gt 0 ]; then
+    echo "[$n] NOTE: a running badge is already on USB -- unplug it first" >&2
+    while ls /dev/cu.usbmodem* >/dev/null 2>&1; do sleep 1; done
+  fi
+
   echo "[$n] waiting for a badge in BOOTSEL (hold BOOTSEL / fit jumper, plug in)..."
   until [ -d /Volumes/RPI-RP2 ]; do sleep 1; done
   echo "[$n] BOOTSEL detected -- flashing $UF2"

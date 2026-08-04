@@ -280,6 +280,87 @@ check("listening indicator resolves by name",
       disco.ANIM_NAMES.index("breathe") >= 0)
 
 # ---------------------------------------------------------------------------
+print("== buttons: debounce / repeat / tap-vs-hold ==")
+bt = fw.buttons
+clock.ms = 1000
+
+
+def press(b, name, down=True):
+    b._pins[name].value(0 if down else 1)
+
+
+b = bt.Buttons({"x": 1})
+press(b, "x"); b.poll()                 # raw edge recorded
+clock.ms += 5
+check("bounce shorter than debounce ignored", b.poll() == [])
+clock.ms += 30
+check("stable press fires the event", b.poll() == ["x"])
+press(b, "x", down=False); b.poll(); clock.ms += 30; b.poll()
+
+b = bt.Buttons({"v": 2}); b.repeat = {"v"}
+press(b, "v"); b.poll(); clock.ms += 30
+first = b.poll()
+clock.ms += b.repeat_after_ms + b.repeat_ms
+evs = []
+for _ in range(3):
+    evs += b.poll()
+    clock.ms += b.repeat_ms
+check("auto-repeat fires while held", first == ["v"] and evs.count("v") >= 3)
+
+b = bt.Buttons({"c": 3}); b.hold = {"c"}; b.hold_ms = 500
+press(b, "c"); b.poll(); clock.ms += 30
+check("hold-capable button silent on press", b.poll() == [])
+clock.ms += 100
+press(b, "c", down=False); b.poll(); clock.ms += 30
+check("short tap fires on RELEASE", b.poll() == ["c"])
+
+b = bt.Buttons({"c": 3}); b.hold = {"c"}; b.hold_ms = 500
+press(b, "c"); b.poll(); clock.ms += 30; b.poll()
+clock.ms += 520
+check("long press fires <name>_hold at threshold", b.poll() == ["c_hold"])
+press(b, "c", down=False); b.poll(); clock.ms += 30
+check("hold suppresses the release tap (reset != channel change)",
+      b.poll() == [])
+
+# ---------------------------------------------------------------------------
+print("== mp3player: track discovery ==")
+mp3p = fw.mp3player
+config = fw.config
+import os as real_os  # noqa: E402
+
+_orig_listdir = real_os.listdir
+_orig_have = mp3p.HAVE_MP3
+_orig_max = config.MAX_TRACKS
+real_os.listdir = lambda p: ["b.mp3", "A.mp3", ".hidden.mp3", "._junk.mp3",
+                             "notes.txt", "c.MP3", "d.wav", "e.mp4"]
+mp3p.HAVE_MP3 = True
+got = mp3p.find_tracks()
+names = [p.rsplit("/", 1)[-1] for p in got]
+check("filters junk, keeps mp3/wav, skips dotfiles, sorts",
+      names == ["A.mp3", "b.mp3", "c.MP3", "d.wav"], str(names))
+config.MAX_TRACKS = 2
+names2 = [p.rsplit("/", 1)[-1] for p in mp3p.find_tracks()]
+check("MAX_TRACKS caps the playlist", len(names2) == 2)
+real_os.listdir = _orig_listdir
+mp3p.HAVE_MP3 = _orig_have
+config.MAX_TRACKS = _orig_max
+
+# ---------------------------------------------------------------------------
+print("== disco: checkpoint decision ==")
+base = {"track": "a.mp3", "pos": 10_000, "vol": 4}
+check("no change -> no write", not disco.should_persist(base, dict(base)))
+check("volume change -> write",
+      disco.should_persist(base, {**base, "vol": 5}))
+check("channel change -> write",
+      disco.should_persist(base, {**base, "track": "b.mp3"}))
+check("small position drift -> no write",
+      not disco.should_persist(base, {**base, "pos": 10_000 + 5_000}))
+check("position drift past threshold -> write",
+      disco.should_persist(
+          base, {**base, "pos": 10_000 + disco.PERSIST_POS_DELTA_MS + 1}))
+check("first write always happens", disco.should_persist({}, base))
+
+# ---------------------------------------------------------------------------
 print("== config: volume ladder ==")
 config = fw.config
 import math  # noqa: E402
