@@ -21,6 +21,21 @@ LED_CLK = 24
 LED_DAT = 25
 LED_COUNT = 4
 
+# Master LED kill switch, for isolating audio noise.
+#
+# Set False and the chain is blanked with ONE clear frame at startup, then the
+# LED task never runs again and GP24/GP25 are parked static low -- so there is
+# no LED current AND no bit-bang edges for the rest of the session.
+#
+# This is deliberately a different probe from LED_ACTIVE_MASK below.  The mask
+# removes LED *current* but keeps clocking the chain every frame; this flag
+# removes *both*.  Comparing the two separates the two coupling mechanisms:
+#   crackle gone with mask=0b0000      -> LED supply current is the culprit
+#   crackle only gone with LED_ENABLE=False -> the bit-bang edges are the culprit
+#   crackle present with LED_ENABLE=False   -> not the LEDs at all; look at the
+#                                              I2S/DAC/amp path or I2S_IBUF
+LED_ENABLE = True
+
 # SK9822 global brightness, 0..31.  This is a CURRENT setting, not a duty cycle:
 # unlike the APA102 (which PWMs this field at ~580 Hz), the SK9822 applies it as
 # an analog current scale, so turning it down genuinely reduces the current the
@@ -99,6 +114,9 @@ SD_BAUD_INIT = 400_000     # low speed for card init
 # 1 MHz (~45 KB/s) starves 44.1 kHz stereo MP3 playback into constant underrun.
 SD_BAUD_DATA = 4_000_000
 SD_MOUNT = "/sd"
+# Playlist is a FLAT listing of the card root, sorted alphabetically.  Capped so
+# a card full of files can't exhaust RAM building the list.
+MAX_TRACKS = 100
 
 # ---------------------------------------------------------------------------
 # IR  (not used by the player yet; documented for a future real sync channel)
@@ -117,18 +135,48 @@ IR_RX = 27
 # headroom and was verified stable on hardware (2026-07-24: 20.2 s audio in
 # 20.1 s wall, worst stall 51 ms vs the 230 ms I2S buffer).  Drop to
 # 200_000_000 if a particular chip proves flaky at 250.
-CPU_FREQ = 250_000_000
+#
+# 2026-08-03: raised 250 -> 276 for AUDIO NOISE reasons, not performance.  The
+# supply-coupled buzz (see below) shifts pitch with sys_clk, and 276 was judged
+# by ear to be the least objectionable of 250/252/264/276.  Decode margin is
+# fine and slightly better than 250: 2.118x decode-only, 1.855x decode+SD,
+# 400 frames clean (vs 2.072x / 1.825x at 250).
+#
+# NOTE this is a real overclock (RP2040 is specified to 133 MHz).  276 MHz is
+# verified on ONE unit at room temperature.  Before committing the whole run to
+# it, check a few more boards and consider a hot venue -- if any unit is
+# marginal, fall back to 250_000_000, which is the well-tested value.
+#
+# Why the buzz cares about the clock at all: +3V3 is a single 42-node rail
+# shared by the RP2040, flash, microSD, LEDs and the audio (U5.5 TM8211 VDD,
+# U6.8 TDA1308 VDD).  There is no analog rail and no filtering between digital
+# and analog, so RP2040 activity modulates the DAC's reference directly.  The
+# real fix is hardware -- see BADGE.md / the rework notes.
+CPU_FREQ = 276_000_000
 
 # ---------------------------------------------------------------------------
 # Audio / player tunables
 # ---------------------------------------------------------------------------
 # I2S DMA buffer.  Larger = more tolerance for SD read latency spikes (fewer
 # dropouts) but a longer pause/stop latency (the buffered audio plays out before
-# it goes quiet).  Doubled from 40 KB when the output moved to 32-bit frames
-# (I2S_BITS above), which doubles the on-the-wire byte rate: 80 KB is again
-# ~0.23 s of 44.1 kHz stereo, comfortably over the worst measured refill stall
-# (51 ms on hardware).
-I2S_IBUF = 80_000
+# it goes quiet).  At 44.1 kHz stereo in 32-bit frames the wire rate is
+# 352,800 B/s, so this is ~181 ms.
+#
+# 2026-08-03: cut 80 KB -> 64 KB.  Two reasons.
+#
+# (1) RAM.  Adding the IR module tipped the badge over: MicroPython's GC is
+#     mark-and-sweep and does NOT compact, so an 80 KB request failed with
+#     ~155 KB free simply because no contiguous run that big was left.  A
+#     smaller block is far easier to place in a fragmented heap.
+# (2) The old budget was stale.  80 KB was sized against the worst measured SD
+#     refill stall (51 ms) and nothing else.  Since then the IR transmitter
+#     blocks ~35-60 ms per send, so the real worst case is a send landing on
+#     top of a bad read: ~111 ms.  181 ms keeps ~1.6x margin on THAT, whereas
+#     40 KB (113 ms) would have had essentially none.
+#
+# If dropouts ever appear, this is the first number to raise -- but re-check
+# the RAM headroom at the same time.
+I2S_IBUF = 64_000
 # PCM read chunk (bytes).  Multiple of 4 so it divides both mono(2) and stereo(4)
 # frame sizes.  ~64 ms of audio per read at 16 kHz mono.
 AUDIO_CHUNK = 2048
