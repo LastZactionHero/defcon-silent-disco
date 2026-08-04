@@ -64,3 +64,8 @@ if [ "$total" -gt 124000000 ]; then
   echo "WARNING: over the 128 MB card budget -- trim a set or drop a channel" >&2
 fi
 echo "channel order = alphabetical.  Eject the card SAFELY (data may be cached)."
+# show what each track will look like on the badge (uses the real firmware code)
+if command -v python3 >/dev/null 2>&1; then
+  echo
+  python3 "$(dirname "$0")/card_preview.py" "$DEST"/*.mp3 2>/dev/null || true
+fi
