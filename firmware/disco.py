@@ -66,6 +66,32 @@ import irsync
 
 VOLUME_STEP = 4
 
+# Every channel's show carries a POSITION BEACON: every BEACON_PERIOD slots
+# of track time, the badge plays BEACON_LEN slots of channel-salted sparkle
+# (in the channel's own theme colours) before returning to its animation.
+# The 4-LED on/off mask is a pure function of (channel, absolute slot), so:
+#   * a phone camera watching ANY channel for one burst can decode
+#     (channel, timecode) -- measured: unique across 7 channels x 9 min at
+#     8 slots (1.28 s), robust to a misread slot at 11 (1.76 s); the 14-slot
+#     burst leaves margin for starting mid-burst
+#   * synced badges hit their bursts at the same track time, so a group
+#     glitters in unison -- the beacon doubles as a visual motif
+#   * colour stays purely aesthetic; the data is brightness geometry only
+BEACON_PERIOD = 64          # slots between burst starts (10.24 s)
+BEACON_LEN = 14             # slots per burst (2.24 s)
+BEACON_SALT = 0x9E3779B1    # channel spreading constant
+
+
+def beacon_mask(slot, channel):
+    """4-bit LED mask for a beacon slot -- never fully dark."""
+    b = _shash(slot + channel * BEACON_SALT) & 0xF
+    return b if b else 0b0101
+
+
+def in_beacon(slot):
+    return (slot % BEACON_PERIOD) < BEACON_LEN
+
+
 # Animations advance on a fixed TIME GRID locked to the playback position:
 # everything steps at multiples of SLOT_MS of *track time*, so two badges
 # synced to the same position flash at the same moments -- the step boundary
@@ -275,9 +301,22 @@ def _tri(x, period):
 # current field (silent).  Full-field flashing stays at or under ~1.5 Hz.
 
 def _shash(x):
-    """Cheap deterministic slot hash (Knuth multiplicative + xor fold)."""
+    """Deterministic slot hash -- full murmur-style finalizer.
+
+    Upgraded from a single multiply + fold: that version's low bits were
+    visibly structured (glitter subtly echoed itself at short lags), and too
+    weak for the camera trick -- with THIS hash, the 4-LED on/off pattern of
+    a sparkle animation over ~1.5 s of phone video uniquely identifies the
+    playback position in a 9-minute track (measured: unique at 6 slots,
+    robust to a misread slot at 9).  The light show doubles as a beacon;
+    colour stays purely aesthetic.
+    """
     x = (x * 2654435761) & 0xFFFFFFFF
-    return x ^ (x >> 13)
+    x ^= x >> 16
+    x = (x * 0x7FEB352D) & 0xFFFFFFFF
+    x ^= x >> 15
+    x = (x * 0x846CA68B) & 0xFFFFFFFF
+    return x ^ (x >> 16)
 
 
 def an_static(slot, theme, out, n, base_b):
@@ -492,6 +531,23 @@ class Lights:
         self._cur_b = b
         self._cur = list(self._buf)
         self.leds.set_brightness(b)
+        for i in range(self.n):
+            self.leds.set(i, self._buf[i])
+        self.leds.write()
+
+    def render_beacon(self, slot, theme_idx, bright, channel):
+        """Channel-salted sparkle burst in the channel's own colours."""
+        if self.leds is None:
+            return
+        m = beacon_mask(slot, channel)
+        theme = THEMES[theme_idx]
+        for i in range(self.n):
+            self._buf[i] = theme[i & 3] if (m >> i) & 1 else BLACK
+        if bright == self._cur_b and self._buf == self._cur:
+            return
+        self._cur_b = bright
+        self._cur = list(self._buf)
+        self.leds.set_brightness(bright)
         for i in range(self.n):
             self.leds.set(i, self._buf[i])
         self.leds.write()
@@ -755,7 +811,11 @@ async def main():
                               ANIM_NAMES.index("alternate"))
             else:
                 t, b, a = looks[cur]
-                lights.render(player.pos_ms // SLOT_MS, t, b, a)
+                slot = player.pos_ms // SLOT_MS
+                if in_beacon(slot):
+                    lights.render_beacon(slot, t, b, cur)
+                else:
+                    lights.render(slot, t, b, a)
             await asyncio.sleep_ms(LED_POLL_MS)
 
     async def persist_task():

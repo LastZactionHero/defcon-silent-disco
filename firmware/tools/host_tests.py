@@ -361,6 +361,33 @@ check("position drift past threshold -> write",
 check("first write always happens", disco.should_persist({}, base))
 
 # ---------------------------------------------------------------------------
+print("== disco: position beacon ==")
+TRACK = 3375
+CH = 7
+k = 8
+windows = {}
+uniq = True
+for c in range(CH):
+    seq = [disco.beacon_mask(s_, c) for s_ in range(TRACK)]
+    for i in range(TRACK - k):
+        w = tuple(seq[i:i + k])
+        if w in windows:
+            uniq = False
+            break
+        windows[w] = (c, i)
+    if not uniq:
+        break
+check("beacon window unique across channels x 9-min track (1.28 s)", uniq)
+check("beacon mask never fully dark",
+      all(disco.beacon_mask(s_, c) for s_ in range(500) for c in range(CH)))
+duty = sum(1 for s_ in range(disco.BEACON_PERIOD)
+           if disco.in_beacon(s_)) / disco.BEACON_PERIOD
+check("burst covers robust-decode length with margin",
+      disco.BEACON_LEN >= 11 + 2)
+check("beacon duty stays a motif, not a takeover (<30%%)", duty < 0.30,
+      "%.0f%%" % (duty * 100))
+
+# ---------------------------------------------------------------------------
 print("== disco: battery hysteresis ==")
 check("healthy voltage -> not low", not disco.batt_low(3.9, False))
 check("below threshold -> low", disco.batt_low(3.4, False))
