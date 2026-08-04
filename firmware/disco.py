@@ -48,7 +48,9 @@ the first thing to look at.
 Next step: arm the receiver and implement SYNC (see disco_full.py).
 """
 
+import os
 import time
+import json
 import math
 import random
 import asyncio
@@ -88,6 +90,18 @@ RESET_HOLD_MS = 10_000
 # How long SYNC listens before giving up.  Must comfortably exceed the
 # longest broadcast gap (IR_TX_MAX_MS) or we can time out between broadcasts.
 SYNC_LISTEN_MS = 25_000
+
+# Crash resilience: channel, position and volume persist to INTERNAL flash
+# (never the SD -- card writes are unproven on this board) and are restored
+# on boot, so a brownout or an unreliable board resumes where it was instead
+# of restarting the set.  Position is saved when it drifts >10 s from the
+# last write (~every 12 s -> a reboot rewinds a few seconds, which feels
+# right), channel/volume within 2 s of changing.  Writes are atomic
+# (write-new + rename) so power loss mid-write cannot tear the file, and the
+# ~50 ms worst-case flash stall hides inside the 181 ms I2S buffer.
+PERSIST_FILE = "/disco_state.json"
+PERSIST_TICK_MS = 2000
+PERSIST_POS_DELTA_MS = 10_000
 
 # TEST HOOK: if non-zero, start a sync automatically this often, so the link
 # can be exercised over USB without a finger on the button.  Set to 0 for
@@ -534,10 +548,30 @@ async def main():
         print("  %2d. %-28s %-10s %-10s b%d"
               % (i + 1, _name(p)[:28], THEME_NAMES[t], ANIM_NAMES[a], b))
 
+    # --- restore persisted state (channel by NAME, position, volume) -------
+    vol = VOLUME_STEP
+    names = [_name(p) for p in tracks]
+    try:
+        with open(PERSIST_FILE) as f:
+            st = json.load(f)
+        if st.get("track") in names:
+            player.index = names.index(st["track"])
+        pos = st.get("pos")
+        if isinstance(pos, int) and pos > 0:
+            player.seek_ms = pos        # CBR byte seek; wraps if past track end
+        v = st.get("vol")
+        if isinstance(v, int) and 0 <= v <= C.VOL_STEPS:
+            vol = v
+        print("restored: %s @ %ds, vol %d/%d"
+              % (st.get("track"), (pos or 0) // 1000, vol, C.VOL_STEPS))
+    except OSError:
+        pass                            # first boot: no state yet
+    except Exception as e:
+        print("state restore failed:", e)
+
     if START_CHANNEL:
         player.index = START_CHANNEL % len(tracks)
 
-    vol = VOLUME_STEP
     player.set_volume_step(vol, C.VOL_STEPS)
     print("volume:", _describe(vol))
     print("CHANNEL tap = next  |  hold %ds = reset  |  VOL+/- = volume"
@@ -657,6 +691,29 @@ async def main():
                 lights.render(player.pos_ms // SLOT_MS, t, b, a)
             await asyncio.sleep_ms(LED_POLL_MS)
 
+    async def persist_task():
+        """Checkpoint (track, position, volume) to internal flash."""
+        last = {}
+        while True:
+            await asyncio.sleep_ms(PERSIST_TICK_MS)
+            if not player.playlist:
+                continue
+            st = {"track": _name(player.playlist[player.index %
+                                                 len(player.playlist)]),
+                  "pos": player.pos_ms,
+                  "vol": vol}
+            if (st["track"] == last.get("track") and st["vol"] == last.get("vol")
+                    and abs(st["pos"] - last.get("pos", -1 << 30))
+                    < PERSIST_POS_DELTA_MS):
+                continue
+            try:
+                with open(PERSIST_FILE + ".new", "w") as f:
+                    json.dump(st, f)
+                os.rename(PERSIST_FILE + ".new", PERSIST_FILE)
+                last = st
+            except Exception as e:
+                print("persist failed:", e)
+
     async def auto_sync_task():
         """Fire SYNC on a timer.  Test hook only; disabled when AUTO_SYNC_MS=0."""
         if not AUTO_SYNC_MS:
@@ -729,7 +786,7 @@ async def main():
 
     try:
         await asyncio.gather(player.run(), input_task(), led_task(), ir_task(),
-                             auto_sync_task())
+                             auto_sync_task(), persist_task())
     finally:
         player.deinit()
         lights.off()
