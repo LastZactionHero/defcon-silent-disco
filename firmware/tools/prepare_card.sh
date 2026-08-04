@@ -1,59 +1,66 @@
 #!/usr/bin/env bash
 #
-# prepare_card.sh -- convert audio files into badge-playable WAV and copy them
-# to the microSD card (or any directory).
+# prepare_card.sh -- encode DJ mixes for the badge and copy them to the card.
 #
-# The badge plays 16-bit PCM WAV streamed from the SD card to the I2S DAC.
-# It CANNOT decode MP3 in real time (MicroPython has no MP3 decoder and the
-# RP2040 is too slow for pure-Python decode), so we pre-decode to WAV here.
+# Output format (matches what the firmware and the IR sync REQUIRE):
+#     MP3, 96 kbps CBR, joint stereo, 44.1 kHz, no ID3/artwork
 #
-# SD read throughput on this board is ~45-51 KB/s at the conservative 1 MHz
-# SPI clock (no MISO pull-up).  Byte rate of the chosen format must stay under
-# that with margin:
-#     mono 16-bit @ 16000 Hz = 32 KB/s   <- default (safe, good margin)
-#     mono 16-bit @ 22050 Hz = 44 KB/s   <- borderline; use only if reads solid
-# The player up-mixes mono to stereo on the fly, so keep the files MONO to
-# halve the SD load.
+#   * CBR is load-bearing: IR sync seeks by byte offset, which is only linear
+#     in time for constant bitrate.  VBR would make everyone sync to the wrong
+#     bar.  Do not "upgrade" this to VBR.
+#   * 44.1 kHz is load-bearing too: the DAC has no reconstruction filter, so a
+#     lower sample rate folds ultrasonic images DOWN toward the audible band.
+#   * Loudness-normalised (EBU R128, -16 LUFS) so channel-surfing between two
+#     different DJs does not whiplash between quiet and loud.
+#   * Metadata/artwork stripped -- a display-less badge has no use for 500 KB
+#     of embedded cover art (the first test file wasted 5.6% on exactly that).
+#
+# Capacity: a "128 MB" card holds ~125 MB usable = ~2 h 54 m at 96 kbps.
+# Channel order on the badge is ALPHABETICAL by filename, and the filename
+# hash picks the LED theme + animation -- renaming a file changes its look.
 #
 # Usage:
 #   tools/prepare_card.sh <dest_dir> <input1> [input2 ...]
-#   RATE=22050 tools/prepare_card.sh /Volumes/BADGE song1.mp3 song2.flac
+#   tools/prepare_card.sh "/Volumes/NO NAME" set1.wav set2.flac set3.mp3
 #
 # Requires: ffmpeg
 set -euo pipefail
 
-RATE="${RATE:-16000}"      # override with RATE=22050 for higher quality (riskier)
-CHANNELS=1                 # mono keeps SD bandwidth low; badge up-mixes to stereo
+BITRATE="${BITRATE:-96k}"
 
 if [ "$#" -lt 2 ]; then
-  echo "usage: RATE=$RATE $0 <dest_dir> <input1> [input2 ...]" >&2
+  echo "usage: $0 <dest_dir> <input1> [input2 ...]" >&2
   exit 2
 fi
-
-if ! command -v ffmpeg >/dev/null 2>&1; then
-  echo "error: ffmpeg not found (brew install ffmpeg)" >&2
-  exit 1
-fi
+command -v ffmpeg >/dev/null 2>&1 || { echo "error: ffmpeg not found (brew install ffmpeg)" >&2; exit 1; }
 
 DEST="$1"; shift
 mkdir -p "$DEST"
 
-i=1
+total=0
 for src in "$@"; do
   if [ ! -f "$src" ]; then
     echo "skip (not found): $src" >&2
     continue
   fi
   base="$(basename "${src%.*}")"
-  # sanitize: keep it short + FAT-friendly; number so playback order is stable
-  safe="$(printf '%s' "$base" | tr -c 'A-Za-z0-9._-' '_' | cut -c1-24)"
-  out="$(printf '%s/%02d_%s.wav' "$DEST" "$i" "$safe")"
-  echo "-> $out  (${RATE} Hz, ${CHANNELS}ch, 16-bit)"
+  safe="$(printf '%s' "$base" | tr -c 'A-Za-z0-9._-' '_' | cut -c1-40)"
+  out="$DEST/$safe.mp3"
+  echo "-> $out"
   ffmpeg -y -v error -i "$src" \
-    -f wav -acodec pcm_s16le -ac "$CHANNELS" -ar "$RATE" \
+    -vn -codec:a libmp3lame -b:a "$BITRATE" -joint_stereo 1 -ar 44100 -ac 2 \
+    -af loudnorm=I=-16:TP=-1.5:LRA=11 \
+    -map_metadata -1 -id3v2_version 0 -write_id3v1 0 \
     "$out"
-  i=$((i + 1))
+  sz=$(stat -f%z "$out" 2>/dev/null || stat -c%s "$out")
+  total=$((total + sz))
+  echo "   $((sz / 1048576)) MB"
 done
 
-echo "done. copied $((i - 1)) file(s) to $DEST"
-echo "eject the card safely, insert into the badge, and it will play them in order."
+sync
+echo
+echo "total: $((total / 1048576)) MB  (budget: ~119 MB usable on a 128 MB card)"
+if [ "$total" -gt 124000000 ]; then
+  echo "WARNING: over the 128 MB card budget -- trim a set or drop a channel" >&2
+fi
+echo "channel order = alphabetical.  Eject the card SAFELY (data may be cached)."
