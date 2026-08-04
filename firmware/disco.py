@@ -119,26 +119,37 @@ B = (0, 0, 255)
 M = (255, 0, 255)
 W = (255, 255, 255)
 
-# Themes: four colours across LED1..LED4.
-#   1-6   analogous sweeps -- a four-wide window slid around the hue wheel
-#   7-9   white-accented pairs -- legible at distance, looks deliberate
-#   10-12 complementary alternation -- highest contrast
+K = BLACK   # an off LED is a design element: electrically perfect, and it buys
+            # coals, voids and asymmetry the 7 pure colours cannot.
+
+# Themes: four colours across LED1..LED4, curated as VIBES rather than swept
+# hue windows.  Two tricks stretch the tiny legal palette:
+#   * adjacent-LED blending -- the eye mixes neighbours at arm's length, so
+#     R next to Y reads as orange (fire, sunset) and M next to B reads as
+#     purple (synthwave, defcon): the two banned colours, recovered optically.
+#   * black as a colour -- gaps and asymmetry read as texture, especially
+#     under rotate/pulse (fire flickers over dark coals, matrix has a void).
 THEMES = (
-    (R, Y, G, Cy),      # sunrise
-    (Y, G, Cy, B),      # meadow
-    (G, Cy, B, M),      # lagoon
-    (Cy, B, M, R),      # twilight
-    (B, M, R, Y),       # ember
-    (M, R, Y, G),       # bloom
-    (R, W, M, W),       # neon rose
-    (B, W, Cy, W),      # glacier
-    (G, W, Y, W),       # citrus
-    (R, Cy, R, Cy),     # flame/ice
-    (G, M, G, M),       # clover
-    (B, Y, B, Y),       # voltage
+    (B, W, Cy, W),      # glacier    ice + white glare
+    (M, B, Cy, M),      # synthwave  neon sunset; M|B edge reads purple
+    (M, R, Y, R),       # sunset     magenta -> red -> gold gradient
+    (R, Y, R, K),       # fire       flames over a dark coal
+    (G, K, G, G),       # matrix     terminal green with a void
+    (G, Cy, M, B),      # aurora     northern lights sweep
+    (G, Y, G, K),       # toxic      radioactive glow
+    (Cy, M, Cy, M),     # miami      hard neon alternation
+    (M, B, M, B),       # defcon     reads purple at distance
+    (R, B, R, B),       # sirens     you know exactly what this is
+    (Cy, B, W, B),      # ocean      deep water + foam
+    (M, W, Cy, W),      # candy      bubblegum + mint
+    (G, W, Y, W),       # citrus     lime + lemon
+    (R, W, M, W),       # neon rose  hot pink storefront
+    (B, Y, B, Y),       # voltage    warning-tape contrast
+    (R, K, R, R),       # vampire    moody red with a bite missing
 )
-THEME_NAMES = ("sunrise", "meadow", "lagoon", "twilight", "ember", "bloom",
-               "neon rose", "glacier", "citrus", "flame/ice", "clover", "voltage")
+THEME_NAMES = ("glacier", "synthwave", "sunset", "fire", "matrix", "aurora",
+               "toxic", "miami", "defcon", "sirens", "ocean", "candy",
+               "citrus", "neon rose", "voltage", "vampire")
 
 BRIGHT_STEPS = (5, 10, 16, 24)
 
@@ -568,8 +579,12 @@ async def main():
                 lights.error(time.ticks_ms(), ERR_PLAYBACK)
             elif listening:
                 # glacier + breathe on the WALL clock: playback is paused
-                # while listening, so track time is frozen here.
-                lights.render(time.ticks_ms() // SLOT_MS, 7, 20, 6)
+                # while listening, so track time is frozen here.  Looked up by
+                # NAME -- a hardcoded index already broke once when the theme
+                # list was reordered.
+                lights.render(time.ticks_ms() // SLOT_MS,
+                              THEME_NAMES.index("glacier"), 20,
+                              ANIM_NAMES.index("breathe"))
             else:
                 t, b, a = looks[cur]
                 lights.render(player.pos_ms // SLOT_MS, t, b, a)
